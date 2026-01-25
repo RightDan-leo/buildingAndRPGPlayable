@@ -1,0 +1,950 @@
+
+                        <!DOCTYPE html>
+                        <html lang="en">
+                        <head>
+                            <meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+							<style>
+								body {
+									background-color: white; /* Ensure the iframe has a white background */
+								}
+
+								
+							</style>
+                        </head>
+                        <body>
+                            <!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>微光守卫 V2.15 - 左右二选一</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', sans-serif; touch-action: none; user-select: none; }
+        
+        /* UI 层级 */
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; }
+        
+        /* 顶部 HUD */
+        .hud-top { padding: 15px; display: flex; justify-content: space-between; align-items: flex-start; pointer-events: none; z-index: 1; }
+        .stat-badge { background: rgba(0,0,0,0.6); border: 1px solid #555; border-radius: 8px; padding: 5px 10px; color: white; font-weight: bold; margin-bottom: 5px; display: flex; align-items: center; }
+        .bar-container { width: 150px; height: 10px; background: #333; border-radius: 5px; overflow: hidden; margin-left: 10px; position: relative; }
+        .bar-fill { height: 100%; width: 0%; transition: width 0.3s; }
+        
+        /* --- 倒计时 UI --- */
+        #timer-badge {
+            font-size: 24px; padding: 10px 20px;
+            background: rgba(0, 50, 0, 0.8); border: 2px solid #2ecc71;
+            box-shadow: 0 0 10px rgba(46, 204, 113, 0.5); transition: all 0.3s;
+        }
+        .timer-urgent {
+            color: #ff3333 !important; border-color: #ff3333 !important;
+            background: rgba(50, 0, 0, 0.8) !important;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.8) !important;
+            font-size: 32px !important; animation: blink 0.5s infinite alternate;
+        }
+        @keyframes blink { from { opacity: 1; transform: scale(1); } to { opacity: 0.7; transform: scale(1.1); } }
+        
+        /* --- 屏幕中心倒计时 --- */
+        #center-countdown {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 150px; font-weight: 900; color: #ff3333;
+            text-shadow: 0 0 30px #ff0000, 4px 4px 0px #000;
+            z-index: 50; display: none; pointer-events: none;
+            animation: pulse-count 0.8s infinite;
+        }
+        @keyframes pulse-count {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            50% { transform: translate(-50%, -50%) scale(1.3); opacity: 0.8; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+
+        /* --- 黑夜降临警告 --- */
+        #night-warning {
+            position: absolute; top: 40%; width: 100%; text-align: center;
+            font-size: 40px; font-weight: 900; background: rgba(0,0,0,0.8);
+            color: #ff3333; padding: 20px 0; text-shadow: 0 0 20px red;
+            border-top: 2px solid red; border-bottom: 2px solid red;
+            z-index: 60; display: none; pointer-events: none;
+            animation: slide-in 0.3s ease-out;
+        }
+        @keyframes slide-in { from { transform: scaleY(0); opacity: 0; } to { transform: scaleY(1); opacity: 1; } }
+
+        /* --- 小地图 --- */
+        #minimap {
+            position: absolute; top: 120px; right: 20px; width: 140px; height: 140px;
+            background: rgba(0, 20, 40, 0.85); border: 2px solid #00ffff; border-radius: 50%;
+            display: none; overflow: hidden; z-index: 5;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+            background-image: radial-gradient(circle, transparent 20%, rgba(0,255,255,0.1) 21%, transparent 22%), radial-gradient(circle, transparent 50%, rgba(0,255,255,0.1) 51%, transparent 52%);
+        }
+        .map-dot { position: absolute; border-radius: 50%; transform: translate(-50%, -50%); }
+        #map-player { 
+            width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent;
+            border-bottom: 10px solid #00ffff; background: transparent;
+            top: 50%; left: 50%; z-index: 10; filter: drop-shadow(0 0 2px white);
+        }
+        #map-base { width: 12px; height: 12px; background: #d000ff; border: 2px solid white; z-index: 5; box-shadow: 0 0 8px #d000ff; }
+
+        /* 重新开始按钮 */
+        #restart-btn {
+            position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
+            background: rgba(255, 50, 50, 0.8); border: 1px solid #ffaaaa;
+            color: white; padding: 8px 15px; border-radius: 20px;
+            font-size: 14px; cursor: pointer; pointer-events: auto; z-index: 100;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+
+        /* --- 技能选择面板 (左右布局修改) --- */
+        #skill-panel {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 20;
+            display: none; flex-direction: column; justify-content: center; align-items: center;
+            pointer-events: auto;
+        }
+        /* 容器改为横向排列 */
+        #skill-container {
+            display: flex;
+            flex-direction: row; /* 横向 */
+            justify-content: center;
+            align-items: stretch; /* 等高 */
+            width: 100%;
+            padding: 0 10px;
+        }
+        /* 卡片改为竖直布局 */
+        .skill-card {
+            background: linear-gradient(135deg, #2c3e50, #4ca1af);
+            width: 45%; /* 两个卡片平分宽度 */
+            max-width: 300px; 
+            padding: 30px 10px; 
+            margin: 0 10px; /* 左右间距 */
+            border: 2px solid #fff; border-radius: 15px; color: white;
+            text-align: center; cursor: pointer; 
+            display: flex; flex-direction: column; /* 内部竖排：图标在上，文字在下 */
+            align-items: center; justify-content: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            transition: transform 0.1s, border-color 0.1s;
+        }
+        .skill-card:active { 
+            transform: scale(0.92); 
+            border-color: gold;
+        }
+        .skill-icon { 
+            font-size: 60px; /* 图标加大 */
+            margin-right: 0; 
+            margin-bottom: 15px; /* 图标和文字的间距 */
+            text-shadow: 0 0 15px rgba(255,255,255,0.6); 
+        }
+        .skill-info { text-align: center; }
+        .skill-title { font-size: 20px; color: #f1c40f; margin-bottom: 8px; font-weight: bold; }
+        .skill-desc { font-size: 14px; color: #ddd; line-height: 1.4; }
+        
+        /* 商店/备战面板 */
+        #shop-panel {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 15, 20, 0.98); z-index: 15;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            pointer-events: auto; color: white;
+        }
+        .shop-gold-display {
+            background: linear-gradient(90deg, #000000, #333333);
+            border: 2px solid gold; border-radius: 50px; padding: 10px 40px; margin-bottom: 20px;
+            font-size: 28px; color: gold; font-weight: bold; box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+            text-shadow: 1px 1px 2px black;
+        }
+        .shop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 90%; max-width: 400px; }
+        .shop-item { 
+            background: #2a2a2a; padding: 15px; border-radius: 12px; border: 1px solid #555; 
+            text-align: center; cursor: pointer; transition: background 0.2s; position: relative;
+        }
+        .shop-item:active { background: #444; transform: translateY(2px); }
+        .shop-item.disabled { opacity: 0.5; pointer-events: none; border-color: #333; }
+        
+        #start-wave-btn {
+            margin-top: 30px; padding: 15px 50px; background: linear-gradient(to bottom, #e74c3c, #c0392b); 
+            color: white; font-size: 22px; border: 2px solid #ff7777;
+            border-radius: 50px; font-weight: bold; box-shadow: 0 5px 15px rgba(192, 57, 43, 0.5);
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+
+        #notify-text {
+            position: absolute; top: 30%; width: 100%; text-align: center;
+            font-size: 36px; font-weight: 900; color: #fff; text-shadow: 0 0 20px #ff00de;
+            opacity: 0; pointer-events: none; transition: opacity 0.5s; z-index: 5;
+        }
+
+        #joystick-zone {
+            position: absolute; bottom: 50px; left: 50px; width: 150px; height: 150px;
+            z-index: 5; pointer-events: auto;
+        }
+        #joystick-knob {
+            position: absolute; top: 50%; left: 50%; width: 50px; height: 50px;
+            background: rgba(255, 255, 255, 0.3); border-radius: 50%; border: 2px solid white;
+            transform: translate(-50%, -50%); pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container"></div>
+    <button id="restart-btn" onclick="game.resetGame()">↺ 重新开始</button>
+
+    <div id="ui-layer">
+        <div class="hud-top">
+            <div style="display: flex; flex-direction: column;">
+                <div class="stat-badge" style="border-color: #f1c40f;">
+                    💰 <span id="gold-display">0</span>
+                </div>
+                <div class="stat-badge" style="border-color: #3498db;">
+                    LV <span id="level-display">1</span>
+                    <div class="bar-container"><div id="xp-bar" class="bar-fill" style="background:#3498db;"></div></div>
+                </div>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                <div class="stat-badge" id="base-hp-badge" style="border-color: #e74c3c;">
+                    ❤️ 基地 <span id="base-hp-text">100%</span>
+                </div>
+                <div class="stat-badge" id="energy-badge" style="border-color: #9b59b6; display:flex;">
+                    ⚡ 充能
+                    <div class="bar-container"><div id="energy-bar" class="bar-fill" style="background:#9b59b6;"></div></div>
+                </div>
+                <div class="stat-badge" id="timer-badge" style="display:none;">
+                    ⏱️ <span id="timer-text">30s</span>
+                </div>
+            </div>
+        </div>
+        
+        <div id="minimap">
+            <div id="map-base" class="map-dot"></div>
+            <div id="map-player" class="map-dot"></div>
+        </div>
+
+        <div id="notify-text">PHASE CHANGE</div>
+        <div id="center-countdown">5</div>
+        <div id="night-warning">🌙 黑夜降临，请做好准备！</div>
+    </div>
+
+    <div id="joystick-zone"><div id="joystick-knob"></div></div>
+
+    <!-- 技能选择面板 -->
+    <div id="skill-panel">
+        <h2 style="color:white; text-shadow: 0 0 10px cyan; margin-bottom: 30px;">⚡ 升级! 选择强化 ⚡</h2>
+        <div id="skill-container">
+            <!-- JS将在这里生成两个并排的卡片 -->
+        </div>
+    </div>
+
+    <div id="shop-panel">
+        <h1 style="color:white; margin-bottom: 10px;">🏰 基地防守整备</h1>
+        <p style="color:#aaa; margin-top:0;">下一波攻势更强，花光金币强化！</p>
+        <div class="shop-gold-display">💰 <span id="shop-gold-text">0</span></div>
+        <div class="shop-grid">
+            <div class="shop-item" id="btn-turret" onclick="game.buy('turret')">
+                <div style="font-size:28px">🔫</div>
+                <div style="font-weight:bold; margin:5px 0;">增加防御塔</div>
+                <div style="color:gold" id="price-turret">100 G</div>
+            </div>
+            <div class="shop-item" id="btn-wall" onclick="game.buy('wall')">
+                <div style="font-size:28px">🧱</div>
+                <div style="font-weight:bold; margin:5px 0;">加固/扩大城墙</div>
+                <div style="color:gold" id="price-wall">50 G</div>
+            </div>
+            <div class="shop-item" id="btn-atk" onclick="game.buy('atk')">
+                <div style="font-size:28px">⚔️</div>
+                <div style="font-weight:bold; margin:5px 0;">主角攻击力</div>
+                <div style="color:gold" id="price-atk">80 G</div>
+            </div>
+            <div class="shop-item" id="btn-multi" onclick="game.buy('multi')">
+                <div style="font-size:28px">🏹</div>
+                <div style="font-weight:bold; margin:5px 0;">主角多重箭</div>
+                <div style="color:gold" id="price-multi">200 G</div>
+            </div>
+        </div>
+        <button id="start-wave-btn" onclick="game.startNight()">⚔️ 开始防守 (第 <span id="wave-num">1</span> 波)</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        // --- 核心配置 ---
+        const CONFIG = {
+            baseChargeMax: 30,  
+            exploreTime: 30,    
+            baseRadius: 10,     
+            colors: {
+                nightBg: 0x111111,
+                dayBg: 0x88ccff,
+                groundNight: 0x222222,
+                groundDay: 0x4caf50
+            },
+            mapRange: 150 
+        };
+
+        let STATE = {}; 
+
+        // --- Three.js 场景搭建 ---
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.Fog(CONFIG.colors.nightBg, 20, 80);
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 50, 40);
+        camera.lookAt(0, 0, 0);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.getElementById('game-container').appendChild(renderer.domElement);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(20, 50, 20);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        const groundGeo = new THREE.PlaneGeometry(300, 300);
+        const groundMat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.groundNight });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // 主角
+        const playerGroup = new THREE.Group();
+        const playerBody = new THREE.Mesh(new THREE.ConeGeometry(2, 5, 8), new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x004444 }));
+        playerBody.position.y = 2.5;
+        playerGroup.add(playerBody);
+        const bow = new THREE.Mesh(new THREE.BoxGeometry(3, 0.5, 0.5), new THREE.MeshBasicMaterial({color: 0xeeeeee}));
+        bow.position.set(0, 3, 1.5);
+        playerGroup.add(bow);
+        playerGroup.castShadow = true;
+        scene.add(playerGroup);
+
+        // 导航箭头
+        const homeArrowGeo = new THREE.ConeGeometry(1, 3, 8);
+        homeArrowGeo.rotateX(Math.PI / 2); 
+        const homeArrowMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+        const homeArrow = new THREE.Mesh(homeArrowGeo, homeArrowMat);
+        homeArrow.visible = false; 
+        scene.add(homeArrow); 
+
+        // --- 基地组 ---
+        const baseGroup = new THREE.Group();
+        const baseMesh = new THREE.Mesh(new THREE.OctahedronGeometry(6, 0), new THREE.MeshStandardMaterial({ color: 0x9b59b6, emissive: 0x550055 }));
+        baseMesh.position.y = 8;
+        baseGroup.add(baseMesh); 
+        const basePlatform = new THREE.Mesh(new THREE.CylinderGeometry(8, 10, 2, 8), new THREE.MeshStandardMaterial({color:0x555555}));
+        basePlatform.position.y = 1;
+        baseGroup.add(basePlatform); 
+        const wallGroup = new THREE.Group();
+        baseGroup.add(wallGroup);
+        const turretGroup = new THREE.Group();
+        baseGroup.add(turretGroup);
+        scene.add(baseGroup);
+
+        let mobs = [];
+        let bullets = [];
+        let particles = [];
+        let items = [];
+
+        // --- 游戏逻辑 ---
+        const game = {
+            init: function() {
+                this.resetState();
+                this.startNight();
+            },
+
+            resetState: function() {
+                STATE = {
+                    phase: 'NIGHT', 
+                    gold: 0,
+                    level: 1,
+                    xp: 0,
+                    xpToNext: 35, 
+                    baseHp: 100,
+                    baseMaxHp: 100,
+                    baseEnergy: 0,
+                    energyPerKill: 2.5, 
+                    wave: 1,
+                    turretCount: 0,
+                    wallLevel: 0, 
+                    player: { hp: 100, damage: 10, atkSpeed: 10, projectileCount: 1, speed: 0.4, pickupRange: 3.5 },
+                    exploreTimer: 0,
+                    spawnTimer: 0,
+                    atkTimer: 0,
+                    turretTimer: 0
+                };
+                
+                this.prices = { turret: 100, wall: 50, atk: 80, multi: 200 };
+                this.clearAllEntities();
+                wallGroup.clear();
+                turretGroup.clear();
+            },
+
+            clearAllEntities: function() {
+                mobs.forEach(m => scene.remove(m.mesh));
+                mobs = [];
+                bullets.forEach(b => scene.remove(b.mesh));
+                bullets = [];
+                items.forEach(i => scene.remove(i.mesh));
+                items = [];
+                particles.forEach(p => scene.remove(p.mesh));
+                particles = [];
+            },
+
+            resetGame: function() {
+                document.getElementById('shop-panel').style.display = 'none';
+                document.getElementById('skill-panel').style.display = 'none';
+                document.getElementById('center-countdown').style.display = 'none';
+                document.getElementById('night-warning').style.display = 'none';
+                this.resetState();
+                this.startNight();
+                this.notify("游戏已重置");
+            },
+
+            startNight: function() {
+                STATE.phase = 'NIGHT';
+                STATE.baseEnergy = 0;
+                
+                if (STATE.wave === 1) {
+                    CONFIG.baseChargeMax = 30; 
+                    STATE.energyPerKill = 2.5; 
+                } else {
+                    CONFIG.baseChargeMax = 100;
+                    STATE.energyPerKill = 3; 
+                }
+
+                scene.background = new THREE.Color(CONFIG.colors.nightBg);
+                scene.fog.color.setHex(CONFIG.colors.nightBg);
+                ground.material.color.setHex(CONFIG.colors.groundNight);
+                playerGroup.position.set(0, 0, 10);
+                baseGroup.visible = true;
+                camera.position.set(0, 50, 40);
+                
+                homeArrow.visible = false; 
+                document.getElementById('minimap').style.display = 'none'; 
+
+                document.getElementById('shop-panel').style.display = 'none';
+                document.getElementById('energy-badge').style.display = 'flex';
+                document.getElementById('timer-badge').style.display = 'none';
+                document.getElementById('timer-badge').classList.remove('timer-urgent');
+                document.getElementById('center-countdown').style.display = 'none';
+                document.getElementById('night-warning').style.display = 'none';
+
+                let bossText = STATE.wave > 1 ? "⚠️ BOSS 出现!" : "⚠️ 怪物围城!";
+                this.notify(bossText);
+                
+                if (STATE.wave > 1) this.spawnBoss();
+                this.updateUI();
+            },
+
+            startDay: function() {
+                STATE.phase = 'DAY';
+                STATE.exploreTimer = CONFIG.exploreTime;
+                scene.background = new THREE.Color(CONFIG.colors.dayBg);
+                scene.fog.color.setHex(CONFIG.colors.dayBg);
+                ground.material.color.setHex(CONFIG.colors.groundDay);
+                playerGroup.position.set(200, 0, 200); 
+                camera.position.set(200, 50, 240);
+                baseGroup.visible = false;
+                
+                homeArrow.visible = true; 
+                document.getElementById('minimap').style.display = 'block'; 
+
+                document.getElementById('energy-badge').style.display = 'none';
+                document.getElementById('timer-badge').style.display = 'flex';
+                this.generateWilds();
+                this.notify("⚔️ 自由狩猎开始！搜刮宝箱！");
+            },
+
+            triggerDaybreak: function() {
+                for(let i=0; i<50; i++) this.createExplosion(new THREE.Vector3(0,0,0), 0xffffff, 2);
+                mobs.forEach(m => scene.remove(m.mesh));
+                mobs = [];
+                this.notify("☀️ 天亮了！反攻时刻！");
+                setTimeout(() => { this.startDay(); }, 2000);
+            },
+
+            triggerWarningAndEnd: function() {
+                STATE.phase = 'WARNING'; 
+                document.getElementById('center-countdown').style.display = 'none'; 
+                document.getElementById('night-warning').style.display = 'block';
+                setTimeout(() => { document.getElementById('night-warning').style.display = 'none'; this.endDay(); }, 2000);
+            },
+
+            endDay: function() {
+                STATE.phase = 'SHOP';
+                STATE.wave++;
+                homeArrow.visible = false; 
+                document.getElementById('minimap').style.display = 'none'; 
+                document.getElementById('timer-badge').classList.remove('timer-urgent'); 
+                document.getElementById('center-countdown').style.display = 'none'; 
+                this.clearAllEntities(); 
+                document.getElementById('shop-panel').style.display = 'flex';
+                document.getElementById('wave-num').innerText = STATE.wave;
+                this.updateShopPrices();
+            },
+
+            update: function() {
+                if (STATE.phase === 'SKILL' || STATE.phase === 'SHOP' || STATE.phase === 'WARNING') return;
+                this.handleInput();
+
+                if (homeArrow.visible) {
+                     const worldPos = new THREE.Vector3();
+                     playerGroup.getWorldPosition(worldPos);
+                     const targetAngle = Math.atan2(-worldPos.x, -worldPos.z);
+                     homeArrow.rotation.set(Math.PI/2, targetAngle - playerGroup.rotation.y, 0);
+                }
+
+                if (STATE.phase === 'DAY') {
+                    let dx = 0 - playerGroup.position.x;
+                    let dz = 0 - playerGroup.position.z;
+                    const range = CONFIG.mapRange;
+                    const dist = Math.sqrt(dx*dx + dz*dz);
+                    const uiRange = range * 0.9;
+                    if (dist > uiRange) {
+                        const ratio = uiRange / dist;
+                        dx *= ratio;
+                        dz *= ratio;
+                    }
+                    const pctX = 50 + (dx / range) * 50; 
+                    const pctY = 50 + (dz / range) * 50;
+                    const baseDot = document.getElementById('map-base');
+                    baseDot.style.left = pctX + '%';
+                    baseDot.style.top = pctY + '%';
+                    
+                    const rotDeg = -playerGroup.rotation.y * (180/Math.PI);
+                    document.getElementById('map-player').style.transform = `translate(-50%, -50%) rotate(${rotDeg}deg)`;
+                }
+
+                if (STATE.phase === 'NIGHT') {
+                    STATE.spawnTimer++;
+                    let spawnRate = (STATE.wave === 1) ? 30 : Math.max(10, 40 - STATE.wave * 2);
+                    if (STATE.spawnTimer > spawnRate) {
+                        this.spawnMob(new THREE.Vector3(0,0,0)); 
+                        STATE.spawnTimer = 0;
+                    }
+                    STATE.turretTimer++;
+                    if (STATE.turretCount > 0 && STATE.turretTimer > 40) {
+                        for(let i=0; i<STATE.turretCount; i++) {
+                            const target = this.getClosestMob(new THREE.Vector3(0,0,0));
+                            if(target && turretGroup.children[i]) {
+                                const turretPos = new THREE.Vector3();
+                                turretGroup.children[i].getWorldPosition(turretPos);
+                                turretPos.y += 3; 
+                                turretGroup.children[i].lookAt(target.mesh.position);
+                                this.spawnBullet(turretPos, target.mesh.position, 0xffff00, true);
+                            }
+                        }
+                        STATE.turretTimer = 0;
+                    }
+                } else if (STATE.phase === 'DAY') {
+                    STATE.exploreTimer -= 1/60;
+                    const timerText = Math.ceil(STATE.exploreTimer);
+                    document.getElementById('timer-text').innerText = timerText + 's';
+                    
+                    const badge = document.getElementById('timer-badge');
+                    const centerCount = document.getElementById('center-countdown');
+
+                    if (STATE.exploreTimer <= 5.5 && STATE.exploreTimer > 0) {
+                        // 5秒倒计时逻辑
+                        if (!badge.classList.contains('timer-urgent')) badge.classList.add('timer-urgent');
+                        
+                        centerCount.style.display = 'block';
+                        centerCount.innerText = timerText;
+                    } else {
+                        badge.classList.remove('timer-urgent');
+                        centerCount.style.display = 'none';
+                    }
+
+                    if (STATE.exploreTimer <= 0) { 
+                        this.triggerWarningAndEnd(); 
+                        return; 
+                    }
+
+                    STATE.spawnTimer++;
+                    if (STATE.spawnTimer > 30) {
+                        const angle = Math.random() * Math.PI * 2;
+                        const r = 30 + Math.random() * 20;
+                        const spawnPos = new THREE.Vector3(playerGroup.position.x + Math.cos(angle)*r, 0, playerGroup.position.z + Math.sin(angle)*r);
+                        this.spawnMob(playerGroup.position, spawnPos, 'day');
+                        STATE.spawnTimer = 0;
+                    }
+                }
+
+                this.logicCombat();
+                this.updateParticles();
+                
+                const targetX = playerGroup.position.x;
+                const targetZ = playerGroup.position.z + 40;
+                camera.position.x += (targetX - camera.position.x) * 0.1;
+                camera.position.z += (targetZ - camera.position.z) * 0.1;
+                
+                if (baseGroup.visible) {
+                    baseMesh.rotation.y += 0.01;
+                    baseMesh.position.y = 8 + Math.sin(Date.now()*0.002);
+                    if (wallGroup.children.length > 0) {
+                         wallGroup.rotation.y -= 0.005;
+                    }
+                }
+            },
+
+            logicCombat: function() {
+                STATE.atkTimer++;
+                if (STATE.atkTimer >= STATE.player.atkSpeed) {
+                    const target = this.getClosestMob(playerGroup.position, 25);
+                    if (target) {
+                        playerGroup.lookAt(target.mesh.position);
+                        for(let i=0; i<STATE.player.projectileCount; i++) {
+                            const offset = (i - (STATE.player.projectileCount-1)/2) * 0.2;
+                            this.spawnBullet(playerGroup.position, target.mesh.position, 0x00ffff, false, offset);
+                        }
+                        STATE.atkTimer = 0;
+                    }
+                }
+
+                mobs.forEach(m => {
+                    const dest = (m.type === 'day') ? playerGroup.position : new THREE.Vector3(0,0,0);
+                    const dir = new THREE.Vector3().subVectors(dest, m.mesh.position).normalize();
+                    m.mesh.position.add(dir.multiplyScalar(m.speed));
+                    m.mesh.lookAt(dest);
+                    
+                    const hitRadius = (STATE.wallLevel > 0) ? (CONFIG.baseRadius + 2 + STATE.wallLevel) : CONFIG.baseRadius;
+                    
+                    if (STATE.phase === 'NIGHT' && m.mesh.position.length() < hitRadius) {
+                        if (STATE.baseHp > 0) {
+                            STATE.baseHp -= 0.1;
+                            this.createExplosion(m.mesh.position, 0xff0000, 0.5);
+                            this.updateUI();
+                        }
+                    }
+                });
+
+                for (let i = bullets.length - 1; i >= 0; i--) {
+                    const b = bullets[i];
+                    b.mesh.position.add(b.vel);
+                    b.life--;
+                    let hit = false;
+                    for (let j = mobs.length - 1; j >= 0; j--) {
+                        const m = mobs[j];
+                        if (b.mesh.position.distanceTo(m.mesh.position) < (m.isBoss? 4 : 2)) {
+                            this.hitMob(j, b.isTurret ? 20 : STATE.player.damage);
+                            hit = true;
+                            break;
+                        }
+                    }
+                    if (hit || b.life <= 0) { scene.remove(b.mesh); bullets.splice(i, 1); }
+                }
+
+                if (STATE.phase === 'DAY') {
+                    for (let i = items.length - 1; i >= 0; i--) {
+                        const it = items[i];
+                        if (playerGroup.position.distanceTo(it.mesh.position) < STATE.player.pickupRange) {
+                            STATE.gold += it.val;
+                            this.createExplosion(it.mesh.position, 0xffff00, 1.5);
+                            this.notify(`+${it.val} G`);
+                            scene.remove(it.mesh);
+                            items.splice(i, 1);
+                            this.updateUI();
+                        }
+                    }
+                }
+            },
+
+            spawnMob: function(targetPos, posOverride = null, type = 'night') {
+                const geo = new THREE.BoxGeometry(2, 2, 2);
+                const mat = new THREE.MeshStandardMaterial({ color: type === 'day' ? 0x55aa55 : 0xff4444 });
+                const mesh = new THREE.Mesh(geo, mat);
+                let x, z;
+                if (posOverride) { x = posOverride.x; z = posOverride.z; } 
+                else {
+                    const angle = Math.random() * Math.PI * 2;
+                    const r = 60;
+                    x = Math.sin(angle) * r;
+                    z = Math.cos(angle) * r;
+                }
+                mesh.position.set(x, 1, z);
+                mesh.castShadow = true;
+                scene.add(mesh);
+                mobs.push({ mesh, hp: 20 + STATE.wave*5, speed: 0.15 + STATE.wave*0.01, type: type });
+            },
+
+            spawnBoss: function() {
+                const geo = new THREE.BoxGeometry(6, 8, 6);
+                const mat = new THREE.MeshStandardMaterial({ color: 0xaa0000 });
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.position.set(70, 4, 0);
+                scene.add(mesh);
+                mobs.push({ mesh, hp: 500 * STATE.wave, speed: 0.08, type: 'night', isBoss: true });
+            },
+
+            spawnBullet: function(start, end, color, isTurret, angleOffset = 0) {
+                const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.6), new THREE.MeshBasicMaterial({color: color}));
+                mesh.position.copy(start);
+                scene.add(mesh);
+                const dir = new THREE.Vector3().subVectors(end, start).normalize();
+                if (angleOffset !== 0) dir.applyAxisAngle(new THREE.Vector3(0,1,0), angleOffset);
+                bullets.push({ mesh, vel: dir.multiplyScalar(1.0), life: 60, isTurret });
+            },
+
+            generateWilds: function() {
+                for(let i=0; i<50; i++) {
+                    const bx = new THREE.Mesh(new THREE.BoxGeometry(2,2,2), new THREE.MeshStandardMaterial({color:0xffd700}));
+                    const x = 200 + (Math.random()-0.5)*150;
+                    const z = 200 + (Math.random()-0.5)*150;
+                    bx.position.set(x, 1, z);
+                    bx.rotation.y = Math.random();
+                    scene.add(bx);
+                    items.push({mesh: bx, val: 50 + Math.floor(Math.random()*50)});
+                }
+            },
+            
+            hitMob: function(index, dmg) {
+                const m = mobs[index];
+                m.hp -= dmg;
+                m.mesh.position.add(m.mesh.position.clone().sub(playerGroup.position).normalize().multiplyScalar(0.5));
+                if (m.hp <= 0) {
+                    scene.remove(m.mesh);
+                    mobs.splice(index, 1);
+                    this.createExplosion(m.mesh.position, 0xffaa00, 1);
+                    this.addXp(m.isBoss ? 100 : 10);
+                    if (STATE.phase === 'NIGHT' && !m.isBoss) {
+                        STATE.baseEnergy += STATE.energyPerKill; 
+                        if (STATE.baseEnergy >= CONFIG.baseChargeMax) this.triggerDaybreak();
+                    }
+                    this.updateUI();
+                }
+            },
+
+            addXp: function(amount) {
+                STATE.xp += amount;
+                if (STATE.xp >= STATE.xpToNext) {
+                    STATE.xp = 0;
+                    STATE.xpToNext = Math.floor(STATE.xpToNext * 1.5);
+                    STATE.level++;
+                    this.showSkillSelect();
+                }
+                this.updateUI();
+            },
+
+            showSkillSelect: function() {
+                const oldPhase = STATE.phase;
+                STATE.phase = 'SKILL'; 
+                const panel = document.getElementById('skill-panel');
+                const container = document.getElementById('skill-container');
+                container.innerHTML = '';
+                panel.style.display = 'flex';
+                
+                const skills = [
+                    { name: "强力射击", icon: "💥", desc: "伤害 +30%", act: () => STATE.player.damage *= 1.3 },
+                    { name: "急速射击", icon: "🌪️", desc: "攻速 +20%", act: () => STATE.player.atkSpeed = Math.max(5, STATE.player.atkSpeed * 0.8) },
+                    { name: "多重箭矢", icon: "🏹", desc: "箭矢数量 +1", act: () => STATE.player.projectileCount++ },
+                    { name: "神行太保", icon: "👢", desc: "移速 +20%", act: () => STATE.player.speed *= 1.2 },
+                    { name: "赏金猎人", icon: "💰", desc: "立刻获得 200 G", act: () => { STATE.gold += 200; this.updateUI(); } },
+                    { name: "贪婪磁铁", icon: "🧲", desc: "拾取范围 +3", act: () => { STATE.player.pickupRange += 3; this.notify("磁力大增！"); } }
+                ];
+                
+                // 二选一逻辑 (slice 0, 2)
+                const choices = skills.sort(() => 0.5 - Math.random()).slice(0, 2);
+                choices.forEach(skill => {
+                    const card = document.createElement('div');
+                    card.className = 'skill-card';
+                    card.innerHTML = `
+                        <div class="skill-icon">${skill.icon}</div>
+                        <div class="skill-info">
+                            <div class="skill-title">${skill.name}</div>
+                            <div class="skill-desc">${skill.desc}</div>
+                        </div>
+                    `;
+                    card.onclick = () => {
+                        skill.act();
+                        panel.style.display = 'none';
+                        STATE.phase = oldPhase;
+                    };
+                    container.appendChild(card);
+                });
+            },
+
+            prices: { turret: 100, wall: 50, atk: 80, multi: 200 },
+            
+            updateShopPrices: function() {
+                document.getElementById('shop-gold-text').innerText = STATE.gold;
+                document.getElementById('price-turret').innerText = this.prices.turret + ' G';
+                document.getElementById('price-wall').innerText = this.prices.wall + ' G';
+                document.getElementById('price-atk').innerText = this.prices.atk + ' G';
+                document.getElementById('price-multi').innerText = this.prices.multi + ' G';
+                this.checkAffordable('turret'); this.checkAffordable('wall'); this.checkAffordable('atk'); this.checkAffordable('multi');
+            },
+
+            checkAffordable: function(item) {
+                const btn = document.getElementById('btn-' + item);
+                if (STATE.gold < this.prices[item]) btn.classList.add('disabled');
+                else btn.classList.remove('disabled');
+            },
+
+            buy: function(item) {
+                const cost = this.prices[item];
+                if (STATE.gold >= cost) {
+                    STATE.gold -= cost;
+                    
+                    if (item === 'turret') {
+                        STATE.turretCount++;
+                        this.prices.turret += 100;
+                        const tBase = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 2, 1, 8), new THREE.MeshStandardMaterial({color:0x555555}));
+                        const tCannon = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 3), new THREE.MeshStandardMaterial({color:0x0088ff}));
+                        tCannon.position.y = 1.5;
+                        tCannon.position.z = 1; 
+                        const turretMesh = new THREE.Group();
+                        turretMesh.add(tBase);
+                        turretMesh.add(tCannon);
+                        const angle = (STATE.turretCount - 1) * 1.5; 
+                        const dist = 8; 
+                        turretMesh.position.set(Math.sin(angle)*dist, 2, Math.cos(angle)*dist);
+                        turretMesh.lookAt(new THREE.Vector3(Math.sin(angle)*20, 2, Math.cos(angle)*20)); 
+                        turretGroup.add(turretMesh);
+                    }
+                    else if (item === 'wall') {
+                        STATE.baseHp = Math.min(STATE.baseHp + 50, STATE.baseMaxHp);
+                        this.prices.wall += 20;
+                        STATE.wallLevel++;
+                        wallGroup.clear();
+                        const radius = 10 + STATE.wallLevel * 1.5;
+                        const height = 4 + STATE.wallLevel;
+                        const opacity = 0.3 + Math.min(0.4, STATE.wallLevel * 0.1);
+                        const wallGeo = new THREE.CylinderGeometry(radius, radius, height, 16, 1, true); 
+                        const wallMat = new THREE.MeshStandardMaterial({
+                            color: 0x00ffff, transparent: true, opacity: opacity,
+                            side: THREE.DoubleSide, emissive: 0x0044aa, emissiveIntensity: 0.5
+                        });
+                        const wall = new THREE.Mesh(wallGeo, wallMat);
+                        wall.position.y = height / 2;
+                        wallGroup.add(wall);
+                        const ringGeo = new THREE.TorusGeometry(radius, 0.2, 8, 32);
+                        const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({color: 0xffffff}));
+                        ring.rotation.x = Math.PI / 2;
+                        ring.position.y = 0.5;
+                        wallGroup.add(ring);
+                    }
+                    else if (item === 'atk') { STATE.player.damage += 5; this.prices.atk += 50; }
+                    else if (item === 'multi') { STATE.player.projectileCount++; this.prices.multi *= 2; }
+                    
+                    this.updateUI();
+                    this.updateShopPrices();
+                    this.createExplosion(new THREE.Vector3(0,5,20), 0xffd700, 1); 
+                }
+            },
+
+            handleInput: function() {
+                let dx = joystick.x; let dy = joystick.y;
+                if (Math.abs(dx) > 0 || Math.abs(dy) > 0) {
+                    playerGroup.position.x += dx * STATE.player.speed;
+                    playerGroup.position.z += dy * STATE.player.speed;
+                    playerGroup.rotation.y = Math.atan2(-dx, -dy);
+                }
+            },
+
+            getClosestMob: function(pos, range = 999) {
+                let closest = null; let minDst = range;
+                mobs.forEach(m => {
+                    const d = pos.distanceTo(m.mesh.position);
+                    if (d < minDst) { minDst = d; closest = m; }
+                });
+                return closest;
+            },
+
+            updateUI: function() {
+                document.getElementById('gold-display').innerText = STATE.gold;
+                document.getElementById('level-display').innerText = STATE.level;
+                document.getElementById('xp-bar').style.width = (STATE.xp / STATE.xpToNext * 100) + '%';
+                document.getElementById('base-hp-text').innerText = Math.floor(STATE.baseHp) + '%';
+                const energyPct = Math.min(100, (STATE.baseEnergy / CONFIG.baseChargeMax) * 100);
+                document.getElementById('energy-bar').style.width = energyPct + '%';
+            },
+
+            notify: function(msg) {
+                const el = document.getElementById('notify-text');
+                el.innerText = msg;
+                el.style.opacity = 1;
+                el.style.top = "30%";
+                setTimeout(() => { el.style.opacity = 0; el.style.top = "20%"; }, 2000);
+            },
+
+            createExplosion: function(pos, color, scale=1) {
+                for(let i=0; i<8; i++) {
+                    const p = new THREE.Mesh(new THREE.BoxGeometry(0.5*scale,0.5*scale,0.5*scale), new THREE.MeshBasicMaterial({color: color}));
+                    p.position.copy(pos);
+                    scene.add(p);
+                    particles.push({ mesh: p, vel: new THREE.Vector3((Math.random()-0.5), Math.random(), (Math.random()-0.5)).multiplyScalar(0.5*scale), life: 30 });
+                }
+            },
+
+            updateParticles: function() {
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const p = particles[i];
+                    p.mesh.position.add(p.vel);
+                    p.vel.y -= 0.03; 
+                    p.life--;
+                    if (p.life <= 0) { scene.remove(p.mesh); particles.splice(i, 1); }
+                }
+            }
+        };
+
+        const joystick = { x: 0, y: 0, active: false };
+        const joyZone = document.getElementById('joystick-zone');
+        const joyKnob = document.getElementById('joystick-knob');
+        let joyStart = {x:0, y:0};
+
+        joyZone.addEventListener('touchstart', e => {
+            joystick.active = true;
+            const t = e.touches[0];
+            const r = joyZone.getBoundingClientRect();
+            joyStart = { x: r.left + r.width/2, y: r.top + r.height/2 };
+            updateJoy(t.clientX, t.clientY);
+        });
+        joyZone.addEventListener('touchmove', e => { if(joystick.active) updateJoy(e.touches[0].clientX, e.touches[0].clientY); });
+        const endJoy = () => { joystick.active = false; joystick.x=0; joystick.y=0; joyKnob.style.transform = `translate(-50%, -50%)`; };
+        joyZone.addEventListener('touchend', endJoy);
+
+        function updateJoy(cx, cy) {
+            let dx = cx - joyStart.x;
+            let dy = cy - joyStart.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            const max = 50;
+            if(dist > max) { dx = (dx/dist)*max; dy = (dy/dist)*max; }
+            joyKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+            joystick.x = dx/max; joystick.y = dy/max;
+        }
+
+        const keys = {};
+        window.onkeydown = e => keys[e.key] = true;
+        window.onkeyup = e => keys[e.key] = false;
+
+        game.init();
+        function animate() {
+            requestAnimationFrame(animate);
+            if (!joystick.active) {
+                let kx = 0, ky = 0;
+                if (keys['w']||keys['ArrowUp']) ky = -1;
+                if (keys['s']||keys['ArrowDown']) ky = 1;
+                if (keys['a']||keys['ArrowLeft']) kx = -1;
+                if (keys['d']||keys['ArrowRight']) kx = 1;
+                joystick.x = kx; joystick.y = ky;
+            }
+            game.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+        window.onresize = () => {
+            camera.aspect = window.innerWidth/window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        };
+    </script>
+</body>
+</html>
+
+							<script>
+                            	
+							</script>
+                        </body>
+                        </html>
+                    
