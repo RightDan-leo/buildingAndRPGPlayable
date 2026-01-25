@@ -411,11 +411,15 @@
 
             resetState: function () {
                 STATE = {
-                    phase: 'NIGHT', gold: 0, level: 1, xp: 0, xpToNext: 35,
+                    phase: 'NIGHT', gold: 0, level: 1, xp: 0, xpToNext: 100, // XP Balance: Increased from 35 to 100
                     baseHp: 100, baseMaxHp: 100, baseEnergy: 0, energyPerKill: 2.5,
                     wave: 1, turretCount: 0, wallLevel: 0, soldierCount: 0,
-                    player: { hp: 100, damage: 10, atkSpeed: 10, projectileCount: 1, speed: 0.4, pickupRange: 3.5 },
-                    spawnTimer: 0, atkTimer: 0, turretTimer: 0, dayObjectiveMet: false
+                    pulseCannons: [], healers: [], empTowers: [], // New Buildings (Miner removed)
+                    player: { hp: 100, damage: 10, atkSpeed: 30, projectileCount: 1, speed: 0.4, pickupRange: 3.5 }, // Nerf: atkSpeed 10 -> 30
+                    spawnTimer: 0, atkTimer: 0, turretTimer: 0, buildingTimer: 0, dayObjectiveMet: false,
+                    buildsThisDay: 0, // Track daily builds
+                    flags: { wall: false, turret1: false, turret2: false, soldier: false }, // Track unique buildings
+                    bossSpawned: false
                 };
 
                 this.prices = { turret: 100, wall: 50, soldier: 150 };
@@ -424,6 +428,57 @@
                 turretGroup.clear();
                 this.clearBuildSlots();
                 this.clearSoldiers();
+            },
+
+            // ... (keeping existing functions until addXp)
+
+            addXp: function (amount) {
+                STATE.xp += amount;
+                this.updateUI();
+                this.checkLevelUp();
+            },
+
+            checkLevelUp: function () {
+                // Prevent level up if already selecting skill
+                if (STATE.phase === 'SKILL') return;
+
+                if (STATE.xp >= STATE.xpToNext) {
+                    STATE.xp -= STATE.xpToNext;
+                    STATE.xpToNext = Math.floor(STATE.xpToNext * 1.5);
+                    STATE.level++;
+                    this.showSkillSelect();
+                    this.updateUI();
+                }
+            },
+
+            showSkillSelect: function () {
+                const oldPhase = STATE.phase;
+                STATE.phase = 'SKILL';
+                const panel = document.getElementById('skill-panel');
+                const container = document.getElementById('skill-container');
+                container.innerHTML = '';
+                panel.style.display = 'flex';
+
+                const skills = [
+                    { name: "强力射击", icon: "💥", desc: "伤害 +30%", act: () => STATE.player.damage *= 1.3 },
+                    { name: "急速射击", icon: "🌪️", desc: "攻速 +20%", act: () => STATE.player.atkSpeed = Math.max(5, STATE.player.atkSpeed * 0.8) },
+                    { name: "多重箭矢", icon: "🏹", desc: "箭矢数量 +1", act: () => STATE.player.projectileCount++ }
+                ];
+
+                const choices = skills.sort(() => 0.5 - Math.random()).slice(0, 2);
+                choices.forEach(skill => {
+                    const card = document.createElement('div');
+                    card.className = 'skill-card';
+                    card.innerHTML = `<div class="skill-icon">${skill.icon}</div><div class="skill-info"><div class="skill-title">${skill.name}</div><div class="skill-desc">${skill.desc}</div></div>`;
+                    card.onclick = () => {
+                        skill.act();
+                        panel.style.display = 'none';
+                        STATE.phase = oldPhase;
+                        // Check if we have enough XP for another level
+                        this.checkLevelUp();
+                    };
+                    container.appendChild(card);
+                });
             },
 
             clearAllEntities: function () {
@@ -456,12 +511,14 @@
             startNight: function () {
                 STATE.phase = 'NIGHT';
                 STATE.baseEnergy = 0;
+                STATE.bossSpawned = false; // Reset boss flag each night (though only used for W3)
 
                 if (STATE.wave === 1) { CONFIG.baseChargeMax = 30; STATE.energyPerKill = 2.5; }
                 else { CONFIG.baseChargeMax = 100; STATE.energyPerKill = 3; }
 
                 scene.background = new THREE.Color(CONFIG.colors.nightBg);
                 scene.fog.color.setHex(CONFIG.colors.nightBg);
+                scene.fog.near = 20; scene.fog.far = 80; // Dense fog for night atmosphere
                 ground.material.color.setHex(CONFIG.colors.groundNight);
                 playerGroup.position.set(0, 0, 10);
                 baseGroup.visible = true;
@@ -484,16 +541,18 @@
             startDay: function () {
                 STATE.phase = 'DAY';
                 STATE.dayObjectiveMet = false;
+                STATE.buildsThisDay = 0;
 
                 scene.background = new THREE.Color(CONFIG.colors.dayBg);
                 scene.fog.color.setHex(CONFIG.colors.dayBg);
+                scene.fog.near = 50; scene.fog.far = 200; // Reduce fog for day visibility
                 ground.material.color.setHex(CONFIG.colors.groundDay);
                 playerGroup.position.set(0, 0, 20);
                 camera.position.set(0, 50, 60);
 
                 baseGroup.visible = true;
                 buildSlotGroup.visible = true;
-                guideArrow.visible = true;
+                // guideArrow.visible = true; // REMOVED per user request
 
                 document.getElementById('minimap').style.display = 'block';
                 document.getElementById('energy-badge').style.display = 'none';
@@ -504,6 +563,153 @@
                 this.setupBuildSlots();
                 this.deploySoldiers(); // Soldiers start working
                 this.notify("☀️ 天亮了！搜集金币，建设家园！");
+            },
+
+            // ...
+
+            updateGuideArrow: function () {
+                // Feature disabled by user request
+                guideArrow.visible = false;
+                return;
+            },
+
+            generateWilds: function () {
+                for (let i = 0; i < 30 + STATE.wave * 10; i++) {
+                    // Changed to Octahedron to look like Gems/Crystals instead of Enemy Boxes
+                    const bx = new THREE.Mesh(new THREE.OctahedronGeometry(1), new THREE.MeshStandardMaterial({ color: 0xffd700 }));
+                    const angle = Math.random() * Math.PI * 2;
+                    const r = 40 + Math.random() * 80;
+                    const x = Math.sin(angle) * r;
+                    const z = Math.cos(angle) * r;
+                    bx.position.set(x, 1, z);
+                    bx.rotation.y = Math.random();
+                    scene.add(bx);
+                    items.push({ mesh: bx, val: 30 + Math.floor(Math.random() * 30) });
+                }
+            },
+
+            update: function () {
+                if (STATE.phase === 'SKILL') return;
+                this.handleInput();
+
+                if (STATE.phase === 'DAY') {
+                    camera.position.x = playerGroup.position.x;
+                    camera.position.z = playerGroup.position.z + 40;
+                    camera.lookAt(playerGroup.position);
+
+                    const range = CONFIG.mapRange;
+                    const pctX = 50 + (playerGroup.position.x / range) * 50;
+                    const pctY = 50 + (playerGroup.position.z / range) * 50;
+                    document.getElementById('map-player').style.left = pctX + '%';
+                    document.getElementById('map-player').style.top = pctY + '%';
+
+                    this.checkBuildInteraction();
+                    this.updateSoldiers();
+                    // this.updateGuideArrow(); // REMOVED
+
+                    // Rotate build slots for effect
+                    if (buildSlotGroup.visible) {
+                        buildSlotGroup.children.forEach(child => {
+                            child.rotation.z -= 0.02; // Rotate around Z because it's rotated X -90
+                        });
+                    }
+
+                    for (let i = items.length - 1; i >= 0; i--) {
+                        const it = items[i];
+                        if (playerGroup.position.distanceTo(it.mesh.position) < STATE.player.pickupRange) {
+                            STATE.gold += it.val;
+                            this.createExplosion(it.mesh.position, 0xffff00, 1.5);
+                            this.notify(`+${it.val} G`);
+                            scene.remove(it.mesh);
+                            items.splice(i, 1);
+                            this.updateUI();
+                        }
+                    }
+                }
+
+                if (STATE.phase === 'NIGHT') {
+                    // Spawn Boss on Wave 3 start
+                    if (STATE.wave === 3 && !STATE.bossSpawned) {
+                        this.spawnBoss();
+                        STATE.bossSpawned = true;
+                        this.notify("⚠️ 警告: 巨型 BOSS 把守关底!");
+                    }
+
+                    STATE.spawnTimer++;
+                    // Difficulty Scaling: Wave 1 (60 - Easy), Wave 2 (15 - Fast), Wave 3+ (10 - Swarm)
+                    let spawnRate = (STATE.wave === 1) ? 60 : (STATE.wave === 2 ? 15 : 10);
+
+                    if (STATE.spawnTimer > spawnRate) {
+                        this.spawnMob();
+                        STATE.spawnTimer = 0;
+                    }
+
+                    STATE.turretTimer++;
+                    if (turretGroup.children.length > 0 && STATE.turretTimer > 40) {
+                        turretGroup.children.forEach(t => {
+                            const target = this.getClosestMob(new THREE.Vector3(0, 0, 0));
+                            if (target) {
+                                const tPos = new THREE.Vector3();
+                                t.children[1].getWorldPosition(tPos);
+                                t.lookAt(target.mesh.position);
+                                this.spawnBullet(tPos, target.mesh.position, 0xffff00, true);
+                            }
+                        });
+                        STATE.turretTimer = 0;
+                    }
+
+                    this.logicCombat();
+                }
+
+                this.logicBuildings(); // Run passive effects (Miners, Healers, EMP)
+
+                this.updateEntities();
+
+                if (baseGroup.visible) {
+                    baseMesh.rotation.y += 0.01;
+                    baseMesh.position.y = 8 + Math.sin(Date.now() * 0.002);
+                }
+            },
+
+            logicBuildings: function () {
+                STATE.buildingTimer++;
+                // Pulse Cannons: AOE Damage every 120 frames (~2s)
+                if (STATE.buildingTimer % 120 === 0 && STATE.pulseCannons.length > 0) {
+                    STATE.pulseCannons.forEach(p => {
+                        this.createExplosion(p.pos, 0x00ffff, 4); // Visual Pulse
+                        // Finding mobs in range
+                        for (let j = mobs.length - 1; j >= 0; j--) {
+                            const m = mobs[j];
+                            if (m.mesh.position.distanceTo(p.pos) < 25) {
+                                this.hitMob(j, 30); // 30 Damage
+                                this.createExplosion(m.mesh.position, 0x0000ff, 0.8);
+                            }
+                        }
+                    });
+                }
+
+                // Healers: +2% HP every 600 frames (~10s)
+                if (STATE.buildingTimer % 600 === 0 && STATE.healers.length > 0) {
+                    const heal = STATE.healers.length * 2;
+                    if (STATE.baseHp < STATE.baseMaxHp) {
+                        STATE.baseHp = Math.min(STATE.baseMaxHp, STATE.baseHp + heal);
+                        this.notify(`维修站: 基地修复 +${heal}%`);
+                        this.updateUI();
+                    }
+                }
+
+                // EMP: Stun every 180 frames (~3s)
+                if (STATE.buildingTimer % 180 === 0 && STATE.empTowers.length > 0) {
+                    STATE.empTowers.forEach(t => {
+                        this.createExplosion(t.pos, 0x00ffff, 3); // Visual Pulse
+                        mobs.forEach(m => {
+                            if (m.mesh.position.distanceTo(t.pos) < 25) {
+                                m.stun = 60; // Stun for 1s
+                                this.createExplosion(m.mesh.position, 0x0000ff, 0.5);
+                            }
+                        });
+                    });
+                }
             },
 
             triggerDaybreak: function () {
@@ -520,29 +726,46 @@
             },
 
             setupBuildSlots: function () {
-                if (buildSlots.length === 0 || STATE.wave === 1) {
-                    this.clearBuildSlots();
-                    this.addBuildSlot(new THREE.Vector3(15, 0, 0), 'turret', '建造防御塔', 100);
-                    this.addBuildSlot(new THREE.Vector3(-15, 0, 0), 'turret', '建造防御塔', 100);
-                    this.addBuildSlot(new THREE.Vector3(0, 0, 15), 'wall', '加固城墙', 50);
-                    // Soldier camp always available to upgrade workforce
-                    this.addBuildSlot(new THREE.Vector3(0, 0, -15), 'soldier', '招募士兵', 150);
-                } else {
-                    buildSlots.forEach(s => { if (!s.built) s.labelEl.style.display = 'block'; });
+                this.clearBuildSlots();
+
+                // Day 1: Wall + Turret 1 (Right)
+                if (STATE.wave >= 1) {
+                    if (!STATE.flags.wall) this.addBuildSlot(new THREE.Vector3(0, 0, 15), 'wall', '加固城墙', 50, 'wall');
+                    if (!STATE.flags.turret1) this.addBuildSlot(new THREE.Vector3(15, 0, 0), 'turret', '建造防御塔', 100, 'turret1');
+
+                    // Allow previous unbuilt if any? (Implied by checking flags)
+                }
+
+                // Day 2: Soldier + Turret 2 (Left)
+                if (STATE.wave >= 2) {
+                    if (!STATE.flags.soldier) this.addBuildSlot(new THREE.Vector3(0, 0, -15), 'soldier', '招募士兵', 150, 'soldier');
+                    if (!STATE.flags.turret2) this.addBuildSlot(new THREE.Vector3(-15, 0, 0), 'turret', '建造防御塔', 100, 'turret2');
+                }
+
+                // Day 3+: Advanced Buildings
+                if (STATE.wave >= 3) {
+                    this.addBuildSlot(new THREE.Vector3(25, 0, 10), 'pulse', '电磁炮', 250);
+                    this.addBuildSlot(new THREE.Vector3(-10, 0, -10), 'healer', '维修站', 150);
+                    this.addBuildSlot(new THREE.Vector3(0, 0, 25), 'emp', '电磁干扰塔', 300);
                 }
             },
 
-            addBuildSlot: function (pos, type, name, cost) {
-                const geo = new THREE.BoxGeometry(4, 0.2, 4);
-                const mat = new THREE.MeshBasicMaterial({ color: CONFIG.colors.buildGhost, transparent: true, opacity: 0.3 });
+            addBuildSlot: function (pos, type, name, cost, id = null) {
+                // Changed to Ring for "Ground Circle" look
+                const geo = new THREE.RingGeometry(2.5, 3, 32);
+                const mat = new THREE.MeshBasicMaterial({ color: CONFIG.colors.buildGhost, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
                 const mesh = new THREE.Mesh(geo, mat);
+                mesh.rotation.x = -Math.PI / 2; // Lay flat on ground
                 mesh.position.copy(pos);
+                // Lift slightly above ground to avoid z-fighting
+                mesh.position.y = 0.1;
+
                 buildSlotGroup.add(mesh);
                 const label = document.createElement('div');
                 label.className = 'build-label';
                 label.innerHTML = `${name}<br>💰 ${cost}`;
                 document.getElementById('world-labels').appendChild(label);
-                buildSlots.push({ mesh, type, name, cost, built: false, labelEl: label, basePos: pos.clone() });
+                buildSlots.push({ mesh, type, name, cost, built: false, labelEl: label, basePos: pos.clone(), id });
             },
 
             checkBuildInteraction: function () {
@@ -585,12 +808,17 @@
 
             performBuild: function (slot) {
                 STATE.gold -= slot.cost;
+                STATE.buildsThisDay++;
 
                 this.createExplosion(slot.mesh.position, 0x00ff00, 2);
                 this.notify(`建造成功: ${slot.name}`);
 
                 if (slot.type === 'turret') {
                     STATE.turretCount++;
+                    // Identify which turret it is based on ID (simple check)
+                    if (slot.id === 'turret1') STATE.flags.turret1 = true;
+                    if (slot.id === 'turret2') STATE.flags.turret2 = true;
+
                     const tBase = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 2, 1, 8), new THREE.MeshStandardMaterial({ color: 0x555555 }));
                     const tCannon = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 3), new THREE.MeshStandardMaterial({ color: 0x0088ff }));
                     tCannon.position.y = 1.5; tCannon.position.z = 1;
@@ -601,6 +829,7 @@
                 }
                 else if (slot.type === 'wall') {
                     STATE.wallLevel++;
+                    STATE.flags.wall = true;
                     // Changed to Solid material, slightly transparent
                     const w = new THREE.Mesh(new THREE.CylinderGeometry(15, 15, 4, 32, 1, true), new THREE.MeshStandardMaterial({
                         color: 0x00ffff,
@@ -614,14 +843,45 @@
                     slot.built = true; slot.mesh.visible = false; slot.labelEl.style.display = 'none';
                 }
                 else if (slot.type === 'soldier') {
+                    STATE.flags.soldier = true;
                     // Spawn a soldier immediately
                     this.spawnSoldier();
                     // Do NOT hide slot, allow buying more? Or hide for this day?
                     // Let's hide for this day to keep it simple.
                     slot.built = true; slot.mesh.visible = false; slot.labelEl.style.display = 'none';
                 }
+                else if (slot.type === 'pulse') {
+                    STATE.pulseCannons.push({ level: 1, pos: slot.mesh.position.clone() });
+                    const p = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 6), new THREE.MeshStandardMaterial({ color: 0x9b59b6 }));
+                    p.position.copy(slot.mesh.position); p.position.y = 3;
+                    const coil = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.2, 8, 16), new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00aaaa }));
+                    coil.rotation.x = Math.PI / 2; coil.position.y = 2;
+                    p.add(coil);
+                    baseGroup.add(p);
+                    slot.built = true; slot.mesh.visible = false; slot.labelEl.style.display = 'none';
+                }
+                else if (slot.type === 'healer') {
+                    STATE.healers.push({ level: 1 });
+                    const h = new THREE.Mesh(new THREE.BoxGeometry(3, 3, 3), new THREE.MeshStandardMaterial({ color: 0x2ecc71 }));
+                    h.position.copy(slot.mesh.position); h.position.y = 1.5;
+                    const cross = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1, 1), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+                    const cross2 = new THREE.Mesh(new THREE.BoxGeometry(1, 3.2, 1), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+                    h.add(cross); h.add(cross2);
+                    baseGroup.add(h);
+                    slot.built = true; slot.mesh.visible = false; slot.labelEl.style.display = 'none';
+                }
+                else if (slot.type === 'emp') {
+                    STATE.empTowers.push({ level: 1, pos: slot.mesh.position.clone() });
+                    const e = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 8), new THREE.MeshStandardMaterial({ color: 0x3498db }));
+                    e.position.copy(slot.mesh.position); e.position.y = 4;
+                    const ring = new THREE.Mesh(new THREE.TorusGeometry(2, 0.2, 8, 32), new THREE.MeshBasicMaterial({ color: 0x00ffff }));
+                    ring.rotation.x = Math.PI / 2; ring.position.y = 2;
+                    e.add(ring);
+                    baseGroup.add(e);
+                    slot.built = true; slot.mesh.visible = false; slot.labelEl.style.display = 'none';
+                }
 
-                if (!STATE.dayObjectiveMet) {
+                if (!STATE.dayObjectiveMet && STATE.buildsThisDay >= 2) {
                     STATE.dayObjectiveMet = true;
                     setTimeout(() => this.autoEndDay(), 2000);
                 }
@@ -631,7 +891,7 @@
             spawnSoldier: function () {
                 STATE.soldierCount++;
                 const geo = new THREE.BoxGeometry(1, 2, 1);
-                const mat = new THREE.MeshStandardMaterial({ color: 0xffff00 }); // Yellow soldiers
+                const mat = new THREE.MeshStandardMaterial({ color: 0x4488ff }); // Blue soldiers
                 const mesh = new THREE.Mesh(geo, mat);
                 mesh.position.set(0, 1, 0);
                 scene.add(mesh);
@@ -694,140 +954,7 @@
                 });
             },
 
-            updateGuideArrow: function () {
-                if (STATE.phase !== 'DAY') return;
 
-                // Priority 1: Uncollected High Value Items? Or just nearest item.
-                let target = null;
-                let minD = 9999;
-
-                // Find nearest item
-                if (items.length > 0) {
-                    items.forEach(it => {
-                        const d = playerGroup.position.distanceTo(it.mesh.position);
-                        if (d < minD) { minD = d; target = it.mesh; }
-                    });
-                }
-
-                // If no items, or if enough money, point to nearest affordable build slot
-                if (target === null || STATE.gold >= 100) {
-                    // Check build slots
-                    buildSlots.forEach(s => {
-                        if (s.built) return;
-                        // Prioritize affordable ones
-                        if (STATE.gold >= s.cost) {
-                            const d = playerGroup.position.distanceTo(s.mesh.position);
-                            if (d < minD) { minD = d; target = s.mesh; }
-                        }
-                    });
-                }
-
-                if (target) {
-                    guideArrow.visible = true;
-                    // Point arrow
-                    const playerPos = playerGroup.position.clone();
-                    const targetPos = target.position.clone();
-
-                    // The arrow is child of player, so we need local rotation
-                    // Actually simpler: LookAt in world space then convert? 
-                    // Or just use Math.atan2 relative to player
-                    const dx = targetPos.x - playerPos.x;
-                    const dz = targetPos.z - playerPos.z;
-                    const angle = Math.atan2(dx, dz); // 0 is +Z? 
-                    // ThreeJS rotation y: 0 is +Z. atan2(x, z) gives angle from +Z clockwise approx depending on coord
-
-                    // Arrow rotation Y relative to player:
-                    // Player rotation Y changes with movement. 
-                    // Easier: Make Arrow NOT child of player, but follow position.
-                    // But I made it child. 
-                    // To point to world target while being child of rotating parent:
-                    // ArrowWorldRot = TargetAngle
-                    // ArrowLocalRot = ArrowWorldRot - ParentWorldRot
-
-                    guideArrow.rotation.y = angle - playerGroup.rotation.y;
-                } else {
-                    guideArrow.visible = false;
-                }
-            },
-
-            generateWilds: function () {
-                for (let i = 0; i < 30 + STATE.wave * 10; i++) {
-                    const bx = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshStandardMaterial({ color: 0xffd700 }));
-                    const angle = Math.random() * Math.PI * 2;
-                    const r = 40 + Math.random() * 80;
-                    const x = Math.sin(angle) * r;
-                    const z = Math.cos(angle) * r;
-                    bx.position.set(x, 1, z);
-                    bx.rotation.y = Math.random();
-                    scene.add(bx);
-                    items.push({ mesh: bx, val: 30 + Math.floor(Math.random() * 30) });
-                }
-            },
-
-            update: function () {
-                if (STATE.phase === 'SKILL') return;
-                this.handleInput();
-
-                if (STATE.phase === 'DAY') {
-                    camera.position.x = playerGroup.position.x;
-                    camera.position.z = playerGroup.position.z + 40;
-                    camera.lookAt(playerGroup.position);
-
-                    const range = CONFIG.mapRange;
-                    const pctX = 50 + (playerGroup.position.x / range) * 50;
-                    const pctY = 50 + (playerGroup.position.z / range) * 50;
-                    document.getElementById('map-player').style.left = pctX + '%';
-                    document.getElementById('map-player').style.top = pctY + '%';
-
-                    this.checkBuildInteraction();
-                    this.updateSoldiers();
-                    this.updateGuideArrow();
-
-                    for (let i = items.length - 1; i >= 0; i--) {
-                        const it = items[i];
-                        if (playerGroup.position.distanceTo(it.mesh.position) < STATE.player.pickupRange) {
-                            STATE.gold += it.val;
-                            this.createExplosion(it.mesh.position, 0xffff00, 1.5);
-                            this.notify(`+${it.val} G`);
-                            scene.remove(it.mesh);
-                            items.splice(i, 1);
-                            this.updateUI();
-                        }
-                    }
-                }
-
-                if (STATE.phase === 'NIGHT') {
-                    STATE.spawnTimer++;
-                    let spawnRate = (STATE.wave === 1) ? 30 : Math.max(10, 40 - STATE.wave * 2);
-                    if (STATE.spawnTimer > spawnRate) {
-                        this.spawnMob();
-                        STATE.spawnTimer = 0;
-                    }
-
-                    STATE.turretTimer++;
-                    if (turretGroup.children.length > 0 && STATE.turretTimer > 40) {
-                        turretGroup.children.forEach(t => {
-                            const target = this.getClosestMob(new THREE.Vector3(0, 0, 0));
-                            if (target) {
-                                const tPos = new THREE.Vector3();
-                                t.children[1].getWorldPosition(tPos);
-                                t.lookAt(target.mesh.position);
-                                this.spawnBullet(tPos, target.mesh.position, 0xffff00, true);
-                            }
-                        });
-                        STATE.turretTimer = 0;
-                    }
-
-                    this.logicCombat();
-                }
-
-                this.updateEntities();
-
-                if (baseGroup.visible) {
-                    baseMesh.rotation.y += 0.01;
-                    baseMesh.position.y = 8 + Math.sin(Date.now() * 0.002);
-                }
-            },
 
             spawnMob: function () {
                 const geo = new THREE.BoxGeometry(2, 2, 2);
@@ -838,7 +965,20 @@
                 mesh.position.set(Math.sin(angle) * r, 1, Math.cos(angle) * r);
                 mesh.castShadow = true;
                 scene.add(mesh);
-                mobs.push({ mesh, hp: 20 + STATE.wave * 5, speed: 0.15 + STATE.wave * 0.01 });
+                mobs.push({ mesh, hp: 20 + STATE.wave * 5, speed: 0.15 + STATE.wave * 0.01, isBoss: false });
+            },
+
+            spawnBoss: function () {
+                const geo = new THREE.DodecahedronGeometry(5);
+                const mat = new THREE.MeshStandardMaterial({ color: 0x8e44ad, emissive: 0x4b0082 });
+                const mesh = new THREE.Mesh(geo, mat);
+                const angle = Math.random() * Math.PI * 2; // Spawn random direction
+                const r = 60;
+                mesh.position.set(Math.sin(angle) * r, 5, Math.cos(angle) * r);
+                mesh.castShadow = true;
+                scene.add(mesh);
+                // Boss Stats: Huge HP, Slower Speed
+                mobs.push({ mesh, hp: 500, speed: 0.08, isBoss: true });
             },
 
             logicCombat: function () {
@@ -857,6 +997,12 @@
 
                 mobs.forEach(m => {
                     const dest = new THREE.Vector3(0, 0, 0);
+
+                    if (m.stun && m.stun > 0) {
+                        m.stun--;
+                        return; // Skip movement if stunned
+                    }
+
                     const dir = new THREE.Vector3().subVectors(dest, m.mesh.position).normalize();
                     m.mesh.position.add(dir.multiplyScalar(m.speed));
                     m.mesh.lookAt(dest);
@@ -916,44 +1062,7 @@
                 }
             },
 
-            addXp: function (amount) {
-                STATE.xp += amount;
-                if (STATE.xp >= STATE.xpToNext) {
-                    STATE.xp = 0;
-                    STATE.xpToNext = Math.floor(STATE.xpToNext * 1.5);
-                    STATE.level++;
-                    this.showSkillSelect();
-                }
-                this.updateUI();
-            },
 
-            showSkillSelect: function () {
-                const oldPhase = STATE.phase;
-                STATE.phase = 'SKILL';
-                const panel = document.getElementById('skill-panel');
-                const container = document.getElementById('skill-container');
-                container.innerHTML = '';
-                panel.style.display = 'flex';
-
-                const skills = [
-                    { name: "强力射击", icon: "💥", desc: "伤害 +30%", act: () => STATE.player.damage *= 1.3 },
-                    { name: "急速射击", icon: "🌪️", desc: "攻速 +20%", act: () => STATE.player.atkSpeed = Math.max(5, STATE.player.atkSpeed * 0.8) },
-                    { name: "多重箭矢", icon: "🏹", desc: "箭矢数量 +1", act: () => STATE.player.projectileCount++ }
-                ];
-
-                const choices = skills.sort(() => 0.5 - Math.random()).slice(0, 2);
-                choices.forEach(skill => {
-                    const card = document.createElement('div');
-                    card.className = 'skill-card';
-                    card.innerHTML = `<div class="skill-icon">${skill.icon}</div><div class="skill-info"><div class="skill-title">${skill.name}</div><div class="skill-desc">${skill.desc}</div></div>`;
-                    card.onclick = () => {
-                        skill.act();
-                        panel.style.display = 'none';
-                        STATE.phase = oldPhase;
-                    };
-                    container.appendChild(card);
-                });
-            },
 
             handleInput: function () {
                 let dx = joystick.x; let dy = joystick.y;
