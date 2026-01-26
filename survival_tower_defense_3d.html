@@ -1512,19 +1512,7 @@
                     }
                 }
 
-                // Player vs Loots
-                for (let i = this.loots.length - 1; i >= 0; i--) {
-                    const loot = this.loots[i];
-                    const dx = this.player.x - loot.x;
-                    const dz = this.player.z - loot.z;
-                    const dist = Math.sqrt(dx * dx + dz * dz);
-
-                    if (dist < this.player.size + 2) {
-                        this.player.wood += loot.wood;
-                        this.scene.remove(loot.mesh);
-                        this.loots.splice(i, 1);
-                    }
-                }
+                // (Old Player vs Loots block removed)
 
                 // Player vs Base (deposit wood)
                 const baseDx = this.player.x - this.base.x;
