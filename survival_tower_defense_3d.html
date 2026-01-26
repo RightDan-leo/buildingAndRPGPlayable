@@ -145,6 +145,12 @@
             border: 2px solid #00ffff;
         }
 
+        .turret-d {
+            background: linear-gradient(135deg, #32cd32 0%, #006400 100%);
+            color: #fff;
+            border: 2px solid #00ff00;
+        }
+
         .turret-btn small {
             display: block;
             margin-top: 8px;
@@ -284,6 +290,10 @@
                 <button class="turret-btn worker-btn" onclick="game.recruitWorker()">
                     <strong>招募工兵 (Worker)</strong>
                     <small>自动收集资源<br>无需操作 / 消耗: 50 木头</small>
+                </button>
+                <button class="turret-btn turret-d" onclick="game.selectTurret('D')">
+                    <strong>医疗塔 (Repair)</strong>
+                    <small>恢复基地生命<br>5 HP/秒 / 消耗: 1 木头/次</small>
                 </button>
             </div>
         </div>
@@ -525,6 +535,7 @@
                     turretA: new THREE.MeshPhongMaterial({ color: 0x333333, shininess: 50 }),
                     turretB: new THREE.MeshPhongMaterial({ color: 0xff8c00, shininess: 50 }),
                     turretC: new THREE.MeshPhongMaterial({ color: 0x8b008b, shininess: 50 }),
+                    turretD: new THREE.MeshPhongMaterial({ color: 0x32cd32, shininess: 50 }),
                     projectile: new THREE.MeshBasicMaterial({ color: 0xffff00 }),
                     projectileGlow: new THREE.MeshBasicMaterial({ color: 0xff6600 })
                 };
@@ -932,24 +943,31 @@
                 switch (type) {
                     case 'A':
                         material = this.materials.turretA;
-                        range = 20;
-                        fireRate = 2 / 9; // Increased 3x speed again (was 2/3, now 2/9)
+                        range = 25; // Slight range buff
+                        fireRate = 4.5; // 4.5 shots/s
                         damage = 10;
                         splash = 0;
                         break;
                     case 'B':
                         material = this.materials.turretB;
-                        range = 12;
-                        fireRate = 0.5 / 9; // Increased 3x speed again (was 0.5/3, now 0.5/9)
+                        range = 15; // Buff range slightly (was 12)
+                        fireRate = 18; // 18 shots/s
                         damage = 1;
                         splash = 0;
                         break;
                     case 'C':
                         material = this.materials.turretC;
-                        range = 35;
-                        fireRate = 5 / 9; // Increased 3x speed again (was 5/3, now 5/9)
+                        range = 40; // Buff range
+                        fireRate = 1.8; // 1.8 shots/s
                         damage = 100;
                         splash = 10;
+                        break;
+                    case 'D':
+                        material = this.materials.turretD;
+                        range = 0; // Self
+                        fireRate = 1; // 1 heal/sec
+                        damage = -5; // Negative damage = Heal
+                        splash = 0;
                         break;
                 }
 
@@ -1319,11 +1337,31 @@
                 });
             },
 
-            updateTurrets(dt) {
+            handleTurrets(dt) {
                 this.base.turrets.forEach(turret => {
                     turret.cooldown -= dt;
 
                     if (turret.cooldown <= 0) {
+
+                        // HEALER LOGIC
+                        if (turret.type === 'D') {
+                            if (this.base.hp < this.base.maxHp && this.base.wood >= 1) {
+                                this.base.hp = Math.min(this.base.maxHp, this.base.hp + 5);
+                                this.base.wood -= 1; // Cost 1 wood per heal
+                                turret.cooldown = 1; // 1 sec cooldown
+
+                                // Visual & Audio
+                                this.audio.play('collect'); // Reuse nice chime sound
+
+                                // Floating text effect (simple console for now or minimal visual)
+                                // We can make the turret jump a bit
+                                turret.mesh.position.y = 1;
+                                setTimeout(() => { if (turret.mesh) turret.mesh.position.y = 0; }, 200);
+                            }
+                            return;
+                        }
+
+                        // ATTACK LOGIC (A, B, C)
                         let target = null;
                         let minDist = turret.range;
 
