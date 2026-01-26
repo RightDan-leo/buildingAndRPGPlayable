@@ -227,10 +227,16 @@
         <div><span class="stat-label">Base HP:</span> <span id="base-hp" class="stat-value hp-value">200</span></div>
         <div><span class="stat-label">Base Wood:</span> <span id="base-wood" class="stat-value wood-value">0</span>
         </div>
-        <div><span class="stat-label">Your Wood:</span> <span id="player-wood" class="stat-value player-wood">0</span>
-        </div>
-        <div><span class="stat-label">Enemies:</span> <span id="enemy-count" class="stat-value">0</span></div>
-        <div><span class="stat-label">Spawn Rate:</span> <span id="spawn-rate" class="stat-value">1.0/s</span></div>
+        <div><span class="stat-label">Workers:</span> <span id="worker-count" class="stat-value"
+                style="color:#00ffff">0</span></div>
+        <div><span class="stat-label">Distance:</span> <span id="player-wood"
+                class="stat-value player-wood">2000m</span></div>
+
+        <button onclick="game.recruitWorker()"
+            style="margin-top:10px; padding:5px 10px; background:#444; border:1px solid #888; color:white; cursor:pointer;"
+            title="Cost: 100 Wood">
+            👷 Recruit Worker (100 Wood)
+        </button>
     </div>
 
     <!-- Controls Hint -->
@@ -318,6 +324,7 @@
             trees: [],
             loots: [],
             projectiles: [],
+            workers: [],
 
             // 3D meshes
             baseMesh: null,
@@ -341,6 +348,9 @@
 
             // Stats
             enemiesKilled: 0,
+
+            // Input
+            keys: {},
 
             // Materials (shared)
             materials: {},
@@ -409,6 +419,14 @@
                             o.start(now + t);
                             o.stop(now + t + 0.5);
                         });
+                    } else if (type === 'collect') {
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(600, now);
+                        osc.frequency.linearRampToValueAtTime(800, now + 0.1);
+                        gain.gain.setValueAtTime(0.1, now);
+                        gain.gain.linearRampToValueAtTime(0, now + 0.1);
+                        osc.start(now);
+                        osc.stop(now + 0.1);
                     }
                 }
             },
@@ -540,20 +558,28 @@
                     this.scene.add(line);
                 }
 
-                // Create Destination Gate at Z = -2000
-                const gateGroup = new THREE.Group();
-                const colGeo = new THREE.BoxGeometry(2, 20, 2);
-                const colMat = new THREE.MeshPhongMaterial({ color: 0x00ffff, emissive: 0x008888 });
+                // Create Destination Beacon at Z = -2000
+                // Massive visual cue
+                const beaconGroup = new THREE.Group();
+                const beamGeo = new THREE.CylinderGeometry(5, 5, 200, 32, 1, true); // Tall beam
+                const beamMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.3, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
+                const beam = new THREE.Mesh(beamGeo, beamMat);
+                beam.position.y = 100;
 
-                const leftCol = new THREE.Mesh(colGeo, colMat); leftCol.position.set(-15, 10, -2000);
-                const rightCol = new THREE.Mesh(colGeo, colMat); rightCol.position.set(15, 10, -2000);
-                const topGeo = new THREE.BoxGeometry(32, 2, 2);
-                const topCol = new THREE.Mesh(topGeo, colMat); topCol.position.set(0, 20, -2000);
+                // Core
+                const coreGeo = new THREE.CylinderGeometry(2, 2, 220, 16);
+                const coreMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
+                const core = new THREE.Mesh(coreGeo, coreMat);
+                core.position.y = 100;
 
-                gateGroup.add(leftCol); gateGroup.add(rightCol); gateGroup.add(topCol);
+                // Label (Mock with a Billboard box for now or just rely on the beam)
+                // Assuming Beam is enough
 
-                // Destination Text (Simple Boxes for now or just the gate)
-                this.scene.add(gateGroup);
+                beaconGroup.add(beam);
+                beaconGroup.add(core);
+                beaconGroup.position.set(0, 0, -2000);
+
+                this.scene.add(beaconGroup);
                 this.destinationZ = -2000;
             },
 
@@ -564,6 +590,9 @@
                 this.loots.forEach(l => this.scene.remove(l.mesh));
                 this.projectiles.forEach(p => this.scene.remove(p.mesh));
                 this.turretMeshes.forEach(t => this.scene.remove(t));
+                if (this.workers) {
+                    this.workers.forEach(w => this.scene.remove(w.mesh));
+                }
 
                 if (this.baseMesh) this.scene.remove(this.baseMesh);
                 if (this.playerMesh) this.scene.remove(this.playerMesh);
@@ -573,6 +602,7 @@
                 this.loots = [];
                 this.projectiles = [];
                 this.turretMeshes = [];
+                this.workers = [];
 
                 // Create base
                 this.base = {
@@ -1039,6 +1069,7 @@
                 this.updateEnemies(dt);
                 this.updateTurrets(dt);
                 this.updateProjectiles(dt);
+                this.updateWorkers(dt);
                 this.spawnEnemies(dt);
                 this.cleanupObjects();
                 this.checkCollisions();
@@ -1048,6 +1079,95 @@
                 if (this.trees.length < 50) {
                     this.addNewTrees();
                 }
+            },
+
+            recruitWorker() {
+                if (this.base.wood >= 100) {
+                    this.base.wood -= 100;
+                    this.createWorker();
+                    this.audio.play('build');
+                }
+            },
+
+            createWorker() {
+                const workerGroup = new THREE.Group();
+                // Little robot visuals
+                const body = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 1.5), new THREE.MeshStandardMaterial({ color: 0x00ffff }));
+                body.position.y = 0.75;
+                const head = new THREE.Mesh(new THREE.SphereGeometry(0.6), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+                head.position.y = 1.8;
+                workerGroup.add(body); workerGroup.add(head);
+
+                workerGroup.position.copy(this.baseMesh.position);
+                workerGroup.position.x += (Math.random() - 0.5) * 10;
+
+                this.scene.add(workerGroup);
+
+                this.workers.push({
+                    mesh: workerGroup,
+                    state: 'IDLE', // IDLE, MOVING, RETURNING
+                    target: null,
+                    speed: 20
+                });
+            },
+
+            updateWorkers(dt) {
+                this.workers.forEach(w => {
+                    const wPos = w.mesh.position;
+
+                    if (w.state === 'IDLE') {
+                        // Find closest loot
+                        let closest = null;
+                        let minDist = 50; // Detection range
+
+                        this.loots.forEach(l => {
+                            const d = wPos.distanceTo(l.mesh.position);
+                            if (d < minDist) {
+                                minDist = d;
+                                closest = l;
+                            }
+                        });
+
+                        if (closest) {
+                            w.target = closest;
+                            w.state = 'MOVING';
+                        } else {
+                            // Follow base if no loot
+                            const distToBase = wPos.distanceTo(this.baseMesh.position);
+                            if (distToBase > 15) {
+                                // Move to base
+                                const dir = new THREE.Vector3().subVectors(this.baseMesh.position, wPos).normalize();
+                                wPos.add(dir.multiplyScalar(w.speed * dt));
+                                w.mesh.lookAt(this.baseMesh.position);
+                            }
+                        }
+                    }
+                    else if (w.state === 'MOVING') {
+                        if (!w.target || !this.loots.includes(w.target)) {
+                            w.state = 'IDLE';
+                            w.target = null;
+                            return;
+                        }
+
+                        const dir = new THREE.Vector3().subVectors(w.target.mesh.position, wPos).normalize();
+                        wPos.add(dir.multiplyScalar(w.speed * dt));
+                        w.mesh.lookAt(w.target.mesh.position);
+
+                        if (wPos.distanceTo(w.target.mesh.position) < 2) {
+                            // Collect
+                            this.audio.play('collect'); // Collect sound
+                            this.base.wood += w.target.wood;
+
+                            // Remove loot
+                            this.scene.remove(w.target.mesh);
+                            const idx = this.loots.indexOf(w.target);
+                            if (idx > -1) this.loots.splice(idx, 1);
+
+                            w.target = null;
+                            w.state = 'IDLE'; // Instant deposit for simplicity as per plan
+                        }
+                    }
+                });
             },
 
             updateBase(dt) {
@@ -1222,28 +1342,7 @@
                 );
 
                 this.projectiles.push(proj);
-                this.playShootSound();
-            },
-
-            playShootSound() {
-                try {
-                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                    const oscillator = audioContext.createOscillator();
-                    const gainNode = audioContext.createGain();
-
-                    oscillator.connect(gainNode);
-                    gainNode.connect(audioContext.destination);
-
-                    oscillator.type = 'sawtooth';
-                    oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
-                    oscillator.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.05);
-
-                    gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.05);
-
-                    oscillator.start(audioContext.currentTime);
-                    oscillator.stop(audioContext.currentTime + 0.05);
-                } catch (e) { }
+                this.audio.play('shoot');
             },
 
             updateProjectiles(dt) {
@@ -1386,13 +1485,16 @@
             checkCollisions() {
                 // Player vs Trees
                 for (let i = this.trees.length - 1; i >= 0; i--) {
+                    // Auto-Collect Trees logic -> Change to Chop -> Spawn Loot
                     const tree = this.trees[i];
-                    const dx = this.player.x - tree.x;
-                    const dz = this.player.z - tree.z;
-                    const dist = Math.sqrt(dx * dx + dz * dz);
+                    const dist = this.playerMesh.position.distanceTo(tree.mesh.position);
+                    if (dist < 3) { // Close to tree
+                        // Chop!
+                        this.audio.play('chop');
 
-                    if (dist < this.player.size + tree.radius) {
-                        this.player.wood += 10;
+                        // Spawn Loot instead of direct wood
+                        this.createLoot(tree.x, tree.z);
+
                         this.scene.remove(tree.mesh);
                         this.trees.splice(i, 1);
                     }
@@ -1457,6 +1559,22 @@
                         if (this.base.hp <= 0) {
                             this.triggerGameOver();
                         }
+                    }
+                }
+
+                // Player vs Loots (RESTORED)
+                for (let i = this.loots.length - 1; i >= 0; i--) {
+                    const loot = this.loots[i];
+                    const dx = this.player.x - loot.x;
+                    const dz = this.player.z - loot.z;
+                    const dist = Math.sqrt(dx * dx + dz * dz);
+
+                    if (dist < this.player.size + 2) {
+                        // Collect
+                        this.audio.play('collect');
+                        this.base.wood += loot.wood;
+                        this.scene.remove(loot.mesh);
+                        this.loots.splice(i, 1);
                     }
                 }
 
@@ -1577,10 +1695,10 @@
             // UI
             // ==========================================
             updateUI() {
-                document.getElementById('base-hp').textContent = Math.max(0, Math.floor(this.base.hp));
-                document.getElementById('base-wood').textContent = this.base.wood;
-                document.getElementById('player-wood').textContent = this.player.wood;
-                document.getElementById('enemy-count').textContent = this.enemies.length;
+                document.getElementById('base-hp').innerText = Math.ceil(this.base.hp);
+                document.getElementById('base-wood').innerText = this.base.wood; // Using Base Wood as Ammo
+                document.getElementById('worker-count').innerText = this.workers.length;
+                document.getElementById('player-wood').innerText = Math.abs(Math.floor((this.base.z - this.destinationZ) / 10)) + "m"; // Reuse for Distance
                 const spawnPerSecond = (1 / this.enemySpawnRate).toFixed(1);
                 document.getElementById('spawn-rate').textContent = spawnPerSecond + '/s';
             },
