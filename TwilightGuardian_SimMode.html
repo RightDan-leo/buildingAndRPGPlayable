@@ -274,6 +274,22 @@
     <div id="game-container"></div>
     <button id="restart-btn" onclick="game.resetGame()">↺ 重新开始</button>
 
+    <!-- Ad Modal Structure -->
+    <div id="ad-modal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:999; flex-direction:column; align-items:center; justify-content:center; color:white;">
+        <h1 style="font-size:40px; text-shadow:0 0 10px gold; margin-bottom:20px;">🎉 第三夜防守成功！</h1>
+        <p style="font-size:20px; max-width:600px; text-align:center;">您已证明了自己是真正的微光守卫。想要体验更宏大的战争？</p>
+        <div
+            style="background:#222; padding:20px; border:2px solid gold; border-radius:15px; margin:30px; text-align:center;">
+            <h2 style="color:gold; margin-top:0;">万龙觉醒 (Call of Dragons)</h2>
+            <p>巨兽震颤大地，军团集结待命！</p>
+            <button onclick="window.open('https://callofdragons.farlightgames.com/', '_blank')"
+                style="background:#e74c3c; color:white; border:none; padding:15px 40px; font-size:24px; border-radius:10px; cursor:pointer; font-weight:bold; box-shadow:0 5px #c0392b;">立即下载</button>
+        </div>
+        <button onclick="document.getElementById('ad-modal').style.display='none'; game.resetGame();"
+            style="background:transparent; border:1px solid #aaa; color:#aaa; padding:10px 20px; border-radius:5px; cursor:pointer; margin-top:20px;">关闭并重新开始</button>
+    </div>
+
     <div id="ui-layer">
         <div class="hud-top">
             <div style="display: flex; flex-direction: column;">
@@ -410,15 +426,18 @@
             },
 
             resetState: function () {
+                // Balance: Audio System
+                this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
                 STATE = {
-                    phase: 'NIGHT', gold: 0, level: 1, xp: 0, xpToNext: 100, // XP Balance: Increased from 35 to 100
+                    phase: 'NIGHT', gold: 0, level: 1, xp: 0, xpToNext: 20,
                     baseHp: 100, baseMaxHp: 100, baseEnergy: 0, energyPerKill: 2.5,
                     wave: 1, turretCount: 0, wallLevel: 0, soldierCount: 0,
-                    pulseCannons: [], healers: [], empTowers: [], // New Buildings (Miner removed)
-                    player: { hp: 100, damage: 10, atkSpeed: 30, projectileCount: 1, speed: 0.4, pickupRange: 3.5 }, // Nerf: atkSpeed 10 -> 30
+                    pulseCannons: [], healers: [], empTowers: [],
+                    player: { hp: 100, damage: 10, atkSpeed: 30, projectileCount: 1, speed: 0.4, pickupRange: 3.5 },
                     spawnTimer: 0, atkTimer: 0, turretTimer: 0, buildingTimer: 0, dayObjectiveMet: false,
-                    buildsThisDay: 0, // Track daily builds
-                    flags: { wall: false, turret1: false, turret2: false, soldier: false }, // Track unique buildings
+                    buildsThisDay: 0,
+                    flags: { wall: false, turret1: false, turret2: false, soldier: false },
                     bossSpawned: false
                 };
 
@@ -513,8 +532,8 @@
                 STATE.baseEnergy = 0;
                 STATE.bossSpawned = false; // Reset boss flag each night (though only used for W3)
 
-                if (STATE.wave === 1) { CONFIG.baseChargeMax = 30; STATE.energyPerKill = 2.5; }
-                else { CONFIG.baseChargeMax = 100; STATE.energyPerKill = 3; }
+                if (STATE.wave === 1) { CONFIG.baseChargeMax = 20; STATE.energyPerKill = 2.5; } // Reduced from 30 (-33%)
+                else { CONFIG.baseChargeMax = 70; STATE.energyPerKill = 3; } // Reduced from 100 (-30%)
 
                 scene.background = new THREE.Color(CONFIG.colors.nightBg);
                 scene.fog.color.setHex(CONFIG.colors.nightBg);
@@ -619,7 +638,7 @@
                         if (playerGroup.position.distanceTo(it.mesh.position) < STATE.player.pickupRange) {
                             STATE.gold += it.val;
                             this.createExplosion(it.mesh.position, 0xffff00, 1.5);
-                            this.notify(`+${it.val} G`);
+                            this.playSound('collect'); // Audio
                             scene.remove(it.mesh);
                             items.splice(i, 1);
                             this.updateUI();
@@ -636,9 +655,8 @@
                     }
 
                     STATE.spawnTimer++;
-                    // Difficulty Scaling: Wave 1 (60 - Easy), Wave 2 (15 - Fast), Wave 3+ (10 - Swarm)
-                    let spawnRate = (STATE.wave === 1) ? 60 : (STATE.wave === 2 ? 15 : 10);
-
+                    // Slower spawn rate: Wave 1 = 60 frames (1s), Higher waves = faster but capped at 20frames
+                    let spawnRate = (STATE.wave === 1) ? 60 : Math.max(20, 50 - STATE.wave * 3);
                     if (STATE.spawnTimer > spawnRate) {
                         this.spawnMob();
                         STATE.spawnTimer = 0;
@@ -715,13 +733,76 @@
             triggerDaybreak: function () {
                 for (let i = 0; i < 50; i++) this.createExplosion(new THREE.Vector3(0, 0, 0), 0xffffff, 2);
                 mobs.forEach(m => scene.remove(m.mesh)); mobs = [];
-                this.notify("☀️ 黎明到来！");
-                setTimeout(() => { this.startDay(); }, 2000);
+                // Check Ad Condition: End of Wave 3 Night
+                if (STATE.wave === 3 && STATE.phase === 'NIGHT') {
+                    document.getElementById('ad-modal').style.display = 'flex';
+                    this.playSound('levelup');
+                } else {
+                    setTimeout(() => { this.startDay(); }, 2000);
+                }
+            },
+
+            playSound: function (type) {
+                if (!this.audioCtx) return;
+                const osc = this.audioCtx.createOscillator();
+                const gain = this.audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(this.audioCtx.destination);
+
+                const now = this.audioCtx.currentTime;
+
+                if (type === 'shoot') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(600, now);
+                    osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                }
+                else if (type === 'hit') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(200, now);
+                    osc.frequency.exponentialRampToValueAtTime(50, now + 0.1);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                }
+                else if (type === 'build') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.linearRampToValueAtTime(800, now + 0.2);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.linearRampToValueAtTime(0, now + 0.5);
+                    osc.start(now);
+                    osc.stop(now + 0.5);
+                }
+                else if (type === 'levelup') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.setValueAtTime(600, now + 0.1);
+                    osc.frequency.setValueAtTime(900, now + 0.2);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.linearRampToValueAtTime(0, now + 1);
+                    osc.start(now);
+                    osc.stop(now + 1);
+                }
+                else if (type === 'collect') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(1000, now);
+                    osc.frequency.exponentialRampToValueAtTime(1500, now + 0.1);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                }
             },
 
             autoEndDay: function () {
                 STATE.wave++;
                 this.notify("🌙 建设完成，黑夜降临！");
+                this.playSound('build'); // Sound
                 setTimeout(() => { this.startNight(); }, 2000);
             },
 
@@ -736,17 +817,20 @@
                     // Allow previous unbuilt if any? (Implied by checking flags)
                 }
 
-                // Day 2: Soldier + Turret 2 (Left)
+                // Day 2: Soldier + Pulse Cannon (Left) + Healer (Back)
                 if (STATE.wave >= 2) {
                     if (!STATE.flags.soldier) this.addBuildSlot(new THREE.Vector3(0, 0, -15), 'soldier', '招募士兵', 150, 'soldier');
-                    if (!STATE.flags.turret2) this.addBuildSlot(new THREE.Vector3(-15, 0, 0), 'turret', '建造防御塔', 100, 'turret2');
+                    // Replaced 2nd Turret with Pulse Cannon (Left)
+                    this.addBuildSlot(new THREE.Vector3(-15, 0, 0), 'pulse', '电磁炮', 250);
+                    // Added Healer (Back Left)
+                    this.addBuildSlot(new THREE.Vector3(-10, 0, -10), 'healer', '维修站', 150);
                 }
 
-                // Day 3+: Advanced Buildings
+                // Day 3+: Advanced Buildings (EMP)
                 if (STATE.wave >= 3) {
-                    this.addBuildSlot(new THREE.Vector3(25, 0, 10), 'pulse', '电磁炮', 250);
-                    this.addBuildSlot(new THREE.Vector3(-10, 0, -10), 'healer', '维修站', 150);
-                    this.addBuildSlot(new THREE.Vector3(0, 0, 25), 'emp', '电磁干扰塔', 300);
+                    // Pulse and Healer moved to Day 2
+                    // Updated Position: Left of Main City (-25, 0, 0) instead of (0, 0, 25)
+                    this.addBuildSlot(new THREE.Vector3(-25, 0, 0), 'emp', '电磁干扰塔', 300);
                 }
             },
 
@@ -844,8 +928,10 @@
                 }
                 else if (slot.type === 'soldier') {
                     STATE.flags.soldier = true;
-                    // Spawn a soldier immediately
+                    // Spawn 2 soldiers immediately
                     this.spawnSoldier();
+                    this.spawnSoldier();
+                    this.notify("已招募 2 名士兵！");
                     // Do NOT hide slot, allow buying more? Or hide for this day?
                     // Let's hide for this day to keep it simple.
                     slot.built = true; slot.mesh.visible = false; slot.labelEl.style.display = 'none';
@@ -946,6 +1032,7 @@
                             items = items.filter(it => it !== s.target);
                             STATE.gold += s.target.val;
                             this.notify(`士兵获得 +${s.target.val} G`);
+                            this.playSound('collect'); // Audio
                             this.updateUI(); // Immediate gold? or manual return? Spec says "help gather", immediate is more satisfying for now
                             s.item = null;
                             s.state = 'IDLE'; // Find next
@@ -957,28 +1044,59 @@
 
 
             spawnMob: function () {
+                const group = new THREE.Group();
                 const geo = new THREE.BoxGeometry(2, 2, 2);
                 const mat = new THREE.MeshStandardMaterial({ color: 0xff4444 });
-                const mesh = new THREE.Mesh(geo, mat);
+                const body = new THREE.Mesh(geo, mat);
+                body.castShadow = true;
+                group.add(body);
+
+                // Health Bar
+                const hpBg = new THREE.Mesh(new THREE.BoxGeometry(2, 0.2, 0.05), new THREE.MeshBasicMaterial({ color: 0x550000 }));
+                hpBg.position.y = 2.5;
+                group.add(hpBg);
+
+                const hpFgGeo = new THREE.BoxGeometry(2, 0.2, 0.05);
+                hpFgGeo.translate(1, 0, 0); // Pivot to left
+                const hpFg = new THREE.Mesh(hpFgGeo, new THREE.MeshBasicMaterial({ color: 0x00ff00 }));
+                hpFg.position.set(-1, 2.5, 0.02); // Start at left edge, slightly in front
+                group.add(hpFg);
+
                 const angle = Math.random() * Math.PI * 2;
                 const r = 60;
-                mesh.position.set(Math.sin(angle) * r, 1, Math.cos(angle) * r);
-                mesh.castShadow = true;
-                scene.add(mesh);
-                mobs.push({ mesh, hp: 20 + STATE.wave * 5, speed: 0.15 + STATE.wave * 0.01, isBoss: false });
+                group.position.set(Math.sin(angle) * r, 1, Math.cos(angle) * r);
+                scene.add(group);
+
+                const maxHp = 20 + STATE.wave * 5;
+                mobs.push({ mesh: group, hp: maxHp, maxHp: maxHp, hpBar: hpFg, speed: 0.15 + STATE.wave * 0.01, isBoss: false });
             },
 
             spawnBoss: function () {
+                const group = new THREE.Group();
                 const geo = new THREE.DodecahedronGeometry(5);
                 const mat = new THREE.MeshStandardMaterial({ color: 0x8e44ad, emissive: 0x4b0082 });
-                const mesh = new THREE.Mesh(geo, mat);
-                const angle = Math.random() * Math.PI * 2; // Spawn random direction
+                const body = new THREE.Mesh(geo, mat);
+                body.castShadow = true;
+                group.add(body);
+
+                // Boss Health Bar (Larger)
+                const hpBg = new THREE.Mesh(new THREE.BoxGeometry(6, 0.5, 0.1), new THREE.MeshBasicMaterial({ color: 0x550000 }));
+                hpBg.position.y = 6.5;
+                group.add(hpBg);
+
+                const hpFgGeo = new THREE.BoxGeometry(6, 0.5, 0.1);
+                hpFgGeo.translate(3, 0, 0);
+                const hpFg = new THREE.Mesh(hpFgGeo, new THREE.MeshBasicMaterial({ color: 0xff0000 })); // Red bar for boss
+                hpFg.position.set(-3, 6.5, 0.05);
+                group.add(hpFg);
+
+                const angle = Math.random() * Math.PI * 2;
                 const r = 60;
-                mesh.position.set(Math.sin(angle) * r, 5, Math.cos(angle) * r);
-                mesh.castShadow = true;
-                scene.add(mesh);
-                // Boss Stats: Huge HP, Slower Speed
-                mobs.push({ mesh, hp: 500, speed: 0.08, isBoss: true });
+                group.position.set(Math.sin(angle) * r, 5, Math.cos(angle) * r);
+                scene.add(group);
+
+                const maxHp = 500;
+                mobs.push({ mesh: group, hp: maxHp, maxHp: maxHp, hpBar: hpFg, speed: 0.08, isBoss: true });
             },
 
             logicCombat: function () {
@@ -991,26 +1109,32 @@
                             const offset = (i - (STATE.player.projectileCount - 1) / 2) * 0.2;
                             this.spawnBullet(playerGroup.position, target.mesh.position, 0x00ffff, false, offset);
                         }
+                        this.playSound('shoot'); // Audio
                         STATE.atkTimer = 0;
                     }
                 }
 
                 mobs.forEach(m => {
                     const dest = new THREE.Vector3(0, 0, 0);
+                    // Determine stop radius: Wall (15) or Base (10)
+                    const stopRadius = (STATE.wallLevel > 0) ? 15 : CONFIG.baseRadius;
 
                     if (m.stun && m.stun > 0) {
                         m.stun--;
                         return; // Skip movement if stunned
                     }
 
-                    const dir = new THREE.Vector3().subVectors(dest, m.mesh.position).normalize();
-                    m.mesh.position.add(dir.multiplyScalar(m.speed));
-                    m.mesh.lookAt(dest);
+                    const dist = m.mesh.position.length();
 
-                    if (m.mesh.position.length() < CONFIG.baseRadius) {
+                    if (dist > stopRadius) {
+                        const dir = new THREE.Vector3().subVectors(dest, m.mesh.position).normalize();
+                        m.mesh.position.add(dir.multiplyScalar(m.speed));
+                        m.mesh.lookAt(dest);
+                    } else {
+                        // Attack Base/Wall
                         if (STATE.baseHp > 0) {
                             STATE.baseHp -= 0.1;
-                            this.createExplosion(m.mesh.position, 0xff0000, 0.5);
+                            if (Math.random() < 0.1) this.createExplosion(m.mesh.position, 0xff0000, 0.5);
                             this.updateUI();
                         }
                     }
@@ -1049,10 +1173,16 @@
             hitMob: function (index, dmg) {
                 const m = mobs[index];
                 m.hp -= dmg;
+
+                // Update Health Bar
+                const pct = Math.max(0, m.hp / m.maxHp);
+                if (m.hpBar) m.hpBar.scale.x = pct;
+
                 if (m.hp <= 0) {
                     scene.remove(m.mesh);
                     mobs.splice(index, 1);
                     this.createExplosion(m.mesh.position, 0xffaa00, 1);
+                    this.playSound('hit'); // Audio
                     this.addXp(10);
                     if (STATE.phase === 'NIGHT') {
                         STATE.baseEnergy += STATE.energyPerKill;
