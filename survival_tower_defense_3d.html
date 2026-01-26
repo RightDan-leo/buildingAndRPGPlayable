@@ -1,0 +1,1677 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Survival Tower Defense 3D</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            background: #1a1a2e;
+            font-family: 'Arial', sans-serif;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        /* UI Overlay */
+        #ui-overlay {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px 20px;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 16px;
+            z-index: 10;
+            border: 2px solid #444;
+            backdrop-filter: blur(5px);
+        }
+
+        #ui-overlay div {
+            margin: 5px 0;
+        }
+
+        .stat-label {
+            color: #888;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .hp-value {
+            color: #ff6b6b;
+        }
+
+        .wood-value {
+            color: #8b5a2b;
+        }
+
+        .player-wood {
+            color: #f0d084;
+        }
+
+        /* Turret Selection Modal */
+        #turret-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #turret-modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #2a2a4a 0%, #1a1a3a 100%);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            border: 3px solid #ffcc00;
+            box-shadow: 0 0 30px rgba(255, 204, 0, 0.3);
+        }
+
+        .modal-content h2 {
+            color: #ffcc00;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+
+        .modal-content p {
+            color: #aaa;
+            margin-bottom: 25px;
+        }
+
+        .turret-options {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .turret-btn {
+            padding: 20px 30px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            min-width: 180px;
+        }
+
+        .turret-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(255, 255, 255, 0.3);
+        }
+
+        .turret-a {
+            background: linear-gradient(135deg, #444 0%, #222 100%);
+            color: #fff;
+            border: 2px solid #666;
+        }
+
+        .turret-b {
+            background: linear-gradient(135deg, #ff9500 0%, #cc6600 100%);
+            color: #fff;
+            border: 2px solid #ffaa00;
+        }
+
+        .turret-c {
+            background: linear-gradient(135deg, #9900cc 0%, #660099 100%);
+            color: #fff;
+            border: 2px solid #aa00aa;
+        }
+
+        .turret-btn small {
+            display: block;
+            margin-top: 8px;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        /* Game Over Screen */
+        #game-over {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 200;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        #game-over.active {
+            display: flex;
+        }
+
+        #game-over h1 {
+            color: #ff4444;
+            font-size: 72px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 30px #ff0000;
+        }
+
+        #game-over p {
+            color: #aaa;
+            font-size: 24px;
+            margin-bottom: 30px;
+        }
+
+        #restart-btn {
+            padding: 15px 40px;
+            font-size: 20px;
+            background: linear-gradient(135deg, #55cc55 0%, #338833 100%);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        #restart-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* Controls hint */
+        #controls-hint {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            border-radius: 8px;
+            color: #888;
+            font-size: 12px;
+            z-index: 10;
+        }
+
+        /* Minimap */
+        #minimap {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 150px;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #444;
+            border-radius: 10px;
+            z-index: 10;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- UI Overlay -->
+    <div id="ui-overlay">
+        <div><span class="stat-label">Base HP:</span> <span id="base-hp" class="stat-value hp-value">200</span></div>
+        <div><span class="stat-label">Base Wood:</span> <span id="base-wood" class="stat-value wood-value">0</span>
+        </div>
+        <div><span class="stat-label">Your Wood:</span> <span id="player-wood" class="stat-value player-wood">0</span>
+        </div>
+        <div><span class="stat-label">Enemies:</span> <span id="enemy-count" class="stat-value">0</span></div>
+        <div><span class="stat-label">Spawn Rate:</span> <span id="spawn-rate" class="stat-value">1.0/s</span></div>
+    </div>
+
+    <!-- Controls Hint -->
+    <div id="controls-hint">
+        <strong>Controls:</strong> WASD to move | Collect trees & kill enemies | Bring wood to base<br>
+        <strong>Camera:</strong> Mouse to rotate | Scroll to zoom
+    </div>
+
+    <!-- Minimap -->
+    <canvas id="minimap"></canvas>
+
+    <!-- Objective Modal -->
+    <div id="start-modal"
+        style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:300; display:flex; flex-direction:column; justify-content:center; align-items:center; color:white; text-align:center;">
+        <h1 style="color:#ffcc00; font-size:48px; text-shadow:0 0 20px orange;">护送营地突围</h1>
+        <p style="font-size:24px; margin:20px 0; max-width:600px;">
+            我们的营地正在撤离，目标是前方 2000 米处的<span style="color:#00ffff">幸存者要塞</span>。
+            <br><br>
+            ⚔️ <b>防御:</b> 建造防御塔抵御潮水般的怪物。<br>
+            🌲 <b>资源:</b> 只有<b>靠近树木</b>才能采集木头，木头是防御塔的<b>弹药</b>！<br>
+            🏁 <b>胜利:</b> 保护核心，活着抵达终点！
+        </p>
+        <button onclick="document.getElementById('start-modal').style.display='none'; game.startParams();"
+            style="padding:15px 40px; font-size:24px; background:#4CAF50; color:white; border:none; border-radius:10px; cursor:pointer; font-weight:bold;">开始突围</button>
+    </div>
+
+    <!-- Turret Selection Modal -->
+    <div id="turret-modal">
+        <div class="modal-content">
+            <h2>🏗️ 建造防御塔</h2>
+            <p>消耗 50 木头。选择类型:</p>
+            <div class="turret-options">
+                <button class="turret-btn turret-a" onclick="game.selectTurret('A')">
+                    <strong>标准塔 (Standard)</strong>
+                    <small>中射程 / 用于平衡输出<br>消耗: 1 木头/发</small>
+                </button>
+                <button class="turret-btn turret-b" onclick="game.selectTurret('B')">
+                    <strong>加特林 (Rapid)</strong>
+                    <small>短射程 / 极快射速<br>消耗: 1 木头/发</small>
+                </button>
+                <button class="turret-btn turret-c" onclick="game.selectTurret('C')">
+                    <strong>迫击炮 (Mortar)</strong>
+                    <small>远射程 / 范围伤害<br>消耗: 2 木头/发</small>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="game-over">
+        <h1>GAME OVER</h1>
+        <p>Your base was destroyed!</p>
+        <p id="final-score"></p>
+        <button id="restart-btn" onclick="game.restart()">Play Again</button>
+    </div>
+
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        // ==========================================
+        // SURVIVAL TOWER DEFENSE 3D GAME
+        // ==========================================
+
+        const game = {
+            // Three.js objects
+            scene: null,
+            camera: null,
+            renderer: null,
+            clock: null,
+
+            // Game state
+            running: true,
+            paused: false,
+            gameOver: false,
+
+            // World settings
+            roadWidth: 20,
+            worldWidth: 100,
+
+            // Game objects
+            base: null,
+            player: null,
+            enemies: [],
+            trees: [],
+            loots: [],
+            projectiles: [],
+
+            // 3D meshes
+            baseMesh: null,
+            playerMesh: null,
+            groundMesh: null,
+            roadMesh: null,
+            turretMeshes: [],
+
+            // Camera control
+            cameraAngle: 0,
+            cameraHeight: 60,
+            cameraDistance: 80,
+            isDragging: false,
+            lastMouseX: 0,
+
+            // Timing
+            gameTime: 0,
+            enemySpawnTimer: 0,
+            enemySpawnRate: 1,
+            spawnUpgradeTimer: 0,
+
+            // Stats
+            enemiesKilled: 0,
+
+            // Materials (shared)
+            materials: {},
+
+            // Destination
+            destinationZ: -2000,
+
+            // Audio System
+            audio: {
+                ctx: null,
+                init: function () {
+                    window.AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                },
+                play: function (type) {
+                    if (!this.ctx) return;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    const now = this.ctx.currentTime;
+
+                    if (type === 'shoot') {
+                        osc.type = 'square';
+                        osc.frequency.setValueAtTime(800, now);
+                        osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+                        gain.gain.setValueAtTime(0.1, now);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                        osc.start(now);
+                        osc.stop(now + 0.1);
+                    } else if (type === 'hit') {
+                        osc.type = 'sawtooth';
+                        osc.frequency.setValueAtTime(200, now);
+                        osc.frequency.exponentialRampToValueAtTime(50, now + 0.1);
+                        gain.gain.setValueAtTime(0.1, now);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                        osc.start(now);
+                        osc.stop(now + 0.1);
+                    } else if (type === 'chop') {
+                        osc.type = 'triangle'; // Wood chop sound
+                        osc.frequency.setValueAtTime(100, now);
+                        osc.frequency.linearRampToValueAtTime(50, now + 0.05);
+                        gain.gain.setValueAtTime(0.2, now);
+                        gain.gain.linearRampToValueAtTime(0, now + 0.05);
+                        osc.start(now);
+                        osc.stop(now + 0.05);
+                    } else if (type === 'build') {
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(400, now);
+                        osc.frequency.linearRampToValueAtTime(800, now + 0.3);
+                        gain.gain.setValueAtTime(0.2, now);
+                        gain.gain.linearRampToValueAtTime(0, now + 0.3);
+                        osc.start(now);
+                        osc.stop(now + 0.3);
+                    } else if (type === 'win') {
+                        osc.type = 'triangle';
+                        // Simple Arpeggio
+                        [0, 0.2, 0.4].forEach((t, i) => {
+                            const o = this.ctx.createOscillator();
+                            const g = this.ctx.createGain();
+                            o.connect(g);
+                            g.connect(this.ctx.destination);
+                            o.frequency.value = 440 * (i + 1);
+                            g.gain.setValueAtTime(0.2, now + t);
+                            g.gain.linearRampToValueAtTime(0, now + t + 0.5);
+                            o.start(now + t);
+                            o.stop(now + t + 0.5);
+                        });
+                    }
+                }
+            },
+
+            // ==========================================
+            // INITIALIZATION
+            // ==========================================
+            init() {
+                this.setupThreeJS();
+                this.setupMaterials();
+                this.setupLighting();
+                this.setupGround();
+                this.setupGame();
+                this.setupInput();
+                this.animate();
+            },
+
+            setupThreeJS() {
+                // Scene
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x87ceeb); // Sky blue
+                this.scene.fog = new THREE.Fog(0x87ceeb, 100, 300);
+
+                // Camera
+                this.camera = new THREE.PerspectiveCamera(
+                    60,
+                    window.innerWidth / window.innerHeight,
+                    0.1,
+                    1000
+                );
+
+                // Renderer
+                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                document.body.appendChild(this.renderer.domElement);
+
+                // Clock
+                this.clock = new THREE.Clock();
+
+                // Handle resize
+                window.addEventListener('resize', () => {
+                    this.camera.aspect = window.innerWidth / window.innerHeight;
+                    this.camera.updateProjectionMatrix();
+                    this.renderer.setSize(window.innerWidth, window.innerHeight);
+                });
+            },
+
+            setupMaterials() {
+                this.materials = {
+                    grass: new THREE.MeshLambertMaterial({ color: 0x228b22 }),
+                    road: new THREE.MeshLambertMaterial({ color: 0x444444 }),
+                    roadLine: new THREE.MeshBasicMaterial({ color: 0xffffff }),
+                    base: new THREE.MeshPhongMaterial({ color: 0x3366cc, shininess: 30 }),
+                    baseTop: new THREE.MeshPhongMaterial({ color: 0x4477dd, shininess: 50 }),
+                    player: new THREE.MeshPhongMaterial({ color: 0xf0f0f0, shininess: 60 }),
+                    playerGlow: new THREE.MeshBasicMaterial({ color: 0xffcc00 }),
+                    enemy: new THREE.MeshPhongMaterial({ color: 0xcc2222, shininess: 30 }),
+                    tree: new THREE.MeshLambertMaterial({ color: 0x006400 }),
+                    trunk: new THREE.MeshLambertMaterial({ color: 0x8b4513 }),
+                    loot: new THREE.MeshPhongMaterial({ color: 0x8b5a2b, shininess: 40 }),
+                    turretA: new THREE.MeshPhongMaterial({ color: 0x333333, shininess: 50 }),
+                    turretB: new THREE.MeshPhongMaterial({ color: 0xff8c00, shininess: 50 }),
+                    turretC: new THREE.MeshPhongMaterial({ color: 0x8b008b, shininess: 50 }),
+                    projectile: new THREE.MeshBasicMaterial({ color: 0xffff00 }),
+                    projectileGlow: new THREE.MeshBasicMaterial({ color: 0xff6600 })
+                };
+            },
+
+            setupLighting() {
+                // Ambient light
+                const ambient = new THREE.AmbientLight(0x404050, 0.6);
+                this.scene.add(ambient);
+
+                // Main directional light (sun)
+                const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+                sun.position.set(50, 100, 50);
+                sun.castShadow = true;
+                sun.shadow.mapSize.width = 2048;
+                sun.shadow.mapSize.height = 2048;
+                sun.shadow.camera.near = 10;
+                sun.shadow.camera.far = 300;
+                sun.shadow.camera.left = -100;
+                sun.shadow.camera.right = 100;
+                sun.shadow.camera.top = 100;
+                sun.shadow.camera.bottom = -100;
+                this.scene.add(sun);
+                this.sunLight = sun;
+
+                // Hemisphere light for natural outdoor lighting
+                const hemi = new THREE.HemisphereLight(0x87ceeb, 0x228b22, 0.4);
+                this.scene.add(hemi);
+            },
+
+            setupGround() {
+                // Create infinite scrolling ground segments
+                this.groundSegments = [];
+                this.roadSegments = [];
+
+                const segmentLength = 100;
+                const numSegments = 5;
+
+                for (let i = 0; i < numSegments; i++) {
+                    // Grass ground
+                    const groundGeo = new THREE.PlaneGeometry(this.worldWidth, segmentLength);
+                    const ground = new THREE.Mesh(groundGeo, this.materials.grass);
+                    ground.rotation.x = -Math.PI / 2;
+                    ground.position.z = -i * segmentLength + segmentLength;
+                    ground.receiveShadow = true;
+                    this.scene.add(ground);
+                    this.groundSegments.push(ground);
+
+                    // Road
+                    const roadGeo = new THREE.PlaneGeometry(this.roadWidth, segmentLength);
+                    const road = new THREE.Mesh(roadGeo, this.materials.road);
+                    road.rotation.x = -Math.PI / 2;
+                    road.position.y = 0.01;
+                    road.position.z = -i * segmentLength + segmentLength;
+                    road.receiveShadow = true;
+                    this.scene.add(road);
+                    this.roadSegments.push(road);
+
+                    const lineGeo = new THREE.PlaneGeometry(0.3, segmentLength);
+                    const line = new THREE.Mesh(lineGeo, this.materials.roadLine);
+                    line.rotation.x = -Math.PI / 2;
+                    line.position.y = 0.02;
+                    line.position.z = -i * segmentLength + segmentLength;
+                    this.scene.add(line);
+                }
+
+                // Create Destination Gate at Z = -2000
+                const gateGroup = new THREE.Group();
+                const colGeo = new THREE.BoxGeometry(2, 20, 2);
+                const colMat = new THREE.MeshPhongMaterial({ color: 0x00ffff, emissive: 0x008888 });
+
+                const leftCol = new THREE.Mesh(colGeo, colMat); leftCol.position.set(-15, 10, -2000);
+                const rightCol = new THREE.Mesh(colGeo, colMat); rightCol.position.set(15, 10, -2000);
+                const topGeo = new THREE.BoxGeometry(32, 2, 2);
+                const topCol = new THREE.Mesh(topGeo, colMat); topCol.position.set(0, 20, -2000);
+
+                gateGroup.add(leftCol); gateGroup.add(rightCol); gateGroup.add(topCol);
+
+                // Destination Text (Simple Boxes for now or just the gate)
+                this.scene.add(gateGroup);
+                this.destinationZ = -2000;
+            },
+
+            setupGame() {
+                // Clear previous objects
+                this.enemies.forEach(e => this.scene.remove(e.mesh));
+                this.trees.forEach(t => this.scene.remove(t.mesh));
+                this.loots.forEach(l => this.scene.remove(l.mesh));
+                this.projectiles.forEach(p => this.scene.remove(p.mesh));
+                this.turretMeshes.forEach(t => this.scene.remove(t));
+
+                if (this.baseMesh) this.scene.remove(this.baseMesh);
+                if (this.playerMesh) this.scene.remove(this.playerMesh);
+
+                this.enemies = [];
+                this.trees = [];
+                this.loots = [];
+                this.projectiles = [];
+                this.turretMeshes = [];
+
+                // Create base
+                this.base = {
+                    x: 0,
+                    z: 0,
+                    width: 15,
+                    height: 15,
+                    hp: 200,
+                    maxHp: 200,
+                    wood: 0,
+                    speed: 2, // units per second
+                    slots: Array(9).fill(null),
+                    turrets: []
+                };
+
+                this.createBaseMesh();
+
+                // Create player
+                this.player = {
+                    x: 0,
+                    z: 20,
+                    size: 3,
+                    speed: 25,
+                    wood: 0
+                };
+
+                this.createPlayerMesh();
+
+                // Generate trees
+                this.generateTrees();
+
+                // Reset game state
+                this.enemiesKilled = 0;
+                this.gameTime = 0;
+                this.enemySpawnTimer = 0;
+                this.enemySpawnRate = 1;
+                this.spawnUpgradeTimer = 0;
+                this.gameOver = false;
+                this.paused = false;
+                this.running = true;
+
+                document.getElementById('game-over').classList.remove('active');
+                document.getElementById('turret-modal').classList.remove('active');
+            },
+
+            createBaseMesh() {
+                // Base group
+                this.baseMesh = new THREE.Group();
+
+                // Main platform
+                const baseGeo = new THREE.BoxGeometry(this.base.width, 3, this.base.height);
+                const baseMesh = new THREE.Mesh(baseGeo, this.materials.base);
+                baseMesh.position.y = 1.5;
+                baseMesh.castShadow = true;
+                baseMesh.receiveShadow = true;
+                this.baseMesh.add(baseMesh);
+
+                // Top platform
+                const topGeo = new THREE.BoxGeometry(this.base.width - 2, 0.5, this.base.height - 2);
+                const topMesh = new THREE.Mesh(topGeo, this.materials.baseTop);
+                topMesh.position.y = 3.25;
+                topMesh.castShadow = true;
+                this.baseMesh.add(topMesh);
+
+                // Corner pillars
+                const pillarGeo = new THREE.CylinderGeometry(0.5, 0.6, 4, 8);
+                const pillarMat = new THREE.MeshPhongMaterial({ color: 0x1a3d7a });
+
+                const corners = [
+                    [-this.base.width / 2 + 1, -this.base.height / 2 + 1],
+                    [this.base.width / 2 - 1, -this.base.height / 2 + 1],
+                    [-this.base.width / 2 + 1, this.base.height / 2 - 1],
+                    [this.base.width / 2 - 1, this.base.height / 2 - 1]
+                ];
+
+                corners.forEach(([x, z]) => {
+                    const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+                    pillar.position.set(x, 2, z);
+                    pillar.castShadow = true;
+                    this.baseMesh.add(pillar);
+                });
+
+                // HP bar background
+                const hpBgGeo = new THREE.BoxGeometry(this.base.width, 0.5, 1);
+                const hpBgMat = new THREE.MeshBasicMaterial({ color: 0x333333 });
+                this.hpBarBg = new THREE.Mesh(hpBgGeo, hpBgMat);
+                this.hpBarBg.position.set(0, 5, -this.base.height / 2 - 1);
+                this.baseMesh.add(this.hpBarBg);
+
+                // HP bar fill
+                const hpFillGeo = new THREE.BoxGeometry(this.base.width - 0.2, 0.6, 0.9);
+                const hpFillMat = new THREE.MeshBasicMaterial({ color: 0x44cc44 });
+                this.hpBarFill = new THREE.Mesh(hpFillGeo, hpFillMat);
+                this.hpBarFill.position.set(0, 5.05, -this.base.height / 2 - 1);
+                this.baseMesh.add(this.hpBarFill);
+
+                this.baseMesh.position.set(this.base.x, 0, this.base.z);
+                this.scene.add(this.baseMesh);
+            },
+
+            createPlayerMesh() {
+                this.playerMesh = new THREE.Group();
+
+                // Body
+                const bodyGeo = new THREE.BoxGeometry(this.player.size, this.player.size * 1.2, this.player.size);
+                const body = new THREE.Mesh(bodyGeo, this.materials.player);
+                body.position.y = this.player.size * 0.6;
+                body.castShadow = true;
+                this.playerMesh.add(body);
+
+                // Head
+                const headGeo = new THREE.SphereGeometry(this.player.size * 0.4, 16, 16);
+                const head = new THREE.Mesh(headGeo, this.materials.player);
+                head.position.y = this.player.size * 1.5;
+                head.castShadow = true;
+                this.playerMesh.add(head);
+
+                // Glow ring
+                const ringGeo = new THREE.RingGeometry(this.player.size * 0.8, this.player.size * 1.0, 32);
+                const ring = new THREE.Mesh(ringGeo, this.materials.playerGlow);
+                ring.rotation.x = -Math.PI / 2;
+                ring.position.y = 0.1;
+                this.playerMesh.add(ring);
+
+                // Eyes
+                const eyeGeo = new THREE.SphereGeometry(0.2, 8, 8);
+                const eyeMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+
+                const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+                leftEye.position.set(-0.5, this.player.size * 1.5, this.player.size * 0.3);
+                this.playerMesh.add(leftEye);
+
+                const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+                rightEye.position.set(0.5, this.player.size * 1.5, this.player.size * 0.3);
+                this.playerMesh.add(rightEye);
+
+                this.playerMesh.position.set(this.player.x, 0, this.player.z);
+                this.scene.add(this.playerMesh);
+            },
+
+            generateTrees() {
+                const roadHalf = this.roadWidth / 2;
+                const worldHalf = this.worldWidth / 2;
+
+                // Generate trees on both sides
+                for (let i = 0; i < 100; i++) {
+                    const side = Math.random() < 0.5 ? -1 : 1;
+                    const x = side * (roadHalf + 5 + Math.random() * (worldHalf - roadHalf - 10));
+                    const z = this.base.z - 50 + Math.random() * 200 - 100;
+
+                    this.createTree(x, z);
+                }
+            },
+
+            createTree(x, z) {
+                const treeGroup = new THREE.Group();
+                const scale = 0.8 + Math.random() * 0.4;
+
+                // Trunk
+                const trunkGeo = new THREE.CylinderGeometry(0.3 * scale, 0.4 * scale, 2 * scale, 8);
+                const trunk = new THREE.Mesh(trunkGeo, this.materials.trunk);
+                trunk.position.y = scale;
+                trunk.castShadow = true;
+                treeGroup.add(trunk);
+
+                // Foliage layers
+                const foliageGeo1 = new THREE.ConeGeometry(2 * scale, 3 * scale, 8);
+                const foliage1 = new THREE.Mesh(foliageGeo1, this.materials.tree);
+                foliage1.position.y = 3 * scale;
+                foliage1.castShadow = true;
+                treeGroup.add(foliage1);
+
+                const foliageGeo2 = new THREE.ConeGeometry(1.5 * scale, 2.5 * scale, 8);
+                const foliage2 = new THREE.Mesh(foliageGeo2, this.materials.tree);
+                foliage2.position.y = 4.5 * scale;
+                foliage2.castShadow = true;
+                treeGroup.add(foliage2);
+
+                const foliageGeo3 = new THREE.ConeGeometry(1 * scale, 2 * scale, 8);
+                const foliage3 = new THREE.Mesh(foliageGeo3, this.materials.tree);
+                foliage3.position.y = 5.5 * scale;
+                foliage3.castShadow = true;
+                treeGroup.add(foliage3);
+
+                treeGroup.position.set(x, 0, z);
+                this.scene.add(treeGroup);
+
+                this.trees.push({
+                    x: x,
+                    z: z,
+                    radius: 2 * scale,
+                    mesh: treeGroup
+                });
+            },
+
+            createEnemy(x, z) {
+                const enemyGroup = new THREE.Group();
+
+                // Body
+                const bodyGeo = new THREE.BoxGeometry(2, 2.5, 2);
+                const body = new THREE.Mesh(bodyGeo, this.materials.enemy);
+                body.position.y = 1.25;
+                body.castShadow = true;
+                enemyGroup.add(body);
+
+                // Eyes
+                const eyeGeo = new THREE.SphereGeometry(0.2, 8, 8);
+                const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+                const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+                leftEye.position.set(-0.4, 1.8, 1);
+                enemyGroup.add(leftEye);
+
+                const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+                rightEye.position.set(0.4, 1.8, 1);
+                enemyGroup.add(rightEye);
+
+                // Angry eyebrows
+                const browGeo = new THREE.BoxGeometry(0.4, 0.1, 0.1);
+                const browMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+
+                const leftBrow = new THREE.Mesh(browGeo, browMat);
+                leftBrow.position.set(-0.4, 2.1, 1);
+                leftBrow.rotation.z = 0.3;
+                enemyGroup.add(leftBrow);
+
+                const rightBrow = new THREE.Mesh(browGeo, browMat);
+                rightBrow.position.set(0.4, 2.1, 1);
+                rightBrow.rotation.z = -0.3;
+                enemyGroup.add(rightBrow);
+
+                enemyGroup.position.set(x, 0, z);
+                this.scene.add(enemyGroup);
+
+                return {
+                    x: x,
+                    z: z,
+                    size: 2,
+                    speed: 8 + Math.random() * 4,
+                    hp: 2,
+                    maxHp: 2,
+                    mesh: enemyGroup
+                };
+            },
+
+            createLoot(x, z) {
+                const lootGroup = new THREE.Group();
+
+                // Wood bundle
+                const woodGeo = new THREE.CylinderGeometry(0.3, 0.3, 1.5, 8);
+
+                for (let i = 0; i < 3; i++) {
+                    const log = new THREE.Mesh(woodGeo, this.materials.loot);
+                    log.position.set((i - 1) * 0.4, 0.3, 0);
+                    log.rotation.z = Math.PI / 2;
+                    log.rotation.y = Math.random() * 0.3;
+                    log.castShadow = true;
+                    lootGroup.add(log);
+                }
+
+                // Glow effect
+                const glowGeo = new THREE.RingGeometry(0.8, 1.2, 16);
+                const glowMat = new THREE.MeshBasicMaterial({
+                    color: 0xf0d084,
+                    transparent: true,
+                    opacity: 0.5,
+                    side: THREE.DoubleSide
+                });
+                const glow = new THREE.Mesh(glowGeo, glowMat);
+                glow.rotation.x = -Math.PI / 2;
+                glow.position.y = 0.05;
+                lootGroup.add(glow);
+
+                lootGroup.position.set(x, 0, z);
+                this.scene.add(lootGroup);
+
+                return {
+                    x: x,
+                    z: z,
+                    wood: 10,
+                    lifetime: 30,
+                    mesh: lootGroup
+                };
+            },
+
+            createTurret(type, offsetX, offsetZ, slot) {
+                const turretGroup = new THREE.Group();
+
+                let material, range, fireRate, damage, splash;
+
+                switch (type) {
+                    case 'A':
+                        material = this.materials.turretA;
+                        range = 20;
+                        fireRate = 2 / 9; // Increased 3x speed again (was 2/3, now 2/9)
+                        damage = 10;
+                        splash = 0;
+                        break;
+                    case 'B':
+                        material = this.materials.turretB;
+                        range = 12;
+                        fireRate = 0.5 / 9; // Increased 3x speed again (was 0.5/3, now 0.5/9)
+                        damage = 1;
+                        splash = 0;
+                        break;
+                    case 'C':
+                        material = this.materials.turretC;
+                        range = 35;
+                        fireRate = 5 / 9; // Increased 3x speed again (was 5/3, now 5/9)
+                        damage = 100;
+                        splash = 10;
+                        break;
+                }
+
+                // Base
+                const baseGeo = new THREE.CylinderGeometry(1.5, 1.8, 1, 16);
+                const baseMesh = new THREE.Mesh(baseGeo, material);
+                baseMesh.position.y = 3.5;
+                baseMesh.castShadow = true;
+                turretGroup.add(baseMesh);
+
+                // Turret head
+                const headGeo = new THREE.SphereGeometry(1, 16, 16);
+                const head = new THREE.Mesh(headGeo, material);
+                head.position.y = 4.5;
+                head.castShadow = true;
+                turretGroup.add(head);
+
+                // Barrel
+                const barrelGeo = new THREE.CylinderGeometry(0.2, 0.3, 2, 8);
+                const barrelMat = new THREE.MeshPhongMaterial({ color: 0x222222 });
+                const barrel = new THREE.Mesh(barrelGeo, barrelMat);
+                barrel.position.set(0, 4.5, 1.5);
+                barrel.rotation.x = Math.PI / 2;
+                barrel.castShadow = true;
+                turretGroup.add(barrel);
+
+                turretGroup.userData = { barrel, type };
+                this.baseMesh.add(turretGroup);
+                turretGroup.position.set(offsetX, 0, offsetZ);
+
+                this.turretMeshes.push(turretGroup);
+
+                return {
+                    type: type,
+                    offsetX: offsetX,
+                    offsetZ: offsetZ,
+                    slot: slot,
+                    range: range,
+                    fireRate: fireRate,
+                    damage: damage,
+                    splash: splash,
+                    cooldown: 0,
+                    mesh: turretGroup
+                };
+            },
+
+            createProjectile(startX, startY, startZ, targetX, targetZ, damage, splash, type) {
+                const size = splash > 0 ? 0.5 : 0.3;
+                const color = type === 'C' ? 0xff6600 : (type === 'B' ? 0xffaa00 : 0xffff00);
+
+                const projGeo = new THREE.SphereGeometry(size, 8, 8);
+                const projMat = new THREE.MeshBasicMaterial({ color: color });
+                const projMesh = new THREE.Mesh(projGeo, projMat);
+
+                // Glow effect
+                const glowGeo = new THREE.SphereGeometry(size * 1.5, 8, 8);
+                const glowMat = new THREE.MeshBasicMaterial({
+                    color: color,
+                    transparent: true,
+                    opacity: 0.3
+                });
+                const glow = new THREE.Mesh(glowGeo, glowMat);
+                projMesh.add(glow);
+
+                projMesh.position.set(startX, startY, startZ);
+                this.scene.add(projMesh);
+
+                return {
+                    x: startX,
+                    y: startY,
+                    z: startZ,
+                    targetX: targetX,
+                    targetZ: targetZ,
+                    speed: 40,
+                    damage: damage,
+                    splash: splash,
+                    mesh: projMesh
+                };
+            },
+
+            setupInput() {
+                // Keyboard
+                document.addEventListener('keydown', (e) => {
+                    this.keys[e.key.toLowerCase()] = true;
+                });
+                document.addEventListener('keyup', (e) => {
+                    this.keys[e.key.toLowerCase()] = false;
+                });
+
+                // Mouse for camera control
+                this.renderer.domElement.addEventListener('mousedown', (e) => {
+                    if (e.button === 0) {
+                        this.isDragging = true;
+                        this.lastMouseX = e.clientX;
+                    }
+                });
+
+                document.addEventListener('mouseup', () => {
+                    this.isDragging = false;
+                });
+
+                document.addEventListener('mousemove', (e) => {
+                    if (this.isDragging) {
+                        const deltaX = e.clientX - this.lastMouseX;
+                        this.cameraAngle += deltaX * 0.01;
+                        this.lastMouseX = e.clientX;
+                    }
+                });
+
+                // Scroll for zoom
+                this.renderer.domElement.addEventListener('wheel', (e) => {
+                    this.cameraDistance += e.deltaY * 0.05;
+                    this.cameraDistance = Math.max(30, Math.min(150, this.cameraDistance));
+                });
+            },
+
+            // ==========================================
+            // GAME LOOP
+            // ==========================================
+            animate() {
+                if (!this.running) return;
+                requestAnimationFrame(() => this.animate());
+
+                const dt = this.clock.getDelta();
+
+                if (!this.paused && !this.gameOver) {
+                    this.update(dt);
+                }
+
+                this.updateCamera();
+                this.render();
+                this.updateUI();
+                this.updateMinimap();
+            },
+
+            // ==========================================
+            // UPDATE LOGIC
+            // ==========================================
+            update(dt) {
+                if (dt > 0.1) dt = 0.1;
+
+                this.gameTime += dt;
+                this.spawnUpgradeTimer += dt;
+
+                // Increase spawn rate
+                if (this.spawnUpgradeTimer >= 10) {
+                    this.spawnUpgradeTimer = 0;
+                    this.enemySpawnRate = Math.max(0.15, this.enemySpawnRate - 1 / 3);
+                }
+
+                this.updateBase(dt);
+                this.updatePlayer(dt);
+                this.updateEnemies(dt);
+                this.updateTurrets(dt);
+                this.updateProjectiles(dt);
+                this.spawnEnemies(dt);
+                this.cleanupObjects();
+                this.checkCollisions();
+                this.checkTurretBuild();
+
+                // Regenerate trees
+                if (this.trees.length < 50) {
+                    this.addNewTrees();
+                }
+            },
+
+            updateBase(dt) {
+                // Move base forward (negative Z)
+                this.base.z -= this.base.speed * dt;
+                this.baseMesh.position.z = this.base.z;
+
+                // Update ground segments for infinite scrolling
+                this.groundSegments.forEach((segment, i) => {
+                    if (segment.position.z > this.base.z + 150) {
+                        segment.position.z -= this.groundSegments.length * 100;
+                    }
+                });
+
+                this.roadSegments.forEach((segment, i) => {
+                    if (segment.position.z > this.base.z + 150) {
+                        segment.position.z -= this.roadSegments.length * 100;
+                    }
+                });
+
+                // Update turret world positions
+                this.base.turrets.forEach(turret => {
+                    turret.x = this.base.x + turret.offsetX;
+                    turret.z = this.base.z + turret.offsetZ;
+                });
+
+                // Update HP bar
+                const hpPercent = Math.max(0, this.base.hp / this.base.maxHp);
+
+                // Update scale from center
+                this.hpBarFill.scale.x = hpPercent;
+
+                // Adjust position to make it scale from left side
+                const fullWidth = this.base.width - 0.2;
+                this.hpBarFill.position.x = -fullWidth * (1 - hpPercent) / 2;
+
+                if (hpPercent > 0.5) {
+                    this.hpBarFill.material.color.setHex(0x44cc44);
+                } else if (hpPercent > 0.25) {
+                    this.hpBarFill.material.color.setHex(0xcccc44);
+                } else {
+                    this.hpBarFill.material.color.setHex(0xcc4444);
+                }
+
+                // Update sun position to follow
+                this.sunLight.position.set(this.base.x + 50, 100, this.base.z + 50);
+                this.sunLight.target.position.set(this.base.x, 0, this.base.z);
+            },
+
+            updatePlayer(dt) {
+                // WASD movement relative to camera angle
+                let moveX = 0, moveZ = 0;
+
+                if (this.keys['w']) moveZ = -1;
+                if (this.keys['s']) moveZ = 1;
+                if (this.keys['a']) moveX = -1;
+                if (this.keys['d']) moveX = 1;
+
+                if (moveX !== 0 || moveZ !== 0) {
+                    // Normalize
+                    const len = Math.sqrt(moveX * moveX + moveZ * moveZ);
+                    moveX /= len;
+                    moveZ /= len;
+
+                    // Apply camera rotation
+                    const cos = Math.cos(this.cameraAngle);
+                    const sin = Math.sin(this.cameraAngle);
+                    const rotX = moveX * cos - moveZ * sin;
+                    const rotZ = moveX * sin + moveZ * cos;
+
+                    this.player.x += rotX * this.player.speed * dt;
+                    this.player.z += rotZ * this.player.speed * dt;
+                }
+
+                // Keep player in bounds
+                const halfWorld = this.worldWidth / 2 - 5;
+                this.player.x = Math.max(-halfWorld, Math.min(halfWorld, this.player.x));
+
+                // Keep player near base (can't go too far ahead or behind)
+                const minZ = this.base.z - 60;
+                const maxZ = this.base.z + 40;
+                this.player.z = Math.max(minZ, Math.min(maxZ, this.player.z));
+
+                // Update mesh
+                this.playerMesh.position.set(this.player.x, 0, this.player.z);
+
+                // Face movement direction
+                if (moveX !== 0 || moveZ !== 0) {
+                    const angle = Math.atan2(moveX, moveZ);
+                    this.playerMesh.rotation.y = angle + this.cameraAngle;
+                }
+            },
+
+            updateEnemies(dt) {
+                this.enemies.forEach(enemy => {
+                    const dx = this.base.x - enemy.x;
+                    const dz = this.base.z - enemy.z;
+                    const dist = Math.sqrt(dx * dx + dz * dz);
+
+                    if (dist > 0) {
+                        enemy.x += (dx / dist) * enemy.speed * dt;
+                        enemy.z += (dz / dist) * enemy.speed * dt;
+
+                        enemy.mesh.position.set(enemy.x, 0, enemy.z);
+
+                        // Face base
+                        enemy.mesh.rotation.y = Math.atan2(dx, dz);
+                    }
+                });
+            },
+
+            updateTurrets(dt) {
+                this.base.turrets.forEach(turret => {
+                    turret.cooldown -= dt;
+
+                    if (turret.cooldown <= 0) {
+                        let target = null;
+                        let minDist = turret.range;
+
+                        this.enemies.forEach(enemy => {
+                            const dx = enemy.x - turret.x;
+                            const dz = enemy.z - turret.z;
+                            const dist = Math.sqrt(dx * dx + dz * dz);
+
+                            if (dist < minDist) {
+                                minDist = dist;
+                                target = enemy;
+                            }
+                        });
+
+                        if (target) {
+                            this.fireTurret(turret, target);
+                            turret.cooldown = turret.fireRate;
+                        }
+                    }
+
+                    // Rotate turret to face nearest enemy
+                    let nearestEnemy = null;
+                    let nearestDist = turret.range;
+
+                    this.enemies.forEach(enemy => {
+                        const dx = enemy.x - turret.x;
+                        const dz = enemy.z - turret.z;
+                        const dist = Math.sqrt(dx * dx + dz * dz);
+
+                        if (dist < nearestDist) {
+                            nearestDist = dist;
+                            nearestEnemy = enemy;
+                        }
+                    });
+
+                    if (nearestEnemy) {
+                        const angle = Math.atan2(
+                            nearestEnemy.x - turret.x,
+                            nearestEnemy.z - turret.z
+                        );
+                        turret.mesh.rotation.y = angle;
+                    }
+                });
+            },
+
+            fireTurret(turret, target) {
+                const proj = this.createProjectile(
+                    turret.x,
+                    4.5,
+                    turret.z,
+                    target.x,
+                    target.z,
+                    turret.damage,
+                    turret.splash,
+                    turret.type
+                );
+
+                this.projectiles.push(proj);
+                this.playShootSound();
+            },
+
+            playShootSound() {
+                try {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+
+                    oscillator.type = 'sawtooth';
+                    oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
+                    oscillator.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.05);
+
+                    gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.05);
+
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.05);
+                } catch (e) { }
+            },
+
+            updateProjectiles(dt) {
+                for (let i = this.projectiles.length - 1; i >= 0; i--) {
+                    const proj = this.projectiles[i];
+
+                    const dx = proj.targetX - proj.x;
+                    const dz = proj.targetZ - proj.z;
+                    const dist = Math.sqrt(dx * dx + dz * dz);
+
+                    if (dist < 2) {
+                        // Hit
+                        if (proj.splash > 0) {
+                            // Create explosion effect
+                            this.createExplosion(proj.x, proj.z, proj.splash);
+
+                            // Splash damage
+                            for (let j = this.enemies.length - 1; j >= 0; j--) {
+                                const enemy = this.enemies[j];
+                                const edx = enemy.x - proj.x;
+                                const edz = enemy.z - proj.z;
+                                const eDist = Math.sqrt(edx * edx + edz * edz);
+
+                                if (eDist < proj.splash) {
+                                    this.killEnemy(j);
+                                }
+                            }
+                        } else {
+                            // Single target
+                            let hitEnemy = -1;
+                            let minDist = 3;
+
+                            this.enemies.forEach((enemy, idx) => {
+                                const edx = enemy.x - proj.x;
+                                const edz = enemy.z - proj.z;
+                                const eDist = Math.sqrt(edx * edx + edz * edz);
+
+                                if (eDist < minDist) {
+                                    minDist = eDist;
+                                    hitEnemy = idx;
+                                }
+                            });
+
+                            if (hitEnemy >= 0) {
+                                this.enemies[hitEnemy].hp -= proj.damage;
+                                if (this.enemies[hitEnemy].hp <= 0) {
+                                    this.killEnemy(hitEnemy);
+                                }
+                            }
+                        }
+
+                        this.scene.remove(proj.mesh);
+                        this.projectiles.splice(i, 1);
+                    } else {
+                        // Move toward target
+                        const moveSpeed = proj.speed * dt;
+                        proj.x += (dx / dist) * moveSpeed;
+                        proj.z += (dz / dist) * moveSpeed;
+                        proj.y -= 0.5 * dt; // Gravity effect
+
+                        proj.mesh.position.set(proj.x, Math.max(0.5, proj.y), proj.z);
+                    }
+                }
+            },
+
+            createExplosion(x, z, radius) {
+                // Create particle explosion
+                const particles = new THREE.Group();
+
+                for (let i = 0; i < 20; i++) {
+                    const geo = new THREE.SphereGeometry(0.3, 4, 4);
+                    const mat = new THREE.MeshBasicMaterial({
+                        color: Math.random() > 0.5 ? 0xff6600 : 0xffcc00
+                    });
+                    const particle = new THREE.Mesh(geo, mat);
+
+                    particle.position.set(
+                        (Math.random() - 0.5) * radius,
+                        Math.random() * 3,
+                        (Math.random() - 0.5) * radius
+                    );
+
+                    particles.add(particle);
+                }
+
+                particles.position.set(x, 0, z);
+                this.scene.add(particles);
+
+                // Remove after animation
+                setTimeout(() => {
+                    this.scene.remove(particles);
+                }, 200);
+            },
+
+            spawnEnemies(dt) {
+                this.enemySpawnTimer -= dt;
+
+                if (this.enemySpawnTimer <= 0) {
+                    this.enemySpawnTimer = this.enemySpawnRate;
+
+                    // Spawn from edges
+                    const edge = Math.floor(Math.random() * 4);
+                    let x, z;
+
+                    switch (edge) {
+                        case 0: // Front
+                            x = (Math.random() - 0.5) * this.worldWidth;
+                            z = this.base.z - 80;
+                            break;
+                        case 1: // Back
+                            x = (Math.random() - 0.5) * this.worldWidth;
+                            z = this.base.z + 60;
+                            break;
+                        case 2: // Left
+                            x = -this.worldWidth / 2 - 10;
+                            z = this.base.z + (Math.random() - 0.5) * 100;
+                            break;
+                        case 3: // Right
+                            x = this.worldWidth / 2 + 10;
+                            z = this.base.z + (Math.random() - 0.5) * 100;
+                            break;
+                    }
+
+                    this.enemies.push(this.createEnemy(x, z));
+                }
+            },
+
+            killEnemy(index) {
+                const enemy = this.enemies[index];
+
+                // Create loot
+                this.loots.push(this.createLoot(enemy.x, enemy.z));
+
+                // Remove enemy
+                this.scene.remove(enemy.mesh);
+                this.enemies.splice(index, 1);
+                this.enemiesKilled++;
+            },
+
+            checkCollisions() {
+                // Player vs Trees
+                for (let i = this.trees.length - 1; i >= 0; i--) {
+                    const tree = this.trees[i];
+                    const dx = this.player.x - tree.x;
+                    const dz = this.player.z - tree.z;
+                    const dist = Math.sqrt(dx * dx + dz * dz);
+
+                    if (dist < this.player.size + tree.radius) {
+                        this.player.wood += 10;
+                        this.scene.remove(tree.mesh);
+                        this.trees.splice(i, 1);
+                    }
+                }
+
+                // Player vs Enemies
+                for (let i = this.enemies.length - 1; i >= 0; i--) {
+                    const enemy = this.enemies[i];
+                    const dx = this.player.x - enemy.x;
+                    const dz = this.player.z - enemy.z;
+                    const dist = Math.sqrt(dx * dx + dz * dz);
+
+                    if (dist < this.player.size + enemy.size) {
+                        this.killEnemy(i);
+                    }
+                }
+
+                // Player vs Loots
+                for (let i = this.loots.length - 1; i >= 0; i--) {
+                    const loot = this.loots[i];
+                    const dx = this.player.x - loot.x;
+                    const dz = this.player.z - loot.z;
+                    const dist = Math.sqrt(dx * dx + dz * dz);
+
+                    if (dist < this.player.size + 2) {
+                        this.player.wood += loot.wood;
+                        this.scene.remove(loot.mesh);
+                        this.loots.splice(i, 1);
+                    }
+                }
+
+                // Player vs Base (deposit wood)
+                const baseDx = this.player.x - this.base.x;
+                const baseDz = this.player.z - this.base.z;
+                if (Math.abs(baseDx) < this.base.width / 2 + this.player.size &&
+                    Math.abs(baseDz) < this.base.height / 2 + this.player.size) {
+                    if (this.player.wood > 0) {
+                        // First heal
+                        const hpNeeded = this.base.maxHp - this.base.hp;
+                        const woodForHeal = Math.min(this.player.wood, hpNeeded);
+                        this.base.hp += woodForHeal;
+                        this.player.wood -= woodForHeal;
+
+                        // Remaining to storage
+                        this.base.wood += this.player.wood;
+                        this.player.wood = 0;
+                    }
+                }
+
+                // Enemies vs Base
+                for (let i = this.enemies.length - 1; i >= 0; i--) {
+                    const enemy = this.enemies[i];
+                    const dx = enemy.x - this.base.x;
+                    const dz = enemy.z - this.base.z;
+
+                    if (Math.abs(dx) < this.base.width / 2 + enemy.size &&
+                        Math.abs(dz) < this.base.height / 2 + enemy.size) {
+                        this.base.hp -= 5;
+                        this.scene.remove(enemy.mesh);
+                        this.enemies.splice(i, 1);
+
+                        if (this.base.hp <= 0) {
+                            this.triggerGameOver();
+                        }
+                    }
+                }
+
+                // Update loot lifetime
+                for (let i = this.loots.length - 1; i >= 0; i--) {
+                    this.loots[i].lifetime -= 1 / 60;
+                    if (this.loots[i].lifetime <= 0) {
+                        this.scene.remove(this.loots[i].mesh);
+                        this.loots.splice(i, 1);
+                    }
+                }
+            },
+
+            checkTurretBuild() {
+                const availableSlot = this.base.slots.findIndex(s => s === null);
+
+                if (this.base.wood >= 50 && availableSlot >= 0 && !this.paused) {
+                    this.paused = true;
+                    document.getElementById('turret-modal').classList.add('active');
+                }
+            },
+
+            selectTurret(type) {
+                const availableSlot = this.base.slots.findIndex(s => s === null);
+                if (availableSlot < 0) return;
+
+                // Calculate position in 3x3 grid
+                const row = Math.floor(availableSlot / 3);
+                const col = availableSlot % 3;
+                const cellSize = this.base.width / 3;
+                const offsetX = (col - 1) * cellSize;
+                const offsetZ = (row - 1) * cellSize;
+
+                const turret = this.createTurret(type, offsetX, offsetZ, availableSlot);
+
+                this.base.slots[availableSlot] = type;
+                this.base.turrets.push(turret);
+                this.base.wood -= 50;
+
+                document.getElementById('turret-modal').classList.remove('active');
+                this.paused = false;
+            },
+
+            addNewTrees() {
+                const roadHalf = this.roadWidth / 2;
+                const worldHalf = this.worldWidth / 2;
+
+                for (let i = 0; i < 10; i++) {
+                    const side = Math.random() < 0.5 ? -1 : 1;
+                    const x = side * (roadHalf + 5 + Math.random() * (worldHalf - roadHalf - 10));
+                    const z = this.base.z - 100 - Math.random() * 50;
+
+                    this.createTree(x, z);
+                }
+            },
+
+            cleanupObjects() {
+                // Remove objects too far behind
+                const minZ = this.base.z + 100;
+
+                for (let i = this.trees.length - 1; i >= 0; i--) {
+                    if (this.trees[i].z > minZ) {
+                        this.scene.remove(this.trees[i].mesh);
+                        this.trees.splice(i, 1);
+                    }
+                }
+
+                for (let i = this.enemies.length - 1; i >= 0; i--) {
+                    if (this.enemies[i].z > minZ) {
+                        this.scene.remove(this.enemies[i].mesh);
+                        this.enemies.splice(i, 1);
+                    }
+                }
+
+                for (let i = this.loots.length - 1; i >= 0; i--) {
+                    if (this.loots[i].z > minZ) {
+                        this.scene.remove(this.loots[i].mesh);
+                        this.loots.splice(i, 1);
+                    }
+                }
+            },
+
+            triggerGameOver() {
+                this.gameOver = true;
+                document.getElementById('final-score').textContent =
+                    `Enemies killed: ${this.enemiesKilled} | Turrets built: ${this.base.turrets.length}`;
+                document.getElementById('game-over').classList.add('active');
+            },
+
+            restart() {
+                this.setupGame();
+            },
+
+            // ==========================================
+            // CAMERA
+            // ==========================================
+            updateCamera() {
+                // Orbit camera around base
+                const targetX = this.base.x;
+                const targetZ = this.base.z;
+
+                const camX = targetX + Math.sin(this.cameraAngle) * this.cameraDistance;
+                const camZ = targetZ + Math.cos(this.cameraAngle) * this.cameraDistance;
+                const camY = this.cameraHeight;
+
+                this.camera.position.set(camX, camY, camZ);
+                this.camera.lookAt(targetX, 0, targetZ);
+            },
+
+            // ==========================================
+            // RENDERING
+            // ==========================================
+            render() {
+                this.renderer.render(this.scene, this.camera);
+            },
+
+            // ==========================================
+            // UI
+            // ==========================================
+            updateUI() {
+                document.getElementById('base-hp').textContent = Math.max(0, Math.floor(this.base.hp));
+                document.getElementById('base-wood').textContent = this.base.wood;
+                document.getElementById('player-wood').textContent = this.player.wood;
+                document.getElementById('enemy-count').textContent = this.enemies.length;
+                const spawnPerSecond = (1 / this.enemySpawnRate).toFixed(1);
+                document.getElementById('spawn-rate').textContent = spawnPerSecond + '/s';
+            },
+
+            updateMinimap() {
+                const canvas = document.getElementById('minimap');
+                const ctx = canvas.getContext('2d');
+                const size = 150;
+                canvas.width = size;
+                canvas.height = size;
+
+                // Background
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                ctx.fillRect(0, 0, size, size);
+
+                // Scale factor
+                const scale = size / 150;
+                const centerX = size / 2;
+                const centerY = size / 2;
+
+                // Draw road
+                ctx.fillStyle = '#555';
+                ctx.fillRect(centerX - 10, 0, 20, size);
+
+                // Draw base (center)
+                ctx.fillStyle = '#3366cc';
+                ctx.fillRect(centerX - 8, centerY - 8, 16, 16);
+
+                // Draw turrets on base
+                this.base.turrets.forEach(turret => {
+                    ctx.fillStyle = turret.type === 'A' ? '#333' :
+                        (turret.type === 'B' ? '#ff8c00' : '#8b008b');
+                    const tx = centerX + turret.offsetX * scale * 0.5;
+                    const tz = centerY + turret.offsetZ * scale * 0.5;
+                    ctx.beginPath();
+                    ctx.arc(tx, tz, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                // Draw trees
+                ctx.fillStyle = '#006400';
+                this.trees.forEach(tree => {
+                    const tx = centerX + (tree.x - this.base.x) * scale;
+                    const tz = centerY + (tree.z - this.base.z) * scale;
+                    if (tx >= 0 && tx <= size && tz >= 0 && tz <= size) {
+                        ctx.beginPath();
+                        ctx.arc(tx, tz, 2, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                });
+
+                // Draw enemies
+                ctx.fillStyle = '#cc2222';
+                this.enemies.forEach(enemy => {
+                    const ex = centerX + (enemy.x - this.base.x) * scale;
+                    const ez = centerY + (enemy.z - this.base.z) * scale;
+                    if (ex >= 0 && ex <= size && ez >= 0 && ez <= size) {
+                        ctx.fillRect(ex - 2, ez - 2, 4, 4);
+                    }
+                });
+
+                // Draw loots
+                ctx.fillStyle = '#f0d084';
+                this.loots.forEach(loot => {
+                    const lx = centerX + (loot.x - this.base.x) * scale;
+                    const lz = centerY + (loot.z - this.base.z) * scale;
+                    if (lx >= 0 && lx <= size && lz >= 0 && lz <= size) {
+                        ctx.beginPath();
+                        ctx.arc(lx, lz, 2, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                });
+
+                // Draw player
+                ctx.fillStyle = '#ffcc00';
+                const px = centerX + (this.player.x - this.base.x) * scale;
+                const pz = centerY + (this.player.z - this.base.z) * scale;
+                ctx.beginPath();
+                ctx.arc(px, pz, 4, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Border
+                ctx.strokeStyle = '#444';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(0, 0, size, size);
+            }
+        };
+
+        // Start the game
+        window.onload = () => game.init();
+    </script>
+</body>
+
+</html>
