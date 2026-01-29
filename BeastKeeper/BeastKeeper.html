@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>巨兽饲养员 (Beast Keeper)</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #1a1a1a;
+            font-family: 'Segoe UI', sans-serif;
+            touch-action: none;
+            user-select: none;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .hud-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #444;
+            color: white;
+        }
+
+        .beast-stats {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            text-align: right;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #ff4444;
+            color: white;
+        }
+
+        #notify-text {
+            position: absolute;
+            top: 30%;
+            width: 100%;
+            text-align: center;
+            font-size: 36px;
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 0 0 10px #ff0000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s;
+        }
+
+        #interaction-btn {
+            position: absolute;
+            bottom: 120px;
+            right: 40px;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: #ffaa00;
+            border: 4px solid white;
+            font-size: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            pointer-events: auto;
+            display: none;
+            cursor: pointer;
+            z-index: 100; /* Ensure above input sensor */
+        }
+
+        /* Universal Joystick & Input Styles */
+        #universal-ui-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #input-sensor {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1; /* Lowered from 999 */
+            /* Transparent but clickable */
+            pointer-events: auto;
+        }
+
+        #joystick-visual {
+            position: absolute;
+            bottom: 50px;
+            right: 50px;
+            /* Initial Fixed Position */
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            transition: opacity 0.2s; /* Fade effect for dynamic show/hide */
+            pointer-events: none; /* Pass clicks through to sensor */
+        }
+
+        #joystick-knob {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        #tutorial-hand {
+            position: absolute;
+            bottom: 80px;
+            right: 80px;
+            /* Pointing to the center of joystick */
+            font-size: 60px;
+            animation: pointer-bob 1.5s infinite;
+            z-index: 1001;
+            pointer-events: none;
+            filter: drop-shadow(0 0 5px black);
+        }
+
+        @keyframes pointer-bob {
+
+            0%,
+            100% {
+                transform: translate(10px, 10px);
+            }
+
+            50% {
+                transform: translate(-10px, -10px);
+            }
+        }
+
+        #start-hint {
+            position: absolute;
+            top: 40%;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            text-shadow: 0 0 5px black, 0 0 10px red;
+            pointer-events: none;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 0.8;
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1.05);
+            }
+
+            100% {
+                opacity: 0.8;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="game-container"></div>
+
+    <div id="ui-layer">
+        <div class="hud-panel">
+            <div>🥩 肉块: <span id="meat-count">0</span></div>
+            <div>🛡️ 玩家等级: <span id="player-level">1</span></div>
+        </div>
+
+        <div class="beast-stats">
+            <h2 style="margin:0; color:#ff5555;">🔥 巨兽状态</h2>
+            <div>状态: <span id="beast-status">幼崽</span></div>
+            <div>基因值: <span id="beast-exp">0</span> / <span id="beast-max-exp">100</span></div>
+            <div>饱食度: <span id="beast-hunger">100%</span></div>
+        </div>
+
+        <div id="notify-text"></div>
+        <div id="interaction-btn">🥩</div>
+    </div>
+
+    <div id="universal-ui-layer">
+        <div id="start-hint">点击屏幕开始游戏 / TAP TO START</div>
+        <div id="tutorial-hand">👆</div>
+        <div id="joystick-visual">
+            <div id="joystick-knob"></div>
+        </div>
+    </div>
+    <div id="input-sensor"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+
+
+    <!-- Game Configuration (CSV) -->
+    <script type="text/csv" id="game-config-csv">
+beast.startStage, 1
+beast.startMaxExp, 50
+beast.expPerFeed, 10
+beast.growExpMult, 1.5
+beast.growScaleMult, 1.3
+player.speed, 0.5
+player.pickupRange, 4
+spawn.maxFood, 10
+spawn.respawnChance, 0.01
+spawn.respawnLimit, 5
+    </script>
+
+    <script>
+        // --- 游戏配置 ---
+        const CONFIG = {
+            colors: { bg: 0x222222, ground: 0x334433, beast: 0xff4400, food: 0xffaaaa },
+            
+            // Gameplay Config
+            beast: { 
+                startStage: 1, startExp: 0, startMaxExp: 50, startScale: 1, startHunger: 100, 
+                expPerFeed: 10, growExpMult: 1.5, growScaleMult: 1.3 
+            },
+            player: { speed: 0.5, pickupRange: 4 },
+            spawn: { maxFood: 10, respawnChance: 0.01, respawnLimit: 5 }
+        };
+
+        async function loadGameConfig() {
+            let text = "";
+            try {
+                const response = await fetch('BeastKeeper.csv');
+                if (!response.ok) throw new Error("Config not found");
+                text = await response.text();
+                console.log("Loaded external CSV config.");
+            } catch (e) {
+                console.warn("Could not load external config, using fallback embedded config:", e);
+                const el = document.getElementById('game-config-csv');
+                if (el) text = el.textContent;
+            }
+
+            if (!text) return;
+
+            const lines = text.split('\n');
+            lines.forEach(line => {
+                const parts = line.split(',').map(s => s.trim());
+                if (parts.length < 2) return;
+                const path = parts[0].split('.');
+                const val = parseFloat(parts[1]);
+                if (isNaN(val)) return;
+
+                let curr = CONFIG;
+                for (let i = 0; i < path.length - 1; i++) {
+                    if (!curr[path[i]]) curr[path[i]] = {};
+                    curr = curr[path[i]];
+                }
+                curr[path[path.length - 1]] = val;
+            });
+            console.log("Config Loaded:", CONFIG);
+        }
+
+        const STATE = {
+            meat: 0,
+            beast: { 
+                stage: CONFIG.beast.startStage, 
+                exp: CONFIG.beast.startExp, 
+                maxExp: CONFIG.beast.startMaxExp, 
+                scale: CONFIG.beast.startScale, 
+                hunger: CONFIG.beast.startHunger 
+            },
+            player: { speed: CONFIG.player.speed, pickupRange: CONFIG.player.pickupRange },
+            items: [],
+            lastTime: 0
+        };
+
+        // --- Three.js Setup ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(CONFIG.colors.bg);
+        scene.fog = new THREE.Fog(CONFIG.colors.bg, 30, 90);
+
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 40, 30);
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.getElementById('game-container').appendChild(renderer.domElement);
+
+        // Lights
+        const ambLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+        dirLight.position.set(20, 50, 20);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        // Ground (Enclosure)
+        const ground = new THREE.Mesh(new THREE.CylinderGeometry(60, 60, 1, 32), new THREE.MeshStandardMaterial({ color: CONFIG.colors.ground }));
+        ground.position.y = -0.5;
+        ground.receiveShadow = true;
+        scene.add(ground);
+        // Fence
+        const fenceGeo = new THREE.TorusGeometry(60, 1, 16, 100);
+        const fence = new THREE.Mesh(fenceGeo, new THREE.MeshStandardMaterial({ color: 0x888888 }));
+        fence.rotation.x = Math.PI / 2;
+        fence.position.y = 1;
+        scene.add(fence);
+
+        // --- Actors ---
+        // Player
+        const playerGroup = new THREE.Group();
+        const playerBody = new THREE.Mesh(new THREE.CapsuleGeometry(1, 2, 4, 8), new THREE.MeshStandardMaterial({ color: 0x00aaff }));
+        playerBody.position.y = 1;
+        playerGroup.add(playerBody);
+        scene.add(playerGroup);
+
+        // Beast (Center)
+        const beastGroup = new THREE.Group();
+        // Simple "Egg/Beast" model
+        const beastBody = new THREE.Mesh(new THREE.DodecahedronGeometry(3), new THREE.MeshStandardMaterial({ color: CONFIG.colors.beast, emissive: 0x441100 }));
+        beastBody.position.y = 3;
+        beastGroup.add(beastBody);
+
+        // Breathing animation pivot
+        const beastPivot = new THREE.Group();
+        beastPivot.add(beastGroup);
+        scene.add(beastPivot);
+
+        // Food Items
+        function spawnFood() {
+            const angle = Math.random() * Math.PI * 2;
+            const r = 15 + Math.random() * 40;
+            const x = Math.sin(angle) * r;
+            const z = Math.cos(angle) * r;
+
+            const geo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+            const mat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.food });
+            const item = new THREE.Mesh(geo, mat);
+            item.position.set(x, 1, z);
+
+            // Floating animation offset
+            item.userData = { y0: 1, phase: Math.random() * Math.PI };
+
+            scene.add(item);
+            STATE.items.push(item);
+        }
+
+        // Initial food
+        for (let i = 0; i < CONFIG.spawn.maxFood; i++) spawnFood();
+
+        // --- Input ---
+        // --- Input System (Standardized) ---
+        const InputSystem = {
+            started: false,
+            active: false,
+            origin: { x: 0, y: 0 },
+            curr: { x: 0, y: 0 },
+            delta: { x: 0, y: 0 },
+
+            init() {
+                const sensor = document.getElementById('input-sensor');
+                const hand = document.getElementById('tutorial-hand');
+                const hint = document.getElementById('start-hint');
+
+                const startState = (cx, cy) => {
+                    if (!this.started) {
+                        this.started = true;
+                        if (hand) hand.style.display = 'none';
+                        if (hint) hint.style.display = 'none';
+                    }
+                    this.active = true;
+                    this.origin.x = cx;
+                    this.origin.y = cy;
+                    this.curr.x = cx;
+                    this.curr.y = cy;
+                    this.updateVisuals();
+                };
+
+                const moveState = (cx, cy) => {
+                    if (!this.active) return;
+                    this.curr.x = cx;
+                    this.curr.y = cy;
+
+                    const maxDist = 50;
+                    let dx = this.curr.x - this.origin.x;
+                    let dy = this.curr.y - this.origin.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist > maxDist) {
+                        const ratio = maxDist / dist;
+                        dx *= ratio;
+                        dy *= ratio;
+                    }
+
+                    this.delta.x = dx / maxDist;
+                    this.delta.y = dy / maxDist;
+
+                    this.updateVisuals();
+                };
+
+                const endState = () => {
+                    this.active = false;
+                    this.delta.x = 0;
+                    this.delta.y = 0;
+                    this.updateVisuals();
+                };
+
+                // Listeners
+                sensor.addEventListener('mousedown', e => startState(e.clientX, e.clientY));
+                window.addEventListener('mousemove', e => moveState(e.clientX, e.clientY));
+                window.addEventListener('mouseup', endState);
+
+                sensor.addEventListener('touchstart', e => {
+                    e.preventDefault();
+                    startState(e.touches[0].clientX, e.touches[0].clientY);
+                }, { passive: false });
+                window.addEventListener('touchmove', e => {
+                    if (this.active) moveState(e.touches[0].clientX, e.touches[0].clientY);
+                }, { passive: false });
+                window.addEventListener('touchend', endState);
+            },
+
+            updateVisuals() {
+                const knob = document.getElementById('joystick-knob');
+                if (!knob) return;
+                const maxVisualDist = 35;
+                const vx = this.delta.x * maxVisualDist;
+                const vy = this.delta.y * maxVisualDist;
+                knob.style.transform = `translate(calc(-50% + ${vx}px), calc(-50% + ${vy}px))`;
+            }
+        };
+
+        InputSystem.init();
+
+        const keys = {};
+        window.onkeydown = e => keys[e.key] = true;
+        window.onkeyup = e => keys[e.key] = false;
+
+        // --- Interaction ---
+        const btn = document.getElementById('interaction-btn');
+        btn.onclick = () => {
+            if (STATE.meat > 0) {
+                feedBeast();
+            }
+        };
+
+        function feedBeast() {
+            if (STATE.meat <= 0) return;
+            STATE.meat--;
+            STATE.beast.exp += CONFIG.beast.expPerFeed;
+            notify("投喂巨兽！基因 +" + CONFIG.beast.expPerFeed);
+            updateUI();
+
+            // Feed Effect
+            const p = new THREE.Mesh(new THREE.SphereGeometry(1), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
+            p.position.copy(beastPivot.position);
+            p.position.y = 5 * STATE.beast.scale;
+            scene.add(p);
+
+            // Check Level Up
+            if (STATE.beast.exp >= STATE.beast.maxExp) {
+                STATE.beast.stage++;
+                STATE.beast.exp = 0;
+                STATE.beast.maxExp *= CONFIG.beast.growExpMult;
+                STATE.beast.scale *= CONFIG.beast.growScaleMult;
+
+                // Visual Growth
+                beastPivot.scale.setScalar(STATE.beast.scale);
+                notify(`巨兽进化！阶段 ${STATE.beast.stage}`);
+            }
+        }
+
+        function notify(msg) {
+            const el = document.getElementById('notify-text');
+            el.innerText = msg;
+            el.style.opacity = 1;
+            setTimeout(() => el.style.opacity = 0, 1500);
+        }
+
+        function updateUI() {
+            document.getElementById('meat-count').innerText = STATE.meat;
+            document.getElementById('beast-exp').innerText = STATE.beast.exp;
+            document.getElementById('beast-max-exp').innerText = Math.floor(STATE.beast.maxExp);
+            document.getElementById('beast-status').innerText = `阶段 ${STATE.beast.stage}`;
+        }
+
+        // --- Game Loop ---
+        function animate(time) {
+            requestAnimationFrame(animate);
+
+            // PAUSE UNTIL START (But keep rendering)
+            if (!InputSystem.started) {
+                if (renderer && scene && camera) renderer.render(scene, camera);
+                return;
+            }
+
+            const dt = (time - STATE.lastTime) / 1000;
+            STATE.lastTime = time;
+
+            // Player Movement
+            let kx = 0, ky = 0;
+            if (keys['w']) ky = -1; if (keys['s']) ky = 1;
+            if (keys['a']) kx = -1; if (keys['d']) kx = 1;
+
+            // Combine Keyboard + Touch
+            let dx = InputSystem.delta.x + kx;
+            let dy = InputSystem.delta.y + ky;
+
+            // Normalize if both active (simple clamp 1)
+            if (Math.abs(dx) > 1) dx = Math.sign(dx);
+            if (Math.abs(dy) > 1) dy = Math.sign(dy);
+
+            if (Math.abs(dx) > 0 || Math.abs(dy) > 0) {
+                playerGroup.position.x += dx * STATE.player.speed;
+                playerGroup.position.z += dy * STATE.player.speed;
+                playerGroup.lookAt(playerGroup.position.x + dx, playerGroup.position.y, playerGroup.position.z + dy);
+
+                // Clamp to fence
+                if (playerGroup.position.length() > 58) {
+                    playerGroup.position.setLength(58);
+                }
+            }
+
+            // Camera Follow
+            camera.position.x = playerGroup.position.x * 0.5;
+            camera.position.z = playerGroup.position.z * 0.5 + 40;
+            camera.lookAt(playerGroup.position.x * 0.2, 0, playerGroup.position.z * 0.2);
+
+            // Item Animation & Pickup
+            for (let i = STATE.items.length - 1; i >= 0; i--) {
+                const item = STATE.items[i];
+                item.position.y = item.userData.y0 + Math.sin(time * 0.003 + item.userData.phase) * 0.3;
+                item.rotation.y += 0.02;
+
+                if (playerGroup.position.distanceTo(item.position) < STATE.player.pickupRange) {
+                    scene.remove(item);
+                    STATE.items.splice(i, 1);
+                    STATE.meat++;
+                    updateUI();
+                }
+            }
+
+            // Respawn Food
+            if (STATE.items.length < CONFIG.spawn.respawnLimit && Math.random() < CONFIG.spawn.respawnChance) {
+                spawnFood();
+            }
+
+            // Beast Animation
+            beastBody.position.y = 3 + Math.sin(time * 0.002) * 0.5;
+            beastBody.rotation.y += 0.005;
+
+            // Interaction Check (Near Beast)
+            const distToBeast = playerGroup.position.distanceTo(beastPivot.position);
+            if (distToBeast < 10 + STATE.beast.scale * 3) {
+                btn.style.display = 'flex';
+                if (STATE.meat > 0) btn.innerHTML = '🥩×' + STATE.meat;
+                else btn.innerHTML = '❌';
+            } else {
+                btn.style.display = 'none';
+            }
+
+            renderer.render(scene, camera);
+        }
+        loadGameConfig().then(() => {
+            animate(0);
+        });
+
+        window.onresize = () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        };
+    </script>
+</body>
+
+</html>

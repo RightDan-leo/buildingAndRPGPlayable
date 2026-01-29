@@ -1,0 +1,10 @@
+beast.startStage, 1
+beast.startMaxExp, 50
+beast.expPerFeed, 10
+beast.growExpMult, 1.5
+beast.growScaleMult, 1.3
+player.speed, 0.5
+player.pickupRange, 4
+spawn.maxFood, 10
+spawn.respawnChance, 0.01
+spawn.respawnLimit, 5
