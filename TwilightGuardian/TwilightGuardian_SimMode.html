@@ -276,16 +276,16 @@
 
         #joystick-visual {
             position: absolute;
-            bottom: 50px;
-            right: 50px;
-            /* Initial Fixed Position */
+            bottom: 30%;
+            right: 20%;
+            /* More central position for tutorial visibility */
             width: 120px;
             height: 120px;
             background: rgba(255, 255, 255, 0.1);
             border: 2px solid rgba(255, 255, 255, 0.5);
             border-radius: 50%;
-            transition: opacity 0.2s;
-            /* Fade effect */
+            transition: opacity 0.2s, bottom 0.3s, right 0.3s;
+            /* Smooth transition for reposition */
             pointer-events: none;
         }
 
@@ -303,8 +303,9 @@
 
         #tutorial-hand {
             position: absolute;
-            bottom: 80px;
-            right: 80px;
+            bottom: calc(30% + 30px);
+            right: calc(20% + 30px);
+            /* Aligned with central joystick position */
             font-size: 60px;
             animation: pointer-bob 1.5s infinite;
             z-index: 1001;
@@ -958,7 +959,10 @@ price.flame, 300
                 // scene.fog.color.setHex(CONFIG.colors.dayBg);
                 // scene.fog.near = 50; scene.fog.far = 200; // Reduce fog for day visibility
                 ground.material.color.setHex(CONFIG.colors.groundDay);
-                playerGroup.position.set(0, 0, 20);
+                // Only reset player position on Day 1 to avoid teleportation glitch
+                if (STATE.wave === 1) {
+                    playerGroup.position.set(0, 0, 20);
+                }
                 camera.position.set(0, 50, 60);
 
                 baseGroup.visible = true;
@@ -1139,17 +1143,95 @@ price.flame, 300
                     }
                 }
 
-                // EMP: Stun every 180 frames (~3s)
-                if (STATE.buildingTimer % 180 === 0 && STATE.empTowers.length > 0) {
+                // EMP -> AOE BOMB LAUNCHER: Launch devastating bomb every ~2.5s
+                if (STATE.buildingTimer % 150 === 0 && STATE.empTowers.length > 0) {
+                    if (STATE.phase !== 'NIGHT') return; // Only fire at night
                     STATE.empTowers.forEach(t => {
-                        this.createExplosion(t.pos, 0xff00ff, 5); // Visual Pulse (Purple)
-                        this.playSound('shoot'); // Audio
-                        mobs.forEach(m => {
-                            if (m.mesh.position.distanceTo(t.pos) < 35) { // Increased range
-                                m.stun = 60; // Stun for 1s
-                                this.createExplosion(m.mesh.position, 0x0000ff, 0.5);
-                            }
+                        // Find closest mob to target
+                        const target = this.getClosestMob(t.pos);
+                        if (!target) return;
+
+                        // Create Bomb Projectile (Large glowing sphere)
+                        const bombGeo = new THREE.SphereGeometry(1.5, 16, 16);
+                        const bombMat = new THREE.MeshBasicMaterial({
+                            color: 0xff00ff,
+                            emissive: 0xff00ff
                         });
+                        const bomb = new THREE.Mesh(bombGeo, bombMat);
+                        bomb.position.copy(t.pos);
+                        bomb.position.y = 8; // Launch from tower height
+                        scene.add(bomb);
+
+                        // Launch Animation (Parabolic Arc)
+                        const startPos = bomb.position.clone();
+                        const endPos = target.mesh.position.clone();
+                        const midPoint = new THREE.Vector3().lerpVectors(startPos, endPos, 0.5);
+                        midPoint.y = 25; // Arc height
+
+                        let progress = 0;
+                        const animateBomb = () => {
+                            progress += 0.08; // Speed
+                            if (progress >= 1) {
+                                // IMPACT! Big AOE Damage
+                                const impactPos = endPos.clone();
+
+                                // Massive Visual Explosion (Multi-layered)
+                                for (let i = 0; i < 30; i++) {
+                                    this.createExplosion(impactPos, 0xff00ff, 3); // Purple core
+                                }
+                                for (let i = 0; i < 20; i++) {
+                                    this.createExplosion(impactPos, 0xffff00, 4); // Yellow outer ring
+                                }
+                                for (let i = 0; i < 10; i++) {
+                                    this.createExplosion(impactPos, 0xffffff, 5); // White flash
+                                }
+
+                                // Screen Shake Effect (Camera wobble)
+                                const originalCamPos = camera.position.clone();
+                                let shakeFrame = 0;
+                                const shake = () => {
+                                    shakeFrame++;
+                                    camera.position.x = originalCamPos.x + (Math.random() - 0.5) * 2;
+                                    camera.position.y = originalCamPos.y + (Math.random() - 0.5) * 2;
+                                    if (shakeFrame < 10) requestAnimationFrame(shake);
+                                    else camera.position.copy(originalCamPos);
+                                };
+                                shake();
+
+                                // AOE Damage: Hit ALL mobs in radius 40
+                                const aoeDamage = 150; // HIGH DAMAGE
+                                const aoeRadius = 40;
+                                for (let j = mobs.length - 1; j >= 0; j--) {
+                                    const m = mobs[j];
+                                    if (m.mesh.position.distanceTo(impactPos) < aoeRadius) {
+                                        this.hitMob(j, aoeDamage);
+                                    }
+                                }
+
+                                this.playSound('shoot');
+                                scene.remove(bomb);
+                                return;
+                            }
+
+                            // Quadratic Bezier for arc trajectory
+                            const t1 = 1 - progress;
+                            const t2 = progress;
+                            bomb.position.x = t1 * t1 * startPos.x + 2 * t1 * t2 * midPoint.x + t2 * t2 * endPos.x;
+                            bomb.position.y = t1 * t1 * startPos.y + 2 * t1 * t2 * midPoint.y + t2 * t2 * endPos.y;
+                            bomb.position.z = t1 * t1 * startPos.z + 2 * t1 * t2 * midPoint.z + t2 * t2 * endPos.z;
+
+                            // Spinning bomb effect
+                            bomb.rotation.x += 0.3;
+                            bomb.rotation.z += 0.2;
+
+                            // Trail particles
+                            if (Math.random() < 0.5) {
+                                this.createExplosion(bomb.position.clone(), 0xff00ff, 0.5);
+                            }
+
+                            requestAnimationFrame(animateBomb);
+                        };
+                        animateBomb();
                     });
                 }
 
@@ -1178,6 +1260,7 @@ price.flame, 300
             },
 
             triggerDaybreak: function () {
+                STATE.phase = 'TRANSITION'; // STOP mob spawning immediately
                 for (let i = 0; i < 50; i++) this.createExplosion(new THREE.Vector3(0, 0, 0), 0xffffff, 2);
                 mobs.forEach(m => scene.remove(m.mesh)); mobs = [];
                 // Check Ad Condition: End of Wave 4 Night
@@ -1195,63 +1278,7 @@ price.flame, 300
                 }
             },
 
-            playSound: function (type) {
-                if (STATE.gameOver) return;
-                if (!this.audioCtx) return;
-                const osc = this.audioCtx.createOscillator();
-                const gain = this.audioCtx.createGain();
-                osc.connect(gain);
-                gain.connect(this.audioCtx.destination);
-
-                const now = this.audioCtx.currentTime;
-
-                if (type === 'shoot') {
-                    osc.type = 'square';
-                    osc.frequency.setValueAtTime(600, now);
-                    osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
-                    gain.gain.setValueAtTime(0.1, now);
-                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-                    osc.start(now);
-                    osc.stop(now + 0.1);
-                }
-                else if (type === 'hit') {
-                    osc.type = 'sawtooth';
-                    osc.frequency.setValueAtTime(200, now);
-                    osc.frequency.exponentialRampToValueAtTime(50, now + 0.1);
-                    gain.gain.setValueAtTime(0.1, now);
-                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-                    osc.start(now);
-                    osc.stop(now + 0.1);
-                }
-                else if (type === 'build') {
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(400, now);
-                    osc.frequency.linearRampToValueAtTime(800, now + 0.2);
-                    gain.gain.setValueAtTime(0.2, now);
-                    gain.gain.linearRampToValueAtTime(0, now + 0.5);
-                    osc.start(now);
-                    osc.stop(now + 0.5);
-                }
-                else if (type === 'levelup') {
-                    osc.type = 'triangle';
-                    osc.frequency.setValueAtTime(300, now);
-                    osc.frequency.setValueAtTime(600, now + 0.1);
-                    osc.frequency.setValueAtTime(900, now + 0.2);
-                    gain.gain.setValueAtTime(0.3, now);
-                    gain.gain.linearRampToValueAtTime(0, now + 1);
-                    osc.start(now);
-                    osc.stop(now + 1);
-                }
-                else if (type === 'collect') {
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(1000, now);
-                    osc.frequency.exponentialRampToValueAtTime(1500, now + 0.1);
-                    gain.gain.setValueAtTime(0.1, now);
-                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-                    osc.start(now);
-                    osc.stop(now + 0.1);
-                }
-            },
+            // NOTE: playSound function is defined later in the file with proper AudioContext lazy initialization
 
             autoEndDay: function () {
                 STATE.wave++;
@@ -1745,7 +1772,7 @@ price.flame, 300
                 group.position.set(Math.sin(angle) * r, 5, Math.cos(angle) * r);
                 scene.add(group);
 
-                const maxHp = CONFIG.mob.bossHp * 15.6; // Increased by 4x total (3.9 -> 15.6)
+                const maxHp = CONFIG.mob.bossHp * 7.8; // Halved from 15.6 to 7.8
                 mobs.push({ mesh: group, hp: maxHp, maxHp: maxHp, hpBar: hpFg, speed: 0.08, isBoss: true });
             },
 
@@ -1952,72 +1979,95 @@ price.flame, 300
                         mesh: cross,
                         vel: new THREE.Vector3(0, 0.2, 0),
                         life: 40
-                    }
+                    }); // FIXED: Missing closing parenthesis
+                }
             },
 
-                playSound: function (key) {
-                    if (!this.audioCtx) return;
-                    const osc = this.audioCtx.createOscillator();
-                    const gain = this.audioCtx.createGain();
-                    osc.connect(gain);
-                    gain.connect(this.audioCtx.destination);
-
-                    const now = this.audioCtx.currentTime;
-                    if (key === 'shoot') {
-                        osc.type = 'square';
-                        osc.frequency.setValueAtTime(800, now);
-                        osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
-                        gain.gain.setValueAtTime(0.1, now);
-                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-                        osc.start(now);
-                        osc.stop(now + 0.1);
-                    } else if (key === 'hit') {
-                        osc.type = 'sawtooth';
-                        osc.frequency.setValueAtTime(200, now);
-                        osc.frequency.exponentialRampToValueAtTime(50, now + 0.1);
-                        gain.gain.setValueAtTime(0.1, now);
-                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-                        osc.start(now);
-                        osc.stop(now + 0.1);
-                    } else if (key === 'collect') { // Also used for Heal
-                        osc.type = 'sine';
-                        osc.frequency.setValueAtTime(1200, now);
-                        osc.frequency.exponentialRampToValueAtTime(1800, now + 0.1);
-                        gain.gain.setValueAtTime(0.1, now);
-                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-                        osc.start(now);
-                        osc.stop(now + 0.3);
-                    } else if (key === 'levelup') {
-                        osc.type = 'triangle';
-                        osc.frequency.setValueAtTime(440, now);
-                        osc.frequency.linearRampToValueAtTime(880, now + 0.3);
-                        gain.gain.setValueAtTime(0.2, now);
-                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
-                        osc.start(now);
-                        osc.stop(now + 0.5);
+            playSound: function (key) {
+                // Lazy Init AudioContext on first sound attempt
+                if (!this.audioCtx) {
+                    try {
+                        this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    } catch (e) {
+                        console.warn("AudioContext init failed:", e);
+                        return;
                     }
-                },
+                }
 
-                triggerVictory: function () {
-                    if (STATE.gameOver) return;
-                    STATE.gameOver = true;
-                    this.notify("🏆 恭喜! 巨兽已击败! 🏆", 5000);
+                // Resume if suspended (Browser Autoplay Policy)
+                if (this.audioCtx.state === 'suspended') {
+                    this.audioCtx.resume();
+                }
 
-                    // Show Download / Victory Screen
-                    const overlay = document.createElement('div');
-                    overlay.style.position = 'absolute';
-                    overlay.style.top = '0';
-                    overlay.style.left = '0';
-                    overlay.style.width = '100%';
-                    overlay.style.height = '100%';
-                    overlay.style.background = 'rgba(0,0,0,0.85)';
-                    overlay.style.display = 'flex';
-                    overlay.style.flexDirection = 'column';
-                    overlay.style.justifyContent = 'center';
-                    overlay.style.alignItems = 'center';
-                    overlay.style.color = '#ffd700';
-                    overlay.style.zIndex = '9999';
-                    overlay.innerHTML = `
+                const osc = this.audioCtx.createOscillator();
+                const gain = this.audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(this.audioCtx.destination);
+
+                const now = this.audioCtx.currentTime;
+                if (key === 'shoot') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(800, now);
+                    osc.frequency.exponentialRampToValueAtTime(100, now + 0.15);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+                } else if (key === 'hit') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(200, now);
+                    osc.frequency.exponentialRampToValueAtTime(50, now + 0.1);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                } else if (key === 'collect') { // Also used for Heal
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(1200, now);
+                    osc.frequency.exponentialRampToValueAtTime(1800, now + 0.1);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                } else if (key === 'levelup') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(440, now);
+                    osc.frequency.linearRampToValueAtTime(880, now + 0.3);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                    osc.start(now);
+                    osc.stop(now + 0.5);
+                } else if (key === 'build') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.linearRampToValueAtTime(800, now + 0.2);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.5);
+                    osc.start(now);
+                    osc.stop(now + 0.5);
+                }
+            },
+
+            triggerVictory: function () {
+                if (STATE.gameOver) return;
+                STATE.gameOver = true;
+                this.notify("🏆 恭喜! 巨兽已击败! 🏆", 5000);
+
+                // Show Download / Victory Screen
+                const overlay = document.createElement('div');
+                overlay.style.position = 'absolute';
+                overlay.style.top = '0';
+                overlay.style.left = '0';
+                overlay.style.width = '100%';
+                overlay.style.height = '100%';
+                overlay.style.background = 'rgba(0,0,0,0.85)';
+                overlay.style.display = 'flex';
+                overlay.style.flexDirection = 'column';
+                overlay.style.justifyContent = 'center';
+                overlay.style.alignItems = 'center';
+                overlay.style.color = '#ffd700';
+                overlay.style.zIndex = '9999';
+                overlay.innerHTML = `
                     <h1 style="font-size: 48px; text-shadow: 0 0 20px orange; margin-bottom: 20px;">VICTORY</h1>
                     <p style="font-size: 24px; color: #fff; margin-bottom: 40px;">守护者任务完成</p>
                     <div style="display: flex; gap: 20px;">
@@ -2029,38 +2079,38 @@ price.flame, 300
                         </div>
                     </div>
                 `;
-                    document.body.appendChild(overlay);
-                }
-            };
+                document.body.appendChild(overlay);
+            }
+        };
 
-            const keys = {};
-            window.onkeydown = e => keys[e.key] = true;
-            window.onkeyup = e => keys[e.key] = false;
+        const keys = {};
+        window.onkeydown = e => keys[e.key] = true;
+        window.onkeyup = e => keys[e.key] = false;
 
-            function animate() {
-                requestAnimationFrame(animate);
+        function animate() {
+            requestAnimationFrame(animate);
 
-        // Idle State: Render but don't update logic
-        if (!window.InputSystem.started) {
+            // Idle State: Render but don't update logic
+            if (!window.InputSystem.started) {
+                renderer.render(scene, camera);
+                return;
+            }
+
+            // Optional: Map Keys to InputSystem for debugging (add to delta)
+            let kx = 0, ky = 0;
+            if (keys['w'] || keys['ArrowUp']) ky = -1;
+            if (keys['s'] || keys['ArrowDown']) ky = 1;
+            if (keys['a'] || keys['ArrowLeft']) kx = -1;
+            if (keys['d'] || keys['ArrowRight']) kx = 1;
+
+            // Inject keys into InputSystem delta (hacky but works for keeping game.handleInput clean)
+            if (kx !== 0 || ky !== 0) {
+                window.InputSystem.delta.x = kx;
+                window.InputSystem.delta.y = ky;
+            }
+
+            game.update();
             renderer.render(scene, camera);
-            return;
-        }
-
-        // Optional: Map Keys to InputSystem for debugging (add to delta)
-        let kx = 0, ky = 0;
-        if (keys['w'] || keys['ArrowUp']) ky = -1;
-        if (keys['s'] || keys['ArrowDown']) ky = 1;
-        if (keys['a'] || keys['ArrowLeft']) kx = -1;
-        if (keys['d'] || keys['ArrowRight']) kx = 1;
-
-        // Inject keys into InputSystem delta (hacky but works for keeping game.handleInput clean)
-        if (kx !== 0 || ky !== 0) {
-            window.InputSystem.delta.x = kx;
-            window.InputSystem.delta.y = ky;
-        }
-
-        game.update();
-        renderer.render(scene, camera);
         }
 
         loadGameConfig().then(() => {
