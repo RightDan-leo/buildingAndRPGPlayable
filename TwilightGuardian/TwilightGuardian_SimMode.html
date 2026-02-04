@@ -249,6 +249,33 @@
             z-index: 5;
         }
 
+        #big-countdown {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 120px;
+            font-weight: 900;
+            color: #ff4444;
+            text-shadow: 0 0 30px #ff0000, 0 0 60px #ff0000;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 100;
+            animation: pulse-countdown 1s infinite;
+        }
+
+        @keyframes pulse-countdown {
+
+            0%,
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+            }
+
+            50% {
+                transform: translate(-50%, -50%) scale(1.1);
+            }
+        }
+
         /* Universal Joystick & Input Styles */
         #universal-ui-layer {
             position: fixed;
@@ -429,6 +456,7 @@
         </div>
 
         <div id="notify-text">PHASE CHANGE</div>
+        <div id="big-countdown"></div>
     </div>
 
     <div id="world-labels"></div>
@@ -811,6 +839,8 @@ price.flame, 300
                     },
                     spawnTimer: 0, atkTimer: 0, turretTimer: 0, buildingTimer: 0, dayObjectiveMet: false,
                     buildsThisDay: 0,
+                    dayTimer: 0, // 白天倒计时计时器
+                    dayDuration: 1200, // 20秒 × 60帧
                     flags: { wall: false, turret1: false, turret2: false, soldier: false, pulse: false, healer: false, emp: false, wall2: false, flame: false },
                     bossSpawned: false,
                     gameOver: false
@@ -918,8 +948,9 @@ price.flame, 300
                 STATE.baseEnergy = 0;
                 STATE.bossSpawned = false; // Reset boss flag each night (though only used for W3)
 
-                if (STATE.wave === 1) { CONFIG.baseChargeMax = 20; STATE.energyPerKill = 2.5; } // Reduced from 30 (-33%)
-                else { CONFIG.baseChargeMax = 70; STATE.energyPerKill = 3; } // Reduced from 100 (-30%)
+                STATE.bossSpawned = false; // 重置，允许每夜生成新Boss
+                if (STATE.wave === 1) { CONFIG.baseChargeMax = 20; STATE.energyPerKill = 2.5; }
+                else { CONFIG.baseChargeMax = 70; STATE.energyPerKill = 3; }
 
                 scene.background = new THREE.Color(CONFIG.colors.nightBg);
                 // scene.fog.color.setHex(CONFIG.colors.nightBg); // Removed fog for better visibility
@@ -934,6 +965,7 @@ price.flame, 300
                 document.getElementById('minimap').style.display = 'none';
                 document.getElementById('objective-panel').style.display = 'none';
                 document.getElementById('energy-badge').style.display = 'flex';
+                document.getElementById('big-countdown').style.opacity = '0'; // 隐藏大倒计时
                 buildSlots.forEach(s => { if (s.labelEl) s.labelEl.style.display = 'none'; });
 
                 // Recall Soldiers - REMOVED: Workers now fight at night!
@@ -950,16 +982,14 @@ price.flame, 300
                 STATE.phase = 'DAY';
                 STATE.dayObjectiveMet = false;
                 STATE.buildsThisDay = 0;
+                STATE.dayTimer = 0; // 重置15秒倒计时
 
-                // Ensure clean state for Day
-                mobs.forEach(m => scene.remove(m.mesh)); mobs = [];
+                // 按规格：白天无怪物，清理所有子弹和怪物
                 bullets.forEach(b => scene.remove(b.mesh)); bullets = [];
+                mobs.forEach(m => scene.remove(m.mesh)); mobs = [];
 
                 scene.background = new THREE.Color(CONFIG.colors.dayBg);
-                // scene.fog.color.setHex(CONFIG.colors.dayBg);
-                // scene.fog.near = 50; scene.fog.far = 200; // Reduce fog for day visibility
                 ground.material.color.setHex(CONFIG.colors.groundDay);
-                // Only reset player position on Day 1 to avoid teleportation glitch
                 if (STATE.wave === 1) {
                     playerGroup.position.set(0, 0, 20);
                 }
@@ -967,17 +997,93 @@ price.flame, 300
 
                 baseGroup.visible = true;
                 buildSlotGroup.visible = true;
-                // guideArrow.visible = true; // REMOVED per user request
 
                 document.getElementById('minimap').style.display = 'block';
                 document.getElementById('energy-badge').style.display = 'none';
                 document.getElementById('objective-panel').style.display = 'block';
-                document.getElementById('objective-panel').innerText = `Day ${STATE.wave}: 搜集金币，建设家园`;
+                this.updateDayObjectiveUI();
 
                 this.generateWilds();
                 this.setupBuildSlots();
-                this.deploySoldiers(); // Soldiers start working
-                this.notify("☀️ 天亮了！搜集金币，建设家园！");
+                this.deploySoldiers();
+                this.notify("☀️ 天亮了！收集资源，完成建造！");
+            },
+
+            // 更新白天目标UI（不是计时器）
+            updateDayObjectiveUI: function () {
+                let objective = '';
+                if (STATE.wave === 1) {
+                    if (!STATE.flags.wall) objective = '建造城墙';
+                    else if (!STATE.flags.turret1) objective = '建造防御塔';
+                    else objective = '建造完成！';
+                } else if (STATE.wave === 2) {
+                    if (!STATE.flags.soldier) objective = '建造士兵营地';
+                    else if (!STATE.flags.pulse) objective = '建造电磁炮';
+                    else objective = '建造完成！';
+                } else if (STATE.wave === 3) {
+                    if (!STATE.flags.wall2) objective = '扩建城墙';
+                    else if (!STATE.flags.emp2) objective = '建造高能电磁炮';
+                    else if (!STATE.flags.healer) objective = '建造维修站';
+                    else objective = '建造完成！';
+                }
+                document.getElementById('objective-panel').innerText = `Day ${STATE.wave}: 🔨 ${objective}`;
+            },
+
+            // 更新白天倒计时UI
+            updateDayTimerUI: function () {
+                const remaining = Math.ceil((STATE.dayDuration - STATE.dayTimer) / 60);
+                document.getElementById('objective-panel').innerText = `Day ${STATE.wave}: ⏱️ 剩余 ${remaining} 秒`;
+
+                // 最后5秒显示巨大倒计时
+                const bigCountdown = document.getElementById('big-countdown');
+                if (remaining <= 5 && remaining > 0) {
+                    bigCountdown.textContent = remaining;
+                    bigCountdown.style.opacity = '1';
+                } else {
+                    bigCountdown.style.opacity = '0';
+                }
+            },
+
+            checkAllBuildsComplete: function () {
+                // 检查是否还有可用的建造位
+                const availableSlots = buildSlots.filter(s => s.active);
+                if (availableSlots.length === 0) {
+                    // 所有建造位已完成 - 立即停止倒计时
+                    STATE.dayObjectiveMet = true; // 阻止倒计时继续显示
+                    document.getElementById('big-countdown').style.opacity = '0';
+                    this.notify("🏗️ 今日建造完成，夜晚来袭！");
+                    this.autoEndDay();
+                    return true;
+                }
+                return false;
+            },
+
+            // 生成白天较弱的怪物
+            spawnDayMob: function () {
+                const group = new THREE.Group();
+                const geo = new THREE.BoxGeometry(1.5, 1.5, 1.5); // 比夜晚小
+                const mat = new THREE.MeshStandardMaterial({ color: 0x88aa44 }); // 绿色（白天怪）
+                const body = new THREE.Mesh(geo, mat);
+                body.castShadow = true;
+                group.add(body);
+
+                // 血条
+                const hpBg = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.15, 0.05), new THREE.MeshBasicMaterial({ color: 0x550000 }));
+                hpBg.position.y = 2;
+                group.add(hpBg);
+                const hpFgGeo = new THREE.BoxGeometry(1.5, 0.15, 0.05);
+                hpFgGeo.translate(0.75, 0, 0);
+                const hpFg = new THREE.Mesh(hpFgGeo, new THREE.MeshBasicMaterial({ color: 0x00ff00 }));
+                hpFg.position.set(-0.75, 2, 0.02);
+                group.add(hpFg);
+
+                const angle = Math.random() * Math.PI * 2;
+                const r = 50 + Math.random() * 30;
+                group.position.set(Math.sin(angle) * r, 1, Math.cos(angle) * r);
+                scene.add(group);
+
+                const maxHp = Math.floor(CONFIG.mob.hpBase * 0.5); // HP减半
+                mobs.push({ mesh: group, hp: maxHp, maxHp: maxHp, hpBar: hpFg, speed: 0.08, isBoss: false, isDayMob: true });
             },
 
             // ...
@@ -989,8 +1095,9 @@ price.flame, 300
             },
 
             generateWilds: function () {
-                for (let i = 0; i < 30 + STATE.wave * 10; i++) {
-                    // Changed to Octahedron to look like Gems/Crystals instead of Enemy Boxes
+                // 增加金币数量: 35 + wave * 10 (Day 1=45, Day 2=55, Day 3=65)
+                const coinCount = 35 + STATE.wave * 10;
+                for (let i = 0; i < coinCount; i++) {
                     const bx = new THREE.Mesh(new THREE.OctahedronGeometry(1), new THREE.MeshStandardMaterial({ color: 0xffd700 }));
                     const angle = Math.random() * Math.PI * 2;
                     const r = 40 + Math.random() * 80;
@@ -1030,6 +1137,17 @@ price.flame, 300
                 // Old Joystick Code Removed...
 
                 if (STATE.phase === 'DAY') {
+                    // 15秒倒计时
+                    STATE.dayTimer++;
+                    if (STATE.dayTimer % 60 === 0) this.updateDayTimerUI();
+
+                    // 15秒后自动进入黑夜
+                    if (STATE.dayTimer >= STATE.dayDuration && !STATE.dayObjectiveMet) {
+                        STATE.dayObjectiveMet = true;
+                        this.notify("⏰ 时间到，黑夜降临！");
+                        setTimeout(() => this.autoEndDay(), 1500);
+                    }
+
                     camera.position.x = playerGroup.position.x;
                     camera.position.z = playerGroup.position.z + 40;
                     camera.lookAt(playerGroup.position);
@@ -1041,22 +1159,21 @@ price.flame, 300
                     document.getElementById('map-player').style.top = pctY + '%';
 
                     this.checkBuildInteraction();
-                    // this.updateSoldiers(); // Moved to main update loop check
-                    // this.updateGuideArrow(); // REMOVED
 
                     // Rotate build slots for effect
                     if (buildSlotGroup.visible) {
                         buildSlotGroup.children.forEach(child => {
-                            child.rotation.z -= 0.02; // Rotate around Z because it's rotated X -90
+                            child.rotation.z -= 0.02;
                         });
                     }
 
+                    // 收集金币
                     for (let i = items.length - 1; i >= 0; i--) {
                         const it = items[i];
                         if (playerGroup.position.distanceTo(it.mesh.position) < STATE.player.pickupRange) {
                             STATE.gold += it.val;
                             this.createExplosion(it.mesh.position, 0xffff00, 1.5);
-                            this.playSound('collect'); // Audio
+                            this.playSound('collect');
                             scene.remove(it.mesh);
                             items.splice(i, 1);
                             this.updateUI();
@@ -1066,11 +1183,11 @@ price.flame, 300
 
                 if (STATE.phase === 'NIGHT') {
                     if (STATE.gameOver) return;
-                    // Spawn Boss on Wave 4 start
+                    // Boss只在Night 4出现
                     if (STATE.wave === 4 && !STATE.bossSpawned) {
                         this.spawnBoss();
                         STATE.bossSpawned = true;
-                        this.notify("⚠️ 警告: 巨型 BOSS 把守关底!");
+                        this.notify("⚠️ 警告: 终极 BOSS 出现！");
                     }
 
                     STATE.spawnTimer++;
@@ -1081,7 +1198,7 @@ price.flame, 300
 
                     if (STATE.spawnTimer % spawnRate === 0) {
                         this.spawnMob();
-                        if (STATE.wave === 4 && Math.random() < 0.3) this.spawnMob(); // 30% Double spawn for swarm feel
+                        if (STATE.wave === 4 && Math.random() < 0.5) this.spawnMob(); // 50% Double spawn for swarm feel
                     }
                     STATE.turretTimer++;
                     if (turretGroup.children.length > 0 && STATE.turretTimer > 40) {
@@ -1281,57 +1398,51 @@ price.flame, 300
             // NOTE: playSound function is defined later in the file with proper AudioContext lazy initialization
 
             autoEndDay: function () {
-                STATE.wave++;
+                // 隐藏大倒计时
+                document.getElementById('big-countdown').style.opacity = '0';
+                // 只在 wave < 4 时增加 wave (游戏只有4个波次)
+                if (STATE.wave < 4) {
+                    STATE.wave++;
+                }
                 this.notify("🌙 建设完成，黑夜降临！");
-                this.playSound('build'); // Sound
+                this.playSound('build');
                 setTimeout(() => { this.startNight(); }, 2000);
             },
 
             setupBuildSlots: function () {
                 this.clearBuildSlots();
 
-                // Day 1: Wall -> Turret 1 (Right)
-                if (STATE.wave === 1) {
-                    if (!STATE.flags.wall) {
-                        this.addBuildSlot(new THREE.Vector3(0, 0, 15), 'wall', '加固城墙', 50, 'wall');
-                        this.notify("任务：建造城墙");
-                    } else if (!STATE.flags.turret1) {
-                        this.addBuildSlot(new THREE.Vector3(15, 0, 0), 'turret', '建造防御塔', 100, 'turret1');
-                        this.notify("任务：建造防御塔");
-                    }
-                }
+                // 建筑顺序列表（全局顺序，跨天继承）
+                // Day 1: wall -> turret1
+                // Day 2: soldier -> pulse
+                // Day 3: wall2 -> emp2 -> healer
+                const buildQueue = [
+                    { pos: new THREE.Vector3(0, 0, 15), type: 'wall', name: '加固城墙', cost: 50, flag: 'wall', unlockDay: 1 },
+                    { pos: new THREE.Vector3(15, 0, 0), type: 'turret', name: '建造防御塔', cost: 100, flag: 'turret1', unlockDay: 1, requires: 'wall' },
+                    { pos: new THREE.Vector3(0, 0, 12), type: 'soldier', name: '士兵营地', cost: 150, flag: 'soldier', unlockDay: 2 },
+                    { pos: new THREE.Vector3(-15, 0, 0), type: 'pulse', name: '电磁炮', cost: 250, flag: 'pulse', unlockDay: 2, requires: 'soldier' },
+                    { pos: new THREE.Vector3(0, 0, 18), type: 'wall2', name: '扩建城墙', cost: 200, flag: 'wall2', unlockDay: 3, requires: 'wall' },
+                    { pos: new THREE.Vector3(20, 0, 0), type: 'emp2', name: '高能电磁炮', cost: 400, flag: 'emp2', unlockDay: 3, requires: 'wall2' },
+                    { pos: new THREE.Vector3(-10, 0, -10), type: 'healer', name: '维修站', cost: 300, flag: 'healer', unlockDay: 3, requires: 'emp2' }
+                ];
 
-                // Day 2: Soldier -> Pulse Cannon
-                if (STATE.wave === 2) {
-                    if (!STATE.flags.soldier) {
-                        this.addBuildSlot(new THREE.Vector3(0, 0, 12), 'soldier', '士兵营地', 150, 'soldier');
-                        this.notify("任务：建造士兵营地");
-                    } else if (!STATE.flags.pulse) {
-                        this.addBuildSlot(new THREE.Vector3(-15, 0, 0), 'pulse', '电磁炮', 250, 'pulse');
-                        this.notify("任务：建造电磁炮");
-                    }
-                }
+                // 找到第一个未完成且已解锁的建筑
+                for (let i = 0; i < buildQueue.length; i++) {
+                    const b = buildQueue[i];
 
-                // Day 3+: Advanced Buildings (EMP)
-                // ... same check ...
+                    // 跳过已建造的
+                    if (STATE.flags[b.flag]) continue;
 
-                // Day 3 (Final Day): Wall Upgrade -> EMP2 -> Healer
-                if (STATE.wave === 3) {
-                    if (STATE.flags.wall && !STATE.flags.wall2) {
-                        // Phase 1: Expand Wall
-                        this.addBuildSlot(new THREE.Vector3(0, 0, 18), 'wall2', '扩建城墙 (超大范围)', 200, 'wall2');
-                        this.notify("任务：扩建城墙，为重型武器腾出空间");
-                    }
-                    else if (STATE.flags.wall2 && !STATE.flags.emp2) {
-                        // Phase 2: High-Energy EMP (Inside Wall)
-                        this.addBuildSlot(new THREE.Vector3(20, 0, 0), 'emp2', '高能电磁炮 (AOE)', 400, 'emp2');
-                        this.notify("任务：建造高能电磁炮");
-                    }
-                    else if (STATE.flags.emp2 && !STATE.flags.healer) {
-                        // Phase 3: Healer (Base Regen)
-                        this.addBuildSlot(new THREE.Vector3(-10, 0, -10), 'healer', '纳米维修站 (回血)', 300, 'healer');
-                        this.notify("任务：建造维修站");
-                    }
+                    // 检查是否已解锁（当前波次 >= 解锁天数）
+                    if (STATE.wave < b.unlockDay) continue;
+
+                    // 检查前置条件
+                    if (b.requires && !STATE.flags[b.requires]) continue;
+
+                    // 添加这个建筑位
+                    this.addBuildSlot(b.pos, b.type, b.name, b.cost, b.flag);
+                    this.notify(`任务：${b.name}`);
+                    return; // 每次只显示一个建筑位
                 }
             },
 
@@ -1492,7 +1603,7 @@ price.flame, 300
                     // Find existing wall and scale it up MASSIVELY
                     if (wallGroup.children.length > 0) {
                         const w = wallGroup.children[0];
-                        w.scale.set(2.0, 1, 2.0); // Increase radius to 30
+                        w.scale.set(1.4, 1, 1.4); // Increase radius moderately (was 2.0)
                         w.material.color.setHex(0xffd700); // Gold color
                         w.material.emissive.setHex(0x552200);
                         this.notify("城墙扩建完成！范围大幅增加！基地血量上限 +100！");
@@ -1532,10 +1643,27 @@ price.flame, 300
                     this.setupBuildSlots();
                 }
 
-                if (!STATE.dayObjectiveMet && buildSlots.length === 0) {
-                    STATE.dayObjectiveMet = true;
-                    setTimeout(() => this.autoEndDay(), 2000);
+
+                // 检查是否当天所有建筑都已完成
+                // 只有当所有当天可建建筑都完成时才触发
+                if (!STATE.dayObjectiveMet) {
+                    let allDone = false;
+                    if (STATE.wave === 1) {
+                        allDone = STATE.flags.wall && STATE.flags.turret1;
+                    } else if (STATE.wave === 2) {
+                        allDone = STATE.flags.soldier && STATE.flags.pulse;
+                    } else if (STATE.wave === 3) {
+                        allDone = STATE.flags.wall2 && STATE.flags.emp2 && STATE.flags.healer;
+                    }
+
+                    if (allDone) {
+                        STATE.dayObjectiveMet = true;
+                        document.getElementById('big-countdown').style.opacity = '0';
+                        this.notify("🏗️ 今日建造完成，夜晚来袭！");
+                        setTimeout(() => this.autoEndDay(), 2000);
+                    }
                 }
+                this.updateDayObjectiveUI(); // 更新建造目标显示
                 this.updateUI();
             },
 
@@ -1744,8 +1872,10 @@ price.flame, 300
                 group.position.set(Math.sin(angle) * r, 1, Math.cos(angle) * r);
                 scene.add(group);
 
-                const maxHp = CONFIG.mob.hpBase; // FORCE CONSTANT HP (20), ignore wave growth
-                mobs.push({ mesh: group, hp: maxHp, maxHp: maxHp, hpBar: hpFg, speed: 0.15 + STATE.wave * 0.01, isBoss: false });
+                const maxHp = CONFIG.mob.hpBase;
+                // 限制速度：最大 0.18（防止高波次太快）
+                const speed = Math.min(0.18, 0.12 + STATE.wave * 0.02);
+                mobs.push({ mesh: group, hp: maxHp, maxHp: maxHp, hpBar: hpFg, speed: speed, isBoss: false });
             },
 
             spawnBoss: function () {
@@ -1767,12 +1897,21 @@ price.flame, 300
                 hpFg.position.set(-3, 6.5, 0.05);
                 group.add(hpFg);
 
-                const angle = Math.random() * Math.PI * 2;
+                // Boss只从上边、左边、右边出现（不从bottom即正Z方向出现）
+                // 坐标系: cos(angle)*r=Z, 正Z=屏幕下方
+                // PI=上边(cos=-1), PI/2=左边(sin=1,cos=0), -PI/2=右边(sin=-1,cos=0)
+                const angleOptions = [
+                    Math.PI,        // 上边 (cos=-1, z负)
+                    Math.PI / 2,    // 左边 (sin=1, cos=0, x正)
+                    -Math.PI / 2    // 右边 (sin=-1, cos=0, x负)
+                ];
+                const baseAngle = angleOptions[Math.floor(Math.random() * 3)];
+                const angle = baseAngle + (Math.random() - 0.5) * 0.6; // 添加随机偏移
                 const r = 60;
                 group.position.set(Math.sin(angle) * r, 5, Math.cos(angle) * r);
                 scene.add(group);
 
-                const maxHp = CONFIG.mob.bossHp * 7.8; // Halved from 15.6 to 7.8
+                const maxHp = CONFIG.mob.bossHp * 6.24; // Reduced to 80% (was 7.8)
                 mobs.push({ mesh: group, hp: maxHp, maxHp: maxHp, hpBar: hpFg, speed: 0.08, isBoss: true });
             },
 
@@ -1900,6 +2039,11 @@ price.flame, 300
                             STATE.baseEnergy += STATE.energyPerKill;
                             if (STATE.baseEnergy >= CONFIG.baseChargeMax) this.triggerDaybreak();
                         }
+                    }
+
+                    // 白天击杀怪物获得金币奖励
+                    if (STATE.phase === 'DAY') {
+                        STATE.gold += 15;
                     }
                     this.updateUI();
                 }

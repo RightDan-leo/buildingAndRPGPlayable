@@ -83,21 +83,157 @@
                 z-index: 999;
             }
 
+            /* 教程引导 - 显示在屏幕底部中央 */
+            #tutorial-overlay {
+                position: absolute;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                z-index: 100;
+                pointer-events: none;
+            }
+
+            .tut-base {
+                width: 120px;
+                height: 120px;
+                background: rgba(0, 0, 0, 0.4);
+                border: 3px dashed rgba(255, 255, 255, 0.6);
+                border-radius: 50%;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                position: relative;
+            }
+
+            .tut-hand {
+                position: absolute;
+                animation: tutorialDrag 2s infinite ease-in-out;
+            }
+
+            .tut-finger {
+                font-size: 50px;
+                filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+            }
+
+            .tut-text {
+                color: white;
+                font-size: 18px;
+                font-weight: bold;
+                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 10px rgba(0, 0, 0, 0.5);
+                margin-top: 15px;
+                background: rgba(0, 0, 0, 0.5);
+                padding: 8px 16px;
+                border-radius: 20px;
+            }
+
+            @keyframes tutorialDrag {
+
+                0%,
+                100% {
+                    transform: translate(0, 0);
+                }
+
+                25% {
+                    transform: translate(30px, -20px);
+                }
+
+                50% {
+                    transform: translate(0, -30px);
+                }
+
+                75% {
+                    transform: translate(-30px, -20px);
+                }
+            }
+
+            /* 教程箭头 - 指向资源 */
+            #tutorial-arrow {
+                position: absolute;
+                top: 45%;
+                left: 55%;
+                transform: translate(-50%, -50%);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                z-index: 100;
+                pointer-events: none;
+                transition: opacity 0.5s;
+            }
+
+            .arrow-text {
+                color: #ffd700;
+                font-size: 20px;
+                font-weight: bold;
+                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 10px rgba(0, 0, 0, 0.5);
+                background: rgba(0, 0, 0, 0.6);
+                padding: 8px 16px;
+                border-radius: 10px;
+                margin-bottom: 5px;
+            }
+
+            .arrow-icon {
+                font-size: 50px;
+                animation: arrowBounce 1s infinite ease-in-out;
+                filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+            }
+
+            @keyframes arrowBounce {
+
+                0%,
+                100% {
+                    transform: translateY(0);
+                }
+
+                50% {
+                    transform: translateY(15px);
+                }
+            }
+
             .upgrade-label {
                 position: absolute;
                 color: white;
-                background: rgba(0, 0, 0, 0.8);
-                padding: 12px;
-                border-radius: 8px;
-                font-size: 14px;
+                background: linear-gradient(180deg, rgba(0, 40, 80, 0.95) 0%, rgba(0, 20, 40, 0.98) 100%);
+                padding: 15px 20px;
+                border-radius: 12px;
+                font-size: 16px;
                 pointer-events: none;
                 transform: translate(-50%, -50%);
                 display: none;
-                border: 2px solid #00ff00;
+                border: 3px solid #00ff00;
                 text-align: center;
                 white-space: nowrap;
                 font-weight: bold;
                 z-index: 20;
+                box-shadow: 0 0 20px rgba(0, 255, 0, 0.4),
+                    inset 0 0 15px rgba(0, 255, 255, 0.1);
+                line-height: 1.5;
+            }
+
+            .upgrade-label .upgrade-icon {
+                font-size: 28px;
+                display: block;
+                margin-bottom: 5px;
+            }
+
+            .upgrade-label .upgrade-title {
+                font-size: 18px;
+                color: #00ffff;
+                text-shadow: 0 0 8px #00ffff;
+            }
+
+            .upgrade-label .upgrade-desc {
+                font-size: 13px;
+                color: #aaffaa;
+                font-weight: normal;
+                margin: 5px 0;
+            }
+
+            .upgrade-label .upgrade-cost {
+                font-size: 16px;
+                color: #ffd700;
             }
 
             #damage-container {
@@ -126,6 +262,33 @@
 
                 100% {
                     transform: translateY(-40px) scale(1.2);
+                    opacity: 0;
+                }
+            }
+
+            @keyframes upgradeNotifyAnim {
+                0% {
+                    transform: translateX(-50%) scale(0);
+                    opacity: 0;
+                }
+
+                10% {
+                    transform: translateX(-50%) scale(1.1);
+                    opacity: 1;
+                }
+
+                20% {
+                    transform: translateX(-50%) scale(1);
+                    opacity: 1;
+                }
+
+                80% {
+                    transform: translateX(-50%) scale(1);
+                    opacity: 1;
+                }
+
+                100% {
+                    transform: translateX(-50%) scale(0.8) translateY(-20px);
                     opacity: 0;
                 }
             }
@@ -399,8 +562,8 @@
         <div id="game-ui">
             <button id="game-restart-btn">↻ 重新开始</button>
             <div class="res-bar">
-                <div class="res-item">📦 木石: <span id="res-total">0</span></div>
-                <div class="wave-info">敌人强度: Lv.<span id="diff-level">1</span></div>
+                <div class="res-item" style="font-size: 32px; font-weight: bold;">📦 资源: <span id="res-total">0</span>
+                </div>
             </div>
             <div id="intro-message"><span>破坏石头和树木，建造营地抵御黑暗军团！</span></div>
 
@@ -412,6 +575,7 @@
                 </div>
                 <div class="tut-text">按住屏幕 拖动移动</div>
             </div>
+            <!-- Tutorial arrow is now dynamically created in JavaScript -->
 
             <div id="joystick-wrapper"></div>
             <div id="hp-container"></div>
@@ -436,7 +600,7 @@
             const CONFIG = {
                 playerSpeed: 0.25,
                 baseResValue: 20,
-                initialSpawnRate: 240,
+                initialSpawnRate: 1,  // 立即生成第一个敌人（测试用）
                 upgradeCosts: {
                     dragonUp: 40,
                     axeUpgrade: 80,   // 降低价格
@@ -537,7 +701,7 @@
             let workers = [], soldiers = [], debris = [];
             let resources = 0;
             let frameCount = 0;
-            let gameState = 'playing';
+            let gameState = 'waiting';  // Start in waiting state until first input
 
             let difficultyLevel = 1;
             let currentSpawnRate = CONFIG.initialSpawnRate;
@@ -553,6 +717,11 @@
             let hasIceAxe2 = false;  // NEW: Frost Axe Lv2
             let bossSpawned = false;
             let bossEntity = null;
+
+            // Tutorial target system
+            let tutorialTargetTree = null;
+            let tutorialHighlightRing = null;
+            let tutorialArrowLabel = null;
 
             function init() {
                 scene = new THREE.Scene();
@@ -588,9 +757,9 @@
 
                 createPlayer();
                 createCamp();
+                createZone(-18, 5, 'dragonUp', '强化精灵龙', CONFIG.upgradeCosts.dragonUp, '攻击范围扩大，自动稳定攻击敌人', '🐲');
                 createEnvironment();
-
-                createZone(0, 18, 'dragonUp', '① 强化精灵龙', CONFIG.upgradeCosts.dragonUp);  // 移到城外
+                setupTutorialTarget();  // 设置教程箭头指向最近的树
 
                 setupJoystick();
                 setupKeyboard();
@@ -673,6 +842,17 @@
 
             function expandCamp() {
                 CONFIG.campRadius += 3;
+
+                // Push all enemies outside the new wall radius
+                enemies.forEach(e => {
+                    const distFromCenter = e.position.length();
+                    if (distFromCenter < CONFIG.campRadius + 2) {
+                        // Push enemy outside
+                        const dir = e.position.clone().normalize();
+                        e.position.copy(dir.multiplyScalar(CONFIG.campRadius + 5));
+                    }
+                });
+
                 createCamp();
                 showFloatingText("营地扩张!", new THREE.Vector3(0, 5, 0), "#00ff00", "28px");
             }
@@ -684,9 +864,33 @@
             function spawnRandomResource() {
                 const type = Math.random() < 0.6 ? 'tree' : 'rock';
                 let x, z;
-                const angle = Math.random() * Math.PI * 2;
-                const dist = CONFIG.campRadius + 5 + Math.random() * 40;
-                x = Math.cos(angle) * dist; z = Math.sin(angle) * dist;
+                let attempts = 0;
+                const maxAttempts = 10;
+
+                // Try to find a valid spawn position away from upgrade zones
+                do {
+                    const angle = Math.random() * Math.PI * 2;
+                    const dist = CONFIG.campRadius + 5 + Math.random() * 40;
+                    x = Math.cos(angle) * dist;
+                    z = Math.sin(angle) * dist;
+                    attempts++;
+
+                    // Check if too close to any active upgrade zone
+                    let tooCloseToZone = false;
+                    for (const zone of upgradeZones) {
+                        if (zone.active) {
+                            const dx = x - zone.mesh.position.x;
+                            const dz = z - zone.mesh.position.z;
+                            const distToZone = Math.sqrt(dx * dx + dz * dz);
+                            if (distToZone < 6) {  // Keep 6 units away from zones
+                                tooCloseToZone = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!tooCloseToZone) break;
+                } while (attempts < maxAttempts);
 
                 const hp = type === 'tree' ? 3 : 5;
                 const scale = 1 + Math.random() * 0.5;
@@ -709,24 +913,110 @@
 
             function increaseDifficulty() {
                 difficultyLevel++;
-                document.getElementById('diff-level').textContent = difficultyLevel;
+                // diff-level element removed from UI
                 currentSpawnRate = Math.max(30, CONFIG.initialSpawnRate - (difficultyLevel * 30));
                 enemiesPerWave = 1 + Math.floor(difficultyLevel / 2);
                 maxEnemies = 15 + (difficultyLevel * 5);
             }
 
-            function createZone(x, z, id, label, cost) {
+            function createZone(x, z, id, label, cost, desc, icon) {
                 const ring = new THREE.Mesh(new THREE.RingGeometry(2.5, 3, 32), new THREE.MeshBasicMaterial({ color: 0x00ff00, side: THREE.DoubleSide }));
                 ring.rotation.x = -Math.PI / 2; ring.position.set(x, 0.1, z);
                 const labelDiv = document.createElement('div');
                 labelDiv.className = 'upgrade-label';
-                labelDiv.innerHTML = `${label}<br>📦 ${cost}`;
+                // Build structured label with icon, title, description, cost
+                let html = '';
+                if (icon) html += `<span class="upgrade-icon">${icon}</span>`;
+                html += `<span class="upgrade-title">${label}</span>`;
+                if (desc) html += `<br><span class="upgrade-desc">${desc}</span>`;
+                html += `<br><span class="upgrade-cost">📦 ${cost}</span>`;
+                labelDiv.innerHTML = html;
                 document.getElementById('upgrade-labels').appendChild(labelDiv);
                 scene.add(ring);
                 upgradeZones.push({ mesh: ring, id: id, cost: cost, labelDiv: labelDiv, active: true });
             }
 
-            // 显示升级弹窗
+            // 教程目标系统 - 高亮一棵树并显示箭头
+            function setupTutorialTarget() {
+                // 找到最近的树
+                let nearestTree = null;
+                let minDist = Infinity;
+                for (const obj of interactables) {
+                    if (obj.userData.subType === 'tree') {
+                        const dist = player.position.distanceTo(obj.position);
+                        if (dist < minDist) {
+                            minDist = dist;
+                            nearestTree = obj;
+                        }
+                    }
+                }
+
+                if (!nearestTree) return;
+
+                tutorialTargetTree = nearestTree;
+
+                // 创建高亮光环
+                const ringGeo = new THREE.RingGeometry(2.5, 3, 32);
+                const ringMat = new THREE.MeshBasicMaterial({
+                    color: 0xffd700,
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                tutorialHighlightRing = new THREE.Mesh(ringGeo, ringMat);
+                tutorialHighlightRing.rotation.x = -Math.PI / 2;
+                tutorialHighlightRing.position.copy(nearestTree.position);
+                tutorialHighlightRing.position.y = 0.15;
+                scene.add(tutorialHighlightRing);
+
+                // 创建浮动标签
+                tutorialArrowLabel = document.createElement('div');
+                tutorialArrowLabel.style.cssText = `
+                    position: absolute;
+                    color: #ffd700;
+                    font-size: 18px;
+                    font-weight: bold;
+                    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+                    background: rgba(0,0,0,0.7);
+                    padding: 8px 14px;
+                    border-radius: 10px;
+                    border: 2px solid #ffd700;
+                    pointer-events: none;
+                    z-index: 100;
+                    white-space: nowrap;
+                    transition: opacity 0.5s;
+                `;
+                tutorialArrowLabel.innerHTML = '🌲 破坏树木石头获得资源 ⬇️';
+                document.body.appendChild(tutorialArrowLabel);
+            }
+
+            function updateTutorialTarget() {
+                if (!tutorialTargetTree || !tutorialArrowLabel || !tutorialHighlightRing) return;
+
+                // 高亮光环动画
+                const t = Date.now() * 0.003;
+                tutorialHighlightRing.rotation.z = t;
+                tutorialHighlightRing.material.opacity = 0.5 + Math.sin(t * 2) * 0.3;
+
+                // 更新标签位置 (在树的上方)
+                const pos = tutorialTargetTree.position.clone();
+                pos.y += 7;
+                const v = pos.project(camera);
+                tutorialArrowLabel.style.left = ((v.x * 0.5 + 0.5) * window.innerWidth - 100) + 'px';
+                tutorialArrowLabel.style.top = ((-(v.y * 0.5) + 0.5) * window.innerHeight) + 'px';
+            }
+
+            function removeTutorialTarget() {
+                if (tutorialHighlightRing) {
+                    scene.remove(tutorialHighlightRing);
+                    tutorialHighlightRing = null;
+                }
+                if (tutorialArrowLabel) {
+                    tutorialArrowLabel.style.opacity = 0;
+                    setTimeout(() => { if (tutorialArrowLabel) tutorialArrowLabel.remove(); tutorialArrowLabel = null; }, 500);
+                }
+                tutorialTargetTree = null;
+            }
             function showUpgradePopup(icon, title, desc) {
                 const popup = document.getElementById('upgrade-popup');
                 popup.querySelector('.popup-icon').textContent = icon;
@@ -746,84 +1036,75 @@
                 playSound('levelup');
 
                 if (id === 'dragonUp') {
-                    dragonLevel = 2; dragon.scale.set(1.5, 1.5, 1.5); dragon.material.color.setHex(0xff1493);
-                    showFloatingText("精灵龙进化!", player.position, "magenta", "24px");
-                    showUpgradePopup("🐲", "精灵龙 Lv2", "攻击范围扩大，自动稳定攻击敌人");
-                    createZone(0, 18, 'axeUpgrade', '② 冰霜巨斧', CONFIG.upgradeCosts.axeUpgrade);  // 移到城外
+                    dragonLevel = 2;
+                    dragon.scale.set(1.5, 1.5, 1.5);
+                    dragon.material.color.setHex(0xff1493);
+                    showUpgradeNotification("🐲 精灵龙进化!", "magenta");
+                    createZone(-15, 18, 'axeUpgrade', '冰霜巨斧', CONFIG.upgradeCosts.axeUpgrade, '秒杀采集！一击破坏石头和树木', '❄️');
                 }
                 else if (id === 'axeUpgrade') {
                     hasIceAxe = true;
                     if (axe && axe.children[1]) axe.children[1].material.color.setHex(0x00ffff);
-                    showFloatingText("获得神器：冰霜巨斧!", player.position, "cyan", "24px");
-                    showUpgradePopup("❄️", "冰霜巨斧", "秒杀采集！一击破坏石头和树木");
-                    createZone(-8, 5, 'worker1', '③ 工人小屋 (Lv1)', CONFIG.upgradeCosts.worker1);
+                    showUpgradeNotification("❄️ 获得神器：冰霜巨斧!", "cyan");
+                    createZone(-8, 5, 'worker1', '工人小屋 Lv1', CONFIG.upgradeCosts.worker1, '召唤工人，自动采集资源', '👷');
                 }
                 else if (id === 'worker1') {
                     buildings.workerHut.level = 1; buildHut('worker', 1);
                     spawnWorker(); spawnWorker();
-                    showUpgradePopup("👷", "工人小屋 Lv1", "召喤2名工人，自动采集资源");
-                    createZone(0, 5, 'tower1', '④ 建造防御塔 (Lv1)', CONFIG.upgradeCosts.tower1);
+                    showUpgradeNotification("👷 +2 工人!", "yellow");
+                    createZone(0, 5, 'tower1', '防御塔 Lv1', CONFIG.upgradeCosts.tower1, '自动攻击进入射程的敌人', '🗼');
                 }
                 else if (id === 'tower1') {
                     buildings.tower.level = 1; buildTower(1);
-                    showUpgradePopup("🗼", "防御箭塔", "自动攻击进入射程的敌人");
-                    createZone(8, 5, 'soldier1', '⑤ 士兵小屋 (Lv1)', CONFIG.upgradeCosts.soldier1);
+                    showUpgradeNotification("🗼 防御塔建成!", "orange");
+                    createZone(8, 5, 'soldier1', '士兵小屋 Lv1', CONFIG.upgradeCosts.soldier1, '召唤士兵，自动巡逻并攻击敌人', '⚔️');
                 }
                 else if (id === 'soldier1') {
                     buildings.soldierHut.level = 1; buildHut('soldier', 1); spawnSoldier(); spawnSoldier();
-                    showUpgradePopup("⚔️", "士兵小屋 Lv1", "召喤2名士兵，自动巡逻并攻击敌人");
-                    createZone(0, 20, 'dragonUp2', '⑤.5 精灵龙 Lv2 ⚡', CONFIG.upgradeCosts.dragonUp2);  // 移到城外
+                    showUpgradeNotification("⚔️ +2 士兵!", "#ff6666");
+                    createZone(0, 20, 'dragonUp2', '雷龙觉醒', CONFIG.upgradeCosts.dragonUp2, '发射闪电链，伤害多个敌人', '⚡');
                 }
                 else if (id === 'dragonUp2') {
-                    // NEW: Dragon Lv2 - Chain Lightning
                     dragonLevel = 3;
                     dragon.scale.set(2.0, 2.0, 2.0);
                     dragon.material.color.setHex(0x00bfff);
                     dragon.material.emissive = new THREE.Color(0x0066ff);
-                    showFloatingText("⚡ 雷龙觉醒!", player.position, "cyan", "28px");
-                    showUpgradePopup("⚡", "雷龙觉醒", "每次攻击发射闪电链，伤害多个敌人");
-                    createZone(0, 8, 'tower2', '⑥ 箭塔 (Lv2)', CONFIG.upgradeCosts.tower2);
-                    createZone(-10, 8, 'worker2', '⑦ 工人小屋 (Lv2)', CONFIG.upgradeCosts.worker2);
-                    createZone(10, 8, 'soldier2', '⑧ 士兵小屋 (Lv2)', CONFIG.upgradeCosts.soldier2);
+                    showUpgradeNotification("⚡ 雷龙觉醒!", "#00bfff");
+                    createZone(0, 8, 'tower2', '加特林炮塔', CONFIG.upgradeCosts.tower2, '升级石墙，炮塔变为高速加特林', '🔫');
+                    createZone(-10, 8, 'worker2', '工人小屋 Lv2', CONFIG.upgradeCosts.worker2, '再召喨2名工人，负载能力翻倍', '👷');
+                    createZone(10, 8, 'soldier2', '士兵小屋 Lv2', CONFIG.upgradeCosts.soldier2, '再召喨2名精英士兵，伤害翻倍', '⚔️');
                 }
                 else if (id === 'tower2') {
                     buildings.tower.level = 2; buildTower(2);
                     isStoneWall = true;
                     expandCamp();
-                    showFloatingText("石墙筑起! 加特林!", new THREE.Vector3(0, 10, 0), "red", "24px");
-                    showUpgradePopup("🔫", "加特林炮塔", "升级石墙，炮塔变为高速加特林");
-                    // tower3 is now created after axeUp2, not here
+                    showUpgradeNotification("🪨 石墙筑起! 加特林!", "#ff4444");
                 }
                 else if (id === 'worker2') {
                     buildings.workerHut.level = 2; buildHut('worker', 2); spawnWorker(); spawnWorker();
                     workers.forEach(w => w.userData.capacity *= 2);
                     expandCamp();
-                    showFloatingText("营地扩张! 工人翻倍!", new THREE.Vector3(-8, 5, 5), "cyan", "24px");
-                    showUpgradePopup("👷", "工人小屋 Lv2", "再召喨2名工人，负载能力翻倍");
+                    showUpgradeNotification("🏠 营地扩张! 工人翻倍!", "cyan");
                 }
                 else if (id === 'soldier2') {
                     buildings.soldierHut.level = 2; buildHut('soldier', 2); spawnSoldier(); spawnSoldier();
                     soldiers.forEach(s => s.userData.dmg *= 2);
                     expandCamp();
-                    showFloatingText("营地扩张! 精英降临!", new THREE.Vector3(8, 5, 5), "orange", "24px");
-                    showUpgradePopup("⚔️", "士兵小屋 Lv2", "再召喨2名精英士兵，伤害翻倍");
-                    createZone(15, 20, 'axeUp2', '⑧.5 冰霜战斧 Lv2 ❄️', CONFIG.upgradeCosts.axeUp2);  // 移到城外
+                    showUpgradeNotification("💥 营地扩张! 士兵翻倍!", "orange");
+                    createZone(15, 20, 'axeUp2', '冰霜战斧 Lv2', CONFIG.upgradeCosts.axeUp2, '冰冻敌人3秒，攻击冰冻敌人可秒杀', '❄️');
                 }
                 else if (id === 'axeUp2') {
-                    // NEW: Frost Axe Lv2 - Freeze + Execute
                     hasIceAxe2 = true;
                     if (axe && axe.children[1]) {
                         axe.children[1].material.color.setHex(0x00ffff);
                         axe.children[1].material.emissive = new THREE.Color(0x0088ff);
                     }
-                    showFloatingText("❄️ 冰霜战神!", player.position, "white", "28px");
-                    showUpgradePopup("❄️", "冰霜战斧 Lv2", "冰冻敌人3秒，攻击冰冻敌人可秒杀");
-                    createZone(0, 10, 'tower3', '⑨ 终极：追踪导弹', CONFIG.upgradeCosts.tower3);
+                    showUpgradeNotification("❄️ 冰霜战神!", "#aaddff");
+                    createZone(0, 10, 'tower3', '终极：奥术飞弹', CONFIG.upgradeCosts.tower3, '发射奥术飞弹，精准打击敌人', '✨');
                 }
                 else if (id === 'tower3') {
                     buildings.tower.level = 3; buildTower(3);
-                    showFloatingText("终极火力! 追踪导弹!", new THREE.Vector3(0, 10, 0), "purple", "32px");
-                    showUpgradePopup("🚀", "追踪导弹系统", "发射追踪导弹，精准打击敌人");
+                    showUpgradeNotification("✨ 终极魔法! 奥术飞弹!", "#9966ff");
 
                     setTimeout(() => {
                         if (!bossSpawned) spawnEnemy(true);
@@ -1094,7 +1375,8 @@
             // ===== NEW: Dragon Lv2 - Chain Lightning =====
             function dragonChainLightning() {
                 if (dragonLevel < 3) return;
-                // Now triggers on every dragon attack (frameCount % 40), not every 5 seconds
+                // Trigger every 60 frames (~1 second) to reduce lag
+                if (frameCount % 60 !== 0) return;
 
                 // Find nearest enemy
                 let targets = [];
@@ -1142,73 +1424,89 @@
             }
 
             function createLightningArc(start, end) {
-                // Single optimized lightning bolt
-                const points = [];
-                const segments = 6;
-                for (let i = 0; i <= segments; i++) {
-                    const t = i / segments;
-                    const p = new THREE.Vector3().lerpVectors(start, end, t);
-                    if (i > 0 && i < segments) {
-                        p.x += (Math.random() - 0.5) * 1.5;
-                        p.y += (Math.random() - 0.5) * 1.5;
-                        p.z += (Math.random() - 0.5) * 1.5;
+                // 5 lightning bolts for maximum dramatic effect
+                for (let bolt = 0; bolt < 5; bolt++) {
+                    const points = [];
+                    const segments = 10;
+                    for (let i = 0; i <= segments; i++) {
+                        const t = i / segments;
+                        const p = new THREE.Vector3().lerpVectors(start, end, t);
+                        if (i > 0 && i < segments) {
+                            // More jagged lightning
+                            p.x += (Math.random() - 0.5) * 3.0;
+                            p.y += (Math.random() - 0.5) * 3.0;
+                            p.z += (Math.random() - 0.5) * 3.0;
+                        }
+                        points.push(p);
                     }
-                    points.push(p);
+                    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                    // Brighter colors: white core, cyan/gold branches
+                    const colors = [0xffffff, 0x00ffff, 0xffd700, 0x88ffff, 0xffff00];
+                    const material = new THREE.LineBasicMaterial({ color: colors[bolt], linewidth: 4 });
+                    const line = new THREE.Line(geometry, material);
+                    scene.add(line);
+                    setTimeout(() => scene.remove(line), 300 + bolt * 30);
                 }
-                const geometry = new THREE.BufferGeometry().setFromPoints(points);
-                const material = new THREE.LineBasicMaterial({ color: 0xffd700, linewidth: 3 });
-                const line = new THREE.Line(geometry, material);
-                scene.add(line);
-                setTimeout(() => scene.remove(line), 150);  // Faster fade
 
-                // Small impact flash
+                // Large glowing impact sphere
                 const impactSphere = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.6, 8, 8),
-                    new THREE.MeshBasicMaterial({ color: 0xffff00, transparent: true, opacity: 0.8 })
+                    new THREE.SphereGeometry(2.0, 16, 16),
+                    new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.9 })
                 );
                 impactSphere.position.copy(end);
                 scene.add(impactSphere);
-                setTimeout(() => scene.remove(impactSphere), 100);
+                setTimeout(() => scene.remove(impactSphere), 200);
 
-                // Fewer sparks (3 instead of 8)
-                for (let i = 0; i < 3; i++) {
+                // Secondary glow
+                const glow = new THREE.Mesh(
+                    new THREE.SphereGeometry(3.5, 12, 12),
+                    new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.4 })
+                );
+                glow.position.copy(end);
+                scene.add(glow);
+                setTimeout(() => scene.remove(glow), 150);
+
+                // 12 sparks exploding outward
+                for (let i = 0; i < 12; i++) {
                     const spark = new THREE.Mesh(
-                        new THREE.BoxGeometry(0.2, 0.2, 0.2),
-                        new THREE.MeshBasicMaterial({ color: 0xffff00 })
+                        new THREE.BoxGeometry(0.3, 0.3, 0.3),
+                        new THREE.MeshBasicMaterial({ color: i % 3 === 0 ? 0x00ffff : (i % 3 === 1 ? 0xffd700 : 0xffffff) })
                     );
                     spark.position.copy(end);
                     scene.add(spark);
                     const vel = new THREE.Vector3(
-                        (Math.random() - 0.5) * 0.5,
-                        Math.random() * 0.3 + 0.1,
-                        (Math.random() - 0.5) * 0.5
+                        (Math.random() - 0.5) * 1.2,
+                        Math.random() * 0.8 + 0.3,
+                        (Math.random() - 0.5) * 1.2
                     );
-                    debris.push({ mesh: spark, vel: vel, life: 0.3 });  // Shorter life
+                    debris.push({ mesh: spark, vel: vel, life: 0.6 });
                 }
             }
 
             // ===== NEW: Frost Axe Lv2 - Freeze Effect =====
             function createFreezeEffect(entity) {
-                // Add ice shell
+                // Scale ice shell based on entity size (bigger for boss)
+                const shellSize = entity.userData.isBoss ? 5.0 : 1.5;
                 const iceShell = new THREE.Mesh(
-                    new THREE.IcosahedronGeometry(1.5, 0),
-                    new THREE.MeshBasicMaterial({ color: 0x88ccff, transparent: true, opacity: 0.6 })
+                    new THREE.IcosahedronGeometry(shellSize, 1),
+                    new THREE.MeshBasicMaterial({ color: 0x88ccff, transparent: true, opacity: 0.5, wireframe: false })
                 );
                 iceShell.position.copy(entity.position);
-                iceShell.position.y += 0.5;
+                iceShell.position.y += entity.userData.isBoss ? 2 : 0.5;
                 scene.add(iceShell);
                 entity.userData.iceShell = iceShell;
 
-                // Ice particles
-                for (let i = 0; i < 10; i++) {
+                // Ice particles (more for boss)
+                const particleCount = entity.userData.isBoss ? 25 : 10;
+                for (let i = 0; i < particleCount; i++) {
                     const particle = new THREE.Mesh(
-                        new THREE.BoxGeometry(0.2, 0.2, 0.2),
+                        new THREE.BoxGeometry(0.3, 0.3, 0.3),
                         new THREE.MeshBasicMaterial({ color: 0xffffff })
                     );
                     particle.position.copy(entity.position);
-                    particle.position.y += Math.random() * 2;
-                    particle.position.x += (Math.random() - 0.5) * 2;
-                    particle.position.z += (Math.random() - 0.5) * 2;
+                    particle.position.y += Math.random() * (entity.userData.isBoss ? 5 : 2);
+                    particle.position.x += (Math.random() - 0.5) * (entity.userData.isBoss ? 6 : 2);
+                    particle.position.z += (Math.random() - 0.5) * (entity.userData.isBoss ? 6 : 2);
                     scene.add(particle);
 
                     debris.push({ mesh: particle, vel: new THREE.Vector3(0, 0.05, 0), life: 0.5 });
@@ -1237,7 +1535,119 @@
                 playSound('explode');
             }
 
+            // ===== Victory Celebration with Fireworks =====
+            function playVictoryCelebration() {
+                // Change game state to celebration (keeps animation running)
+                gameState = 'celebration';
+
+                // Play victory sound
+                playSound('levelup');
+                showFloatingText("🎉 胜利! 🎉", player.position, "#ffd700", "48px");
+
+                // Make workers and soldiers jump happily
+                const jumpDuration = 3000;
+                const jumpStart = Date.now();
+
+                function celebrationJump() {
+                    if (Date.now() - jumpStart > jumpDuration) return;
+
+                    // Workers jump
+                    workers.forEach((w, idx) => {
+                        const t = (Date.now() * 0.01 + idx * 2) % (Math.PI * 2);
+                        w.position.y = 0.5 + Math.abs(Math.sin(t)) * 1.5;
+                        w.rotation.y += 0.1;
+                    });
+
+                    // Soldiers jump
+                    soldiers.forEach((s, idx) => {
+                        const t = (Date.now() * 0.012 + idx * 2.5) % (Math.PI * 2);
+                        s.position.y = 0.6 + Math.abs(Math.sin(t)) * 2.0;
+                        s.rotation.y += 0.12;
+                    });
+
+                    // Dragon does victory circles
+                    const dt = (Date.now() - jumpStart) * 0.003;
+                    dragon.position.y = 5 + Math.sin(dt * 3) * 2;
+                    dragon.rotation.y += 0.05;
+
+                    requestAnimationFrame(celebrationJump);
+                }
+                celebrationJump();
+
+                // Massive fullscreen fireworks
+                const fireworkColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff, 0x00ffff, 0xffa500, 0xff1493, 0xffd700, 0x7fff00];
+
+                // Launch 12 massive firework bursts across the screen
+                for (let burst = 0; burst < 12; burst++) {
+                    setTimeout(() => {
+                        // Spread across entire view
+                        const burstPos = new THREE.Vector3(
+                            player.position.x + (Math.random() - 0.5) * 50,
+                            8 + Math.random() * 15,
+                            player.position.z + (Math.random() - 0.5) * 50
+                        );
+
+                        // 60 particles per burst for fullscreen effect
+                        const particleCount = 60;
+                        const burstColor = fireworkColors[Math.floor(Math.random() * fireworkColors.length)];
+                        const burstColor2 = fireworkColors[Math.floor(Math.random() * fireworkColors.length)];
+
+                        for (let i = 0; i < particleCount; i++) {
+                            const particle = new THREE.Mesh(
+                                new THREE.SphereGeometry(0.4 + Math.random() * 0.3, 8, 8),
+                                new THREE.MeshBasicMaterial({
+                                    color: i % 2 === 0 ? burstColor : burstColor2,
+                                    transparent: true,
+                                    opacity: 1.0
+                                })
+                            );
+                            particle.position.copy(burstPos);
+                            scene.add(particle);
+
+                            // Radial velocity with more spread
+                            const theta = Math.random() * Math.PI * 2;
+                            const phi = Math.random() * Math.PI;
+                            const speed = 0.5 + Math.random() * 0.5;
+                            const vel = new THREE.Vector3(
+                                Math.sin(phi) * Math.cos(theta) * speed,
+                                Math.sin(phi) * Math.sin(theta) * speed * 0.5 + 0.1,
+                                Math.cos(phi) * speed
+                            );
+                            debris.push({ mesh: particle, vel: vel, life: 2.0 });
+                        }
+
+                        // Big flash at burst center
+                        const flash = new THREE.Mesh(
+                            new THREE.SphereGeometry(3, 12, 12),
+                            new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 })
+                        );
+                        flash.position.copy(burstPos);
+                        scene.add(flash);
+                        setTimeout(() => scene.remove(flash), 100);
+
+                        playSound('explode');
+                    }, burst * 200);  // Faster bursts
+                }
+
+                // Show end screen after 3 seconds
+                setTimeout(() => {
+                    document.getElementById('end-screen').style.display = 'flex';
+                }, 3000);
+            }
+
             function update() {
+                // Always update camera and dragon (for seamless waiting->playing transition)
+                camera.position.x = player.position.x; camera.position.z = player.position.z + 35; camera.lookAt(player.position.x, 0, player.position.z);
+
+                const t = Date.now() * 0.002;
+                dragon.position.copy(player.position);
+                dragon.position.y = 3 + Math.sin(t * 3) * 0.5;
+                dragon.position.x += Math.cos(t) * 2; dragon.position.z += Math.sin(t) * 2;
+
+                // Update tutorial target label position (only when waiting)
+                if (gameState === 'waiting') updateTutorialTarget();
+
+                // Only run game logic when playing
                 if (gameState !== 'playing') return;
                 frameCount++;
 
@@ -1255,13 +1665,6 @@
                     player.position.z = Math.max(-140, Math.min(140, player.position.z));
                 }
 
-                camera.position.x = player.position.x; camera.position.z = player.position.z + 35; camera.lookAt(player.position.x, 0, player.position.z);
-
-                const t = Date.now() * 0.002;
-                dragon.position.copy(player.position);
-                dragon.position.y = 3 + Math.sin(t * 3) * 0.5;
-                dragon.position.x += Math.cos(t) * 2; dragon.position.z += Math.sin(t) * 2;
-
                 if (frameCount % 30 === 0 && interactables.length < CONFIG.maxResourcesOnMap) spawnRandomResource();
 
                 if (frameCount % 20 === 0) {
@@ -1272,7 +1675,7 @@
                             obj.userData.hp -= dmg;
                             playSound('chop');
 
-                            obj.scale.multiplyScalar(0.95); showFloatingText(hasIceAxe ? "暴击!" : "击中", obj.position, hasIceAxe ? "cyan" : "white");
+                            obj.scale.multiplyScalar(0.95); showFloatingText(hasIceAxe ? "暴击!" : "破坏", obj.position, hasIceAxe ? "cyan" : "white");
                             if (obj.userData.hp <= 0) {
                                 scene.remove(obj); interactables.splice(idx, 1);
                                 resources += obj.userData.value; showFloatingText(`+${obj.userData.value} 📦`, player.position, "#00ff00");
@@ -1296,19 +1699,28 @@
                             setTimeout(() => axe.rotation.x = Math.PI / 3, 100);
 
                             if (e.userData.frozen) {
-                                // Execute frozen enemy
+                                // Execute frozen enemy (boss takes extra damage instead)
                                 if (!e.userData.isBoss) {
                                     createIceShatterEffect(e.position);
                                     showFloatingText("❄️ 处决!", e.position, "white", "28px");
                                     e.userData.hp = 0;
                                 } else {
-                                    e.userData.hp -= 100;
-                                    showFloatingText("-100", e.position, "cyan");
+                                    // Boss: big damage but no instant kill
+                                    createIceShatterEffect(e.position);
+                                    e.userData.hp -= 150;
+                                    showFloatingText("❄️ -150", e.position, "cyan", "26px");
+                                }
+                                // Unfreeze after execute attack
+                                e.userData.frozen = false;
+                                e.userData.speed = e.userData.originalSpeed || 0.24;
+                                if (e.userData.iceShell) {
+                                    scene.remove(e.userData.iceShell);
+                                    e.userData.iceShell = null;
                                 }
                             } else {
-                                // Freeze enemy
+                                // Freeze enemy (works on boss too)
                                 e.userData.frozen = true;
-                                e.userData.frozenTimer = 180; // 3 seconds
+                                e.userData.frozenTimer = e.userData.isBoss ? 90 : 180; // Boss: 1.5s, normal: 3s
                                 e.userData.originalSpeed = e.userData.speed || 0.24;
                                 e.userData.speed = 0;
                                 createFreezeEffect(e);
@@ -1385,7 +1797,6 @@
                                 nearestWall.position.x += (Math.random() - 0.5) * 0.2;
                                 setTimeout(() => nearestWall.position.x -= (Math.random() - 0.5) * 0.2, 50);
                                 if (Math.random() < 0.3) {
-                                    showFloatingText("Clang!", e.position, "#aaa", "16px");
                                     playSound('hit');
                                 }
                             }
@@ -1429,7 +1840,12 @@
                 upgradeZones.forEach(zone => {
                     if (!zone.active) return;
                     if (player.position.distanceTo(zone.mesh.position) < 3.5) {
-                        if (resources >= zone.cost) { resources -= zone.cost; updateUI(); doUpgrade(zone); }
+                        if (resources >= zone.cost) {
+                            zone.active = false;  // 立即标记为已使用，防止重复触发
+                            resources -= zone.cost;
+                            updateUI();
+                            doUpgrade(zone);
+                        }
                     }
                 });
             }
@@ -1546,8 +1962,9 @@
 
                     if (e.userData.isBoss) {
                         bossEntity = null;
-                        document.getElementById('end-screen').style.display = 'flex';
                         gameState = 'win';
+                        // Play victory celebration with fireworks
+                        playVictoryCelebration();
                     }
 
                     scene.remove(e);
@@ -1561,14 +1978,49 @@
             }
 
             function showFloatingText(txt, pos, color, size = '18px') {
+                const container = document.getElementById('damage-container');
+                if (!container) return;  // 安全检查
                 const d = document.createElement('div');
                 d.className = 'dmg-num';
                 d.textContent = txt; d.style.color = color; d.style.fontSize = size;
                 const v = pos.clone().project(camera);
                 d.style.left = (v.x * .5 + .5) * window.innerWidth + 'px';
                 d.style.top = (-(v.y * .5) * .5 + .5) * window.innerHeight + 'px';
-                document.getElementById('damage-container').appendChild(d);
+                container.appendChild(d);
                 setTimeout(() => d.remove(), 800);
+            }
+
+            // 升级通知 - 显示在屏幕上方中央，更长持续时间
+            let upgradeNotifyCount = 0;  // 当前显示的通知数量
+            function showUpgradeNotification(txt, color) {
+                const offset = upgradeNotifyCount * 60;  // 每条通知垂直偏移60px
+                upgradeNotifyCount++;
+
+                const d = document.createElement('div');
+                d.style.cssText = `
+                    position: fixed;
+                    top: calc(20% + ${offset}px);
+                    left: 50%;
+                    transform: translateX(-50%) scale(0);
+                    color: ${color};
+                    font-size: 28px;
+                    font-weight: 900;
+                    text-shadow: 0 0 10px ${color}, 2px 2px 4px rgba(0,0,0,0.8), 0 0 20px rgba(0,0,0,0.5);
+                    pointer-events: none;
+                    z-index: 200;
+                    background: rgba(0,0,0,0.6);
+                    padding: 10px 24px;
+                    border-radius: 12px;
+                    border: 2px solid ${color};
+                    white-space: nowrap;
+                    animation: upgradeNotifyAnim 2.5s ease-out forwards;
+                `;
+                d.textContent = txt;
+                document.body.appendChild(d);
+                setTimeout(() => {
+                    d.remove();
+                    upgradeNotifyCount--;
+                }, 2500);
             }
 
             function updateUI() { document.getElementById('res-total').textContent = resources; }
@@ -1584,11 +2036,17 @@
                 });
 
                 joystickManager.on('start', () => {
+                    // Start game on first input
+                    if (gameState === 'waiting') {
+                        gameState = 'playing';
+                    }
                     const tut = document.getElementById('tutorial-overlay');
                     if (tut) {
                         tut.style.opacity = 0;
                         setTimeout(() => { if (tut) tut.remove(); }, 500);
                     }
+                    // 移除教程箭头和高亮
+                    removeTutorialTarget();
                     if (audioCtx.state === 'suspended') audioCtx.resume();
                 });
 
@@ -1608,6 +2066,13 @@
                 window.addEventListener('keydown', e => {
                     const k = e.key.toLowerCase(); if (keys.hasOwnProperty(k)) keys[k] = true;
                     if (e.key === 'ArrowUp') keys.w = true; if (e.key === 'ArrowDown') keys.s = true; if (e.key === 'ArrowLeft') keys.a = true; if (e.key === 'ArrowRight') keys.d = true;
+                    // Start game on first keyboard input
+                    if (gameState === 'waiting') {
+                        gameState = 'playing';
+                        const tut = document.getElementById('tutorial-overlay');
+                        if (tut) { tut.style.opacity = 0; setTimeout(() => { if (tut) tut.remove(); }, 500); }
+                        removeTutorialTarget();
+                    }
                     if (audioCtx.state === 'suspended') audioCtx.resume();
                 });
                 window.addEventListener('keyup', e => { const k = e.key.toLowerCase(); if (keys.hasOwnProperty(k)) keys[k] = false; if (e.key === 'ArrowUp') keys.w = false; if (e.key === 'ArrowDown') keys.s = false; if (e.key === 'ArrowLeft') keys.a = false; if (e.key === 'ArrowRight') keys.d = false; });
