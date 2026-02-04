@@ -28,23 +28,36 @@
             pointer-events: none !important;
         }
 
-        /* UI Overlay */
+        /* UI Overlay - Simplified Two Boxes */
         #ui-overlay {
             position: fixed;
             top: 20px;
             left: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 15px 20px;
-            border-radius: 10px;
-            color: #fff;
-            font-size: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
             z-index: 10;
-            border: 2px solid #444;
-            backdrop-filter: blur(5px);
         }
 
-        #ui-overlay div {
-            margin: 5px 0;
+        .stat-box {
+            background: rgba(0, 0, 0, 0.85);
+            padding: 15px 25px;
+            border-radius: 12px;
+            border: 2px solid #555;
+            backdrop-filter: blur(5px);
+            text-align: center;
+        }
+
+        .stat-box .stat-label {
+            color: #aaa;
+            font-size: 14px;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .stat-box .stat-value {
+            font-size: 28px;
+            font-weight: bold;
         }
 
         .stat-label {
@@ -626,14 +639,15 @@
 </head>
 
 <body>
-    <!-- UI Overlay -->
+    <!-- UI Overlay - Simplified -->
     <div id="ui-overlay">
-        <div><span class="stat-label">营地血量:</span> <span id="base-hp" class="stat-value hp-value">200</span></div>
-        <div><span class="stat-label">木材储备:</span> <span id="base-wood" class="stat-value wood-value">0</span>
+        <div class="stat-box">
+            <span class="stat-label">🪵 木材储备</span>
+            <span id="base-wood" class="stat-value" style="color: #ffcc00;">0</span>
         </div>
-        <div><span class="stat-label">工人数量:</span> <span id="worker-count" class="stat-value"
-                style="color:#00ffff">0</span></div>
-        <div><span class="stat-label">剩余距离:</span> <span id="player-wood" class="stat-value player-wood">2000m</span>
+        <div class="stat-box">
+            <span class="stat-label">🏁 剩余距离</span>
+            <span id="player-wood" class="stat-value" style="color: #00ff88;">120m</span>
         </div>
     </div>
 
@@ -679,16 +693,17 @@
     <div id="turret-modal">
         <div class="modal-content">
             <h2>&#x1F3D7; 建造防御塔</h2>
-            <p>消耗 50 木头，选择类型:</p>
+            <p style="font-size: 20px; margin: 15px 0;">🪵 消耗 <span
+                    style="color: #ffcc00; font-weight: bold; font-size: 24px;">50 木头</span>，选择类型:</p>
             <div class="turret-options">
                 <button id="turret-btn-A" class="turret-btn turret-a">
                     <strong>标准炮塔</strong>
-                    <small>中等射程 / 平衡输出<br>弹药: 1 木头/发</small>
+                    <small>中等射程 / 平衡输出<br>弹药: 2 木头/发</small>
                 </button>
                 <button id="turret-btn-C" class="turret-btn turret-c locked">
                     <span class="lock-icon">🔒</span>
                     <strong>迫击炮</strong>
-                    <small>远程 / 范围伤害<br>弹药: 2 木头/发</small>
+                    <small>远程 / 范围伤害<br>弹药: 4 木头/发</small>
                 </button>
                 <button id="turret-btn-E" class="turret-btn worker-btn locked">
                     <span class="lock-icon">🔒</span>
@@ -744,7 +759,7 @@
         <p id="victory-score"></p>
         <button id="download-btn"
             style="margin: 10px; padding: 15px 30px; font-size: 20px; background: linear-gradient(135deg, #ff6600 0%, #ff3300 100%); border: none; border-radius: 10px; color: white; cursor: pointer; box-shadow: 0 0 20px rgba(255,102,0,0.5);"
-            onclick="window.open('https://play.google.com/store/apps/details?id=com.topwar.callofdragon', '_blank')">📥
+            onclick="window.open('https://callofdragons.farlightgames.com/', '_blank')">📥
             下载万龙觉醒</button>
         <button id="victory-btn"
             style="margin: 10px; padding: 15px 30px; font-size: 18px; background: linear-gradient(135deg, #4488ff 0%, #2266cc 100%); border: none; border-radius: 10px; color: white; cursor: pointer;"
@@ -803,7 +818,7 @@
             // Timing
             gameTime: 0,
             enemySpawnTimer: 0,
-            enemySpawnRate: 0.66, // First 20s: 50% fewer enemies (was 0.33)
+            enemySpawnRate: 1.32, // First 20s: 75% fewer enemies (0.33 -> 0.66 -> 1.32)
             spawnUpgradeTimer: 0,
             spawnBoosted: false,  // 20s spawn boost trigger
             elitesSpawned: false, // Elite spawn trigger at 30s
@@ -849,7 +864,7 @@
                         name: '快速连射',
                         desc: '射速 +100%',
                         fireRateMultiplier: 2,
-                        damageMultiplier: 1
+                        damageMultiplier: 1.5
                     },
                     choice2: {
                         emoji: '💥',
@@ -872,7 +887,7 @@
                         emoji: '⚡',
                         name: '超级充能',
                         desc: '伤害 +200%',
-                        damageMultiplier: 3
+                        damageMultiplier: 4
                     }
                 },
                 'C': { // Mortar
@@ -902,9 +917,9 @@
                     choice2: {
                         emoji: '🛡️',
                         name: '护盾生成',
-                        desc: '为角色提供护盾',
+                        desc: '为马车提供100点护盾',
                         shieldGenerator: true,
-                        shieldAmount: 50
+                        shieldAmount: 100
                     }
                 },
                 'E': { // Engineer Camp
@@ -1455,8 +1470,8 @@
                     z: 0,
                     width: 15,
                     height: 15,
-                    hp: 200,
-                    maxHp: 200,
+                    hp: 400,
+                    maxHp: 400,
                     wood: 0,
                     speed: 2, // units per second
                     slots: Array(9).fill(null),
@@ -1486,7 +1501,7 @@
                 this.enemiesKilled = 0;
                 this.gameTime = 0;
                 this.enemySpawnTimer = 0;
-                this.enemySpawnRate = 0.66; // First 20s: 50% fewer enemies
+                this.enemySpawnRate = 1.32; // First 20s: 75% fewer enemies
                 this.spawnUpgradeTimer = 0;
                 this.spawnBoosted = false;
                 this.elitesSpawned = false;
@@ -1769,19 +1784,7 @@
                 rightBrow.rotation.z = -0.3;
                 enemyGroup.add(rightBrow);
 
-                // HP Bar for normal enemy
-                const hpBarBgGeo = new THREE.BoxGeometry(2, 0.3, 0.1);
-                const hpBarBgMat = new THREE.MeshBasicMaterial({ color: 0x333333, side: THREE.DoubleSide });
-                const hpBarBg = new THREE.Mesh(hpBarBgGeo, hpBarBgMat);
-                hpBarBg.position.set(0, 3, 0);
-                enemyGroup.add(hpBarBg);
-
-                const hpBarGeo = new THREE.BoxGeometry(2, 0.3, 0.15);
-                const hpBarMat = new THREE.MeshBasicMaterial({ color: 0x00ff00, side: THREE.DoubleSide });
-                const hpBar = new THREE.Mesh(hpBarGeo, hpBarMat);
-                hpBar.position.set(0, 3, 0.05);
-                hpBar.name = 'hpBar';
-                enemyGroup.add(hpBar);
+                // HP Bar removed for normal enemies (only elite/boss show HP)
 
                 enemyGroup.position.set(x, 0, z);
                 this.scene.add(enemyGroup);
@@ -1859,8 +1862,8 @@
                     z: z,
                     size: 2 * scale,
                     speed: 15, // Doubled from 7.5
-                    hp: 400,      // Doubled from 200
-                    maxHp: 400,
+                    hp: 600,      // Adjusted (was 800)
+                    maxHp: 600,
                     mesh: enemyGroup,
                     isElite: true
                 };
@@ -1991,31 +1994,31 @@
                 switch (type) {
                     case 'A': // Standard Tower - 75% nerfed
                         material = this.materials.turretA;
-                        range = 15; // was 30
+                        range = 30; // Increased (was 22)
                         fireRate = 8; // was 15
-                        damage = 38; // was 75
+                        damage = 60; // Increased (was 38)
                         splash = 1; // was 2
-                        ammoCost = 0.2;
+                        ammoCost = 0.2; // Reduced (was 0.4, originally 0.2)
                         break;
                     case 'B': // Gatling - 75% nerfed
                         material = this.materials.turretB;
-                        range = 10; // was 20
+                        range = 20; // Increased (was 15)
                         fireRate = 15; // was 30
-                        damage = 10; // was 20
+                        damage = 15; // Increased (was 10)
                         splash = 0;
-                        ammoCost = 0.03;
+                        ammoCost = 0.06; // Doubled (was 0.03)
                         break;
                     case 'C': // Mortar - 75% nerfed
                         material = this.materials.turretC;
-                        range = 25; // was 50
+                        range = 50; // Increased (was 38)
                         fireRate = 3; // was 6
-                        damage = 150; // was 300
+                        damage = 225; // Increased (was 150)
                         splash = 6; // was 12
-                        ammoCost = 0.3;
+                        ammoCost = 0.6; // Doubled (was 0.3)
                         break;
                     case 'D': // Healing Tower - 75% nerfed
                         material = this.materials.turretD;
-                        range = 6; // was 12
+                        range = 15; // Increased (was 10)
                         fireRate = 3; // was 5
                         damage = -10; // was -20
                         splash = 0;
@@ -2393,10 +2396,10 @@
                 this.spawnEnemies(dt);
                 this.cleanupObjects();
                 this.checkCollisions();
-                this.checkCollisions();
                 this.checkTurretBuild();
                 this.updateGuideArrow();
                 this.updateUpgradeArrows(dt);
+                this.updateShieldEffect(Date.now() * 0.001); // Animate shield effect
 
                 // Check victory condition
                 if (this.base.z <= this.destinationZ) {
@@ -2663,6 +2666,52 @@
                     const angle = Math.atan2(moveX, moveZ);
                     this.playerMesh.rotation.y = angle + this.cameraAngle;
                 }
+
+                // Player auto-attack (shoot bullets at nearest enemy)
+                if (!this.player.attackCooldown) this.player.attackCooldown = 0;
+                this.player.attackCooldown -= dt;
+
+                if (this.player.attackCooldown <= 0 && this.enemies.length > 0) {
+                    // Find nearest enemy within range
+                    const attackRange = 25; // Increased from 15
+                    let nearestEnemy = null;
+                    let nearestDist = attackRange;
+
+                    this.enemies.forEach(enemy => {
+                        const dx = enemy.x - this.player.x;
+                        const dz = enemy.z - this.player.z;
+                        const dist = Math.sqrt(dx * dx + dz * dz);
+                        if (dist < nearestDist) {
+                            nearestDist = dist;
+                            nearestEnemy = enemy;
+                        }
+                    });
+
+                    if (nearestEnemy) {
+                        // Create bullet
+                        const bulletGeo = new THREE.SphereGeometry(0.8, 8, 8); // Bigger bullet
+                        const bulletMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 }); // Green for player
+                        const bulletMesh = new THREE.Mesh(bulletGeo, bulletMat);
+                        bulletMesh.position.set(this.player.x, 1.5, this.player.z);
+                        this.scene.add(bulletMesh);
+                        console.log('🔫 Player shot bullet at enemy!', nearestEnemy.x, nearestEnemy.z);
+
+                        this.projectiles.push({
+                            mesh: bulletMesh,
+                            x: this.player.x,
+                            y: 1.5, // FIXED: Must initialize y for gravity calculation
+                            z: this.player.z,
+                            targetX: nearestEnemy.x,
+                            targetZ: nearestEnemy.z,
+                            speed: 30,
+                            damage: 5, // Low damage
+                            splash: 0
+                        });
+
+                        this.player.attackCooldown = 0.5; // 2 shots per second
+                        this.audio.play('shoot');
+                    }
+                }
             },
 
             updateEnemies(dt) {
@@ -2689,9 +2738,10 @@
                     if (hpBar) {
                         const hpRatio = Math.max(0, enemy.hp / enemy.maxHp);
                         hpBar.scale.x = hpRatio;
-                        // Shift based on enemy type: Boss=5, Elite=3, Normal=1
-                        const shiftAmount = enemy.isBoss ? 5 : (enemy.isElite ? 3 : 1);
-                        hpBar.position.x = (hpRatio - 1) * shiftAmount;
+                        // Width: Normal=2, Elite=6, Boss=10 → halfWidth = 1, 3, 5
+                        const halfWidth = enemy.isBoss ? 5 : (enemy.isElite ? 3 : 1);
+                        // Shift so bar drains from right side (left origin)
+                        hpBar.position.x = -halfWidth * (1 - hpRatio);
                     }
 
                     // Reduce attack cooldown for ALL enemies
@@ -3240,7 +3290,21 @@
                     const dist = Math.sqrt(dx * dx + dz * dz);
 
                     if (dist < this.player.size + enemy.size) {
-                        this.killEnemy(i);
+                        // Player deals low damage on contact (1 damage per collision check)
+                        if (!enemy.playerContactCooldown || enemy.playerContactCooldown <= 0) {
+                            enemy.hp -= 1; // Low damage
+                            enemy.playerContactCooldown = 0.5; // 0.5 second cooldown
+                            this.audio.play('hit');
+
+                            // Kill if HP depleted
+                            if (enemy.hp <= 0) {
+                                this.killEnemy(i);
+                            }
+                        }
+                    }
+                    // Reduce player contact cooldown
+                    if (enemy.playerContactCooldown > 0) {
+                        enemy.playerContactCooldown -= 0.016; // ~60fps
                     }
                 }
 
@@ -3288,6 +3352,17 @@
                                 damage = 15;
                             }
 
+                            // Shield absorbs damage first
+                            if (this.base.shield && this.base.shield > 0) {
+                                const shieldDamage = Math.min(damage, this.base.shield);
+                                this.base.shield -= shieldDamage;
+                                damage -= shieldDamage;
+                                // Hide shield effect when depleted
+                                if (this.base.shield <= 0) {
+                                    this.base.shield = 0;
+                                    this.hideCartShieldEffect();
+                                }
+                            }
                             this.base.hp -= damage;
                             enemy.attackCooldown = 1; // 1 second between attacks
 
@@ -3564,6 +3639,11 @@
                 if (choice.shieldGenerator) {
                     turret.shieldGenerator = true;
                     turret.shieldAmount = choice.shieldAmount;
+                    // Add shield to cart
+                    this.base.shield = (this.base.shield || 0) + choice.shieldAmount;
+                    this.base.maxShield = (this.base.maxShield || 0) + choice.shieldAmount;
+                    // Create shield visual effect around cart
+                    this.createCartShieldEffect();
                 }
                 if (choice.extraWorkers) {
                     for (let i = 0; i < choice.extraWorkers; i++) {
@@ -3639,11 +3719,11 @@
                 const time = Date.now() * 0.003;
 
                 // Show arrows after Gatling is UNLOCKED (turretUnlockLevel >= 4) AND have enough wood
-                const upgradeUnlocked = this.turretUnlockLevel >= 4;
+                const allTurretsBuilt = this.base.turrets.length >= 9; // All 9 turret slots filled
                 const hasEnoughWood = this.base.wood >= this.getUpgradeCost();
 
-                // Create/show arrows only when upgrade is available AND wood >= 50
-                if (upgradeUnlocked && hasEnoughWood) {
+                // Create/show arrows only when ALL 9 TURRETS BUILT AND wood >= upgrade cost
+                if (allTurretsBuilt && hasEnoughWood) {
                     // Create arrows for turrets that can be upgraded
                     this.base.turrets.forEach(turret => {
                         if (!turret.upgraded && !turret.upgradeArrow) {
@@ -3680,10 +3760,10 @@
             showUpgradeTutorial() {
                 const bubble = document.createElement('div');
                 bubble.id = 'upgrade-tutorial';
-                bubble.innerHTML = '💡 点击<span style="color:#00ff00;">炮塔</span>可以升级炮塔！';
+                bubble.innerHTML = '💡 点击<span style="color:#00ff00;">绿色箭头</span>升级炮塔！';
                 bubble.style.cssText = `
                     position: fixed;
-                    bottom: 15%;
+                    top: 28%;
                     left: 50%;
                     transform: translate(-50%, 0);
                     background: rgba(0,0,0,0.9);
@@ -3691,7 +3771,7 @@
                     border-radius: 15px;
                     border: 2px solid #00ff00;
                     color: white;
-                    font-size: 18px;
+                    font-size: 22px;
                     z-index: 300;
                     text-align: center;
                     animation: pulse 1s infinite;
@@ -3711,7 +3791,47 @@
                 bubble.addEventListener('click', () => bubble.remove());
             },
 
-            // Update turret modal to show lock/unlock states
+            // Create visual shield effect around cart
+            createCartShieldEffect() {
+                if (this.shieldEffectMesh) return; // Already exists
+
+                // Create a semi-transparent sphere around the cart
+                const shieldGeo = new THREE.SphereGeometry(8, 32, 16);
+                const shieldMat = new THREE.MeshBasicMaterial({
+                    color: 0x00aaff,
+                    transparent: true,
+                    opacity: 0.3,
+                    side: THREE.DoubleSide
+                });
+                this.shieldEffectMesh = new THREE.Mesh(shieldGeo, shieldMat);
+                this.shieldEffectMesh.position.set(0, 3, 0); // Center on cart
+                this.baseMesh.add(this.shieldEffectMesh);
+
+                // Add pulsing animation
+                this.shieldEffectMesh.userData.originalOpacity = 0.3;
+                console.log('🛡️ Shield effect created around cart!');
+            },
+
+            // Hide shield effect when depleted
+            hideCartShieldEffect() {
+                if (this.shieldEffectMesh) {
+                    this.baseMesh.remove(this.shieldEffectMesh);
+                    this.shieldEffectMesh.geometry.dispose();
+                    this.shieldEffectMesh.material.dispose();
+                    this.shieldEffectMesh = null;
+                    console.log('💔 Shield depleted, effect removed!');
+                }
+            },
+
+            // Animate shield effect (call from update loop)
+            updateShieldEffect(time) {
+                if (this.shieldEffectMesh && this.base.shield > 0) {
+                    // Pulse effect
+                    const pulse = 0.3 + Math.sin(time * 3) * 0.1;
+                    this.shieldEffectMesh.material.opacity = pulse;
+                    this.shieldEffectMesh.rotation.y += 0.01;
+                }
+            },
             updateTurretModal() {
                 // Lock sequence: A (level 0), C (level 1), E (level 2), D (level 3), B (level 4)
                 const buttonMapping = {
@@ -3891,9 +4011,7 @@
             // UI
             // ==========================================
             updateUI() {
-                document.getElementById('base-hp').innerText = Math.ceil(this.base.hp);
                 document.getElementById('base-wood').innerText = Math.floor(this.base.wood); // Integer only
-                document.getElementById('worker-count').innerText = this.workers.length;
                 document.getElementById('player-wood').innerText = Math.abs(Math.floor((this.base.z - this.destinationZ))) + "m"; // Distance to goal
             },
 
