@@ -4,593 +4,1862 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>巨兽饲养员 (Beast Keeper)</title>
+    <title>巨兽收容所 - BeastKeeper</title>
     <style>
-        body {
+        * {
             margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
             overflow: hidden;
-            background-color: #1a1a1a;
-            font-family: 'Segoe UI', sans-serif;
             touch-action: none;
-            user-select: none;
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: #1a1a2e;
         }
 
-        #ui-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
+        #gameCanvas {
+            display: block;
         }
 
-        .hud-panel {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 15px;
-            border-radius: 10px;
-            border: 1px solid #444;
+        /* HUD */
+        #hud {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .resource-bar {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 8px 15px;
+            border-radius: 8px;
             color: white;
-        }
-
-        .beast-stats {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            text-align: right;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 15px;
-            border-radius: 10px;
-            border: 1px solid #ff4444;
-            color: white;
-        }
-
-        #notify-text {
-            position: absolute;
-            top: 30%;
-            width: 100%;
-            text-align: center;
-            font-size: 36px;
-            font-weight: 900;
-            color: #fff;
-            text-shadow: 0 0 10px #ff0000;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.5s;
-        }
-
-        #interaction-btn {
-            position: absolute;
-            bottom: 120px;
-            right: 40px;
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: #ffaa00;
-            border: 4px solid white;
-            font-size: 30px;
+            font-size: 16px;
             display: flex;
             align-items: center;
+            gap: 8px;
+        }
+
+        .resource-bar .icon {
+            font-size: 20px;
+        }
+
+        .resource-bar .value {
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        /* Joystick */
+        #joystickZone {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 150px;
+            height: 150px;
+            z-index: 200;
+        }
+
+        /* Tutorial Overlay */
+        #tutorialOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 500;
+            display: flex;
+            flex-direction: column;
             justify-content: center;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-            pointer-events: auto;
-            display: none;
-            cursor: pointer;
-            z-index: 100; /* Ensure above input sensor */
+            align-items: center;
+            color: white;
         }
 
-        /* Universal Joystick & Input Styles */
-        #universal-ui-layer {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 1000;
-            user-select: none;
-            -webkit-user-select: none;
+        #tutorialOverlay h1 {
+            font-size: 36px;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px #000;
         }
 
-        #input-sensor {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1; /* Lowered from 999 */
-            /* Transparent but clickable */
-            pointer-events: auto;
+        #tutorialOverlay .hand {
+            font-size: 80px;
+            animation: handMove 1.5s infinite;
         }
 
-        #joystick-visual {
-            position: absolute;
-            bottom: 50px;
-            right: 50px;
-            /* Initial Fixed Position */
-            width: 120px;
-            height: 120px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.5);
-            border-radius: 50%;
-            transition: opacity 0.2s; /* Fade effect for dynamic show/hide */
-            pointer-events: none; /* Pass clicks through to sensor */
-        }
-
-        #joystick-knob {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 50px;
-            height: 50px;
-            background: rgba(255, 255, 255, 0.8);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-        }
-
-        #tutorial-hand {
-            position: absolute;
-            bottom: 80px;
-            right: 80px;
-            /* Pointing to the center of joystick */
-            font-size: 60px;
-            animation: pointer-bob 1.5s infinite;
-            z-index: 1001;
-            pointer-events: none;
-            filter: drop-shadow(0 0 5px black);
-        }
-
-        @keyframes pointer-bob {
+        @keyframes handMove {
 
             0%,
             100% {
-                transform: translate(10px, 10px);
+                transform: translate(0, 0);
             }
 
             50% {
-                transform: translate(-10px, -10px);
+                transform: translate(30px, 30px);
             }
         }
 
-        #start-hint {
-            position: absolute;
-            top: 40%;
-            width: 100%;
-            text-align: center;
+        #tutorialOverlay p {
+            font-size: 20px;
+            margin-top: 20px;
+            opacity: 0.8;
+        }
+
+        /* Prompts */
+        #promptBox {
+            position: fixed;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(30, 30, 60, 0.9));
+            padding: 15px 30px;
+            border-radius: 15px;
+            border: 2px solid #4CAF50;
             color: white;
-            font-size: 28px;
-            font-weight: bold;
-            text-shadow: 0 0 5px black, 0 0 10px red;
-            pointer-events: none;
-            animation: pulse 2s infinite;
+            font-size: 20px;
+            z-index: 300;
+            text-align: center;
+            display: none;
+            animation: pulse 1s infinite;
         }
 
         @keyframes pulse {
-            0% {
-                opacity: 0.8;
+
+            0%,
+            100% {
+                box-shadow: 0 0 10px #4CAF50;
             }
 
             50% {
-                opacity: 1;
-                transform: scale(1.05);
+                box-shadow: 0 0 25px #4CAF50;
             }
+        }
 
-            100% {
-                opacity: 0.8;
-            }
+        /* Beast Panel */
+        #beastPanel {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .beast-card {
+            background: rgba(0, 0, 0, 0.85);
+            padding: 10px 15px;
+            border-radius: 12px;
+            border: 2px solid #666;
+            color: white;
+            min-width: 160px;
+        }
+
+        .beast-card.active {
+            border-color: #4CAF50;
+        }
+
+        .beast-card .name {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .beast-card .stage {
+            font-size: 12px;
+            color: #aaa;
+        }
+
+        .beast-card .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #333;
+            border-radius: 4px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .beast-card .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            transition: width 0.3s;
+        }
+
+        .beast-card .feed-btn {
+            margin-top: 8px;
+            padding: 6px 12px;
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+            border: none;
+            border-radius: 15px;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .beast-card .feed-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 10px rgba(255, 107, 53, 0.6);
+        }
+
+        .beast-card .feed-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+
+        /* Victory Screen */
+        #victoryScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+
+        #victoryScreen h1 {
+            font-size: 48px;
+            color: #ffd700;
+            text-shadow: 3px 3px 6px #000;
+            margin-bottom: 20px;
+        }
+
+        #victoryScreen p {
+            font-size: 20px;
+            margin-bottom: 40px;
+            opacity: 0.9;
+        }
+
+        #victoryScreen .btn {
+            padding: 15px 40px;
+            font-size: 22px;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            margin: 10px;
+            transition: transform 0.2s;
+        }
+
+        #victoryScreen .btn:hover {
+            transform: scale(1.05);
+        }
+
+        #victoryScreen .btn-download {
+            background: linear-gradient(135deg, #f39c12, #e74c3c);
+            color: white;
+        }
+
+        #victoryScreen .btn-restart {
+            background: #555;
+            color: white;
+        }
+
+        /* Controls hint */
+        #controlsHint {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 20px;
+            border-radius: 20px;
+            color: #aaa;
+            font-size: 14px;
+            z-index: 50;
         }
     </style>
 </head>
 
 <body>
-    <div id="game-container"></div>
+    <canvas id="gameCanvas"></canvas>
 
-    <div id="ui-layer">
-        <div class="hud-panel">
-            <div>🥩 肉块: <span id="meat-count">0</span></div>
-            <div>🛡️ 玩家等级: <span id="player-level">1</span></div>
+    <!-- HUD -->
+    <div id="hud">
+        <div class="resource-bar">
+            <span class="icon">🥩</span>
+            <span>肉块:</span>
+            <span class="value" id="meatCount">15</span>
         </div>
-
-        <div class="beast-stats">
-            <h2 style="margin:0; color:#ff5555;">🔥 巨兽状态</h2>
-            <div>状态: <span id="beast-status">幼崽</span></div>
-            <div>基因值: <span id="beast-exp">0</span> / <span id="beast-max-exp">100</span></div>
-            <div>饱食度: <span id="beast-hunger">100%</span></div>
-        </div>
-
-        <div id="notify-text"></div>
-        <div id="interaction-btn">🥩</div>
-    </div>
-
-    <div id="universal-ui-layer">
-        <div id="start-hint">点击屏幕开始游戏 / TAP TO START</div>
-        <div id="tutorial-hand">👆</div>
-        <div id="joystick-visual">
-            <div id="joystick-knob"></div>
+        <div class="resource-bar">
+            <span class="icon">🪙</span>
+            <span>金币:</span>
+            <span class="value" id="coinCount">0</span>
         </div>
     </div>
-    <div id="input-sensor"></div>
 
+    <!-- Beast Panel -->
+    <div id="beastPanel"></div>
+
+    <!-- Prompt Box -->
+    <div id="promptBox"></div>
+
+    <!-- Joystick Zone -->
+    <div id="joystickZone"></div>
+
+    <!-- Tutorial Overlay -->
+    <div id="tutorialOverlay">
+        <h1>🐉 巨兽收容所 🐉</h1>
+        <div class="hand">👆</div>
+        <p>拖动摇杆或使用 WASD 移动</p>
+        <p style="opacity:0.5; font-size:14px;">点击任意位置开始</p>
+    </div>
+
+    <!-- Victory Screen -->
+    <div id="victoryScreen">
+        <h1>🏆 胜利！🏆</h1>
+        <p>恭喜你成功经营了巨兽收容所！</p>
+        <button class="btn btn-download" onclick="window.open('https://example.com/download')">
+            📲 立即下载完整版
+        </button>
+        <button class="btn btn-restart" onclick="location.reload()">
+            🔄 重新开始
+        </button>
+    </div>
+
+    <!-- Controls Hint -->
+    <div id="controlsHint">WASD 或 拖动摇杆移动</div>
+
+    <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script>
-
-
-    <!-- Game Configuration (CSV) -->
-    <script type="text/csv" id="game-config-csv">
-beast.startStage, 1
-beast.startMaxExp, 50
-beast.expPerFeed, 10
-beast.growExpMult, 1.5
-beast.growScaleMult, 1.3
-player.speed, 0.5
-player.pickupRange, 4
-spawn.maxFood, 10
-spawn.respawnChance, 0.01
-spawn.respawnLimit, 5
-    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
 
     <script>
-        // --- 游戏配置 ---
+        // ==================== GAME CONFIG ====================
         const CONFIG = {
-            colors: { bg: 0x222222, ground: 0x334433, beast: 0xff4400, food: 0xffaaaa },
-            
-            // Gameplay Config
-            beast: { 
-                startStage: 1, startExp: 0, startMaxExp: 50, startScale: 1, startHunger: 100, 
-                expPerFeed: 10, growExpMult: 1.5, growScaleMult: 1.3 
-            },
-            player: { speed: 0.5, pickupRange: 4 },
-            spawn: { maxFood: 10, respawnChance: 0.01, respawnLimit: 5 }
+            // Resources - enough for first feed
+            startingMeat: 15,
+            startingCoins: 0,
+
+            // Beast feeding - one feed = full progress
+            feedCost: 10,
+            feedProgressPerFeed: 100, // One feed fills bar completely
+
+            // Buildings
+            meatFactoryCost: 50,
+            workerHutCost: 80,
+            upgradeMeatFactoryCost: 100,
+            meatProductionRate: 2, // per second
+            meatProductionRateUpgraded: 5,
+
+            // Combat - increased ranges and speeds
+            enemySpawnInterval: 3, // seconds
+            beastAttackRange: 25, // INCREASED for ranged attacks
+            beastAttackDamage: { baby: 0, healthy: 15, evolved: 60 },
+            beastMoveSpeed: 12, // Beasts move towards enemies
+            enemySpeed: 8, // Faster enemies
+            bossHp: 500,
+            bossSpawnDelay: 5,
+
+            // Player - faster movement
+            playerSpeed: 25,
+            collectRange: 3
         };
 
-        async function loadGameConfig() {
-            let text = "";
-            try {
-                const response = await fetch('BeastKeeper.csv');
-                if (!response.ok) throw new Error("Config not found");
-                text = await response.text();
-                console.log("Loaded external CSV config.");
-            } catch (e) {
-                console.warn("Could not load external config, using fallback embedded config:", e);
-                const el = document.getElementById('game-config-csv');
-                if (el) text = el.textContent;
-            }
-
-            if (!text) return;
-
-            const lines = text.split('\n');
-            lines.forEach(line => {
-                const parts = line.split(',').map(s => s.trim());
-                if (parts.length < 2) return;
-                const path = parts[0].split('.');
-                const val = parseFloat(parts[1]);
-                if (isNaN(val)) return;
-
-                let curr = CONFIG;
-                for (let i = 0; i < path.length - 1; i++) {
-                    if (!curr[path[i]]) curr[path[i]] = {};
-                    curr = curr[path[i]];
-                }
-                curr[path[path.length - 1]] = val;
-            });
-            console.log("Config Loaded:", CONFIG);
-        }
-
-        const STATE = {
-            meat: 0,
-            beast: { 
-                stage: CONFIG.beast.startStage, 
-                exp: CONFIG.beast.startExp, 
-                maxExp: CONFIG.beast.startMaxExp, 
-                scale: CONFIG.beast.startScale, 
-                hunger: CONFIG.beast.startHunger 
-            },
-            player: { speed: CONFIG.player.speed, pickupRange: CONFIG.player.pickupRange },
-            items: [],
-            lastTime: 0
-        };
-
-        // --- Three.js Setup ---
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(CONFIG.colors.bg);
-        scene.fog = new THREE.Fog(CONFIG.colors.bg, 30, 90);
-
-        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 40, 30);
-        camera.lookAt(0, 0, 0);
-
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.shadowMap.enabled = true;
-        document.getElementById('game-container').appendChild(renderer.domElement);
-
-        // Lights
-        const ambLight = new THREE.AmbientLight(0xffffff, 0.5);
-        scene.add(ambLight);
-        const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-        dirLight.position.set(20, 50, 20);
-        dirLight.castShadow = true;
-        scene.add(dirLight);
-
-        // Ground (Enclosure)
-        const ground = new THREE.Mesh(new THREE.CylinderGeometry(60, 60, 1, 32), new THREE.MeshStandardMaterial({ color: CONFIG.colors.ground }));
-        ground.position.y = -0.5;
-        ground.receiveShadow = true;
-        scene.add(ground);
-        // Fence
-        const fenceGeo = new THREE.TorusGeometry(60, 1, 16, 100);
-        const fence = new THREE.Mesh(fenceGeo, new THREE.MeshStandardMaterial({ color: 0x888888 }));
-        fence.rotation.x = Math.PI / 2;
-        fence.position.y = 1;
-        scene.add(fence);
-
-        // --- Actors ---
-        // Player
-        const playerGroup = new THREE.Group();
-        const playerBody = new THREE.Mesh(new THREE.CapsuleGeometry(1, 2, 4, 8), new THREE.MeshStandardMaterial({ color: 0x00aaff }));
-        playerBody.position.y = 1;
-        playerGroup.add(playerBody);
-        scene.add(playerGroup);
-
-        // Beast (Center)
-        const beastGroup = new THREE.Group();
-        // Simple "Egg/Beast" model
-        const beastBody = new THREE.Mesh(new THREE.DodecahedronGeometry(3), new THREE.MeshStandardMaterial({ color: CONFIG.colors.beast, emissive: 0x441100 }));
-        beastBody.position.y = 3;
-        beastGroup.add(beastBody);
-
-        // Breathing animation pivot
-        const beastPivot = new THREE.Group();
-        beastPivot.add(beastGroup);
-        scene.add(beastPivot);
-
-        // Food Items
-        function spawnFood() {
-            const angle = Math.random() * Math.PI * 2;
-            const r = 15 + Math.random() * 40;
-            const x = Math.sin(angle) * r;
-            const z = Math.cos(angle) * r;
-
-            const geo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
-            const mat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.food });
-            const item = new THREE.Mesh(geo, mat);
-            item.position.set(x, 1, z);
-
-            // Floating animation offset
-            item.userData = { y0: 1, phase: Math.random() * Math.PI };
-
-            scene.add(item);
-            STATE.items.push(item);
-        }
-
-        // Initial food
-        for (let i = 0; i < CONFIG.spawn.maxFood; i++) spawnFood();
-
-        // --- Input ---
-        // --- Input System (Standardized) ---
-        const InputSystem = {
+        // ==================== GAME STATE ====================
+        const game = {
             started: false,
-            active: false,
-            origin: { x: 0, y: 0 },
-            curr: { x: 0, y: 0 },
-            delta: { x: 0, y: 0 },
+            step: 1,
+            meat: CONFIG.startingMeat,
+            coins: CONFIG.startingCoins,
 
-            init() {
-                const sensor = document.getElementById('input-sensor');
-                const hand = document.getElementById('tutorial-hand');
-                const hint = document.getElementById('start-hint');
+            beasts: [],
+            buildings: [],
+            enemies: [],
+            loot: [],
+            workers: [],
+            projectiles: [], // Beast ranged attacks
+            buildingLabels: [], // 3D building info labels
 
-                const startState = (cx, cy) => {
-                    if (!this.started) {
-                        this.started = true;
-                        if (hand) hand.style.display = 'none';
-                        if (hint) hint.style.display = 'none';
-                    }
-                    this.active = true;
-                    this.origin.x = cx;
-                    this.origin.y = cy;
-                    this.curr.x = cx;
-                    this.curr.y = cy;
-                    this.updateVisuals();
-                };
+            // Flags
+            hydraSpawned: false,
+            thunderbirdSpawned: false,
+            meatFactoryBuilt: false,
+            workerHutBuilt: false,
+            meatFactoryUpgraded: false,
+            bossSpawned: false,
+            bossDefeated: false,
 
-                const moveState = (cx, cy) => {
-                    if (!this.active) return;
-                    this.curr.x = cx;
-                    this.curr.y = cy;
-
-                    const maxDist = 50;
-                    let dx = this.curr.x - this.origin.x;
-                    let dy = this.curr.y - this.origin.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-
-                    if (dist > maxDist) {
-                        const ratio = maxDist / dist;
-                        dx *= ratio;
-                        dy *= ratio;
-                    }
-
-                    this.delta.x = dx / maxDist;
-                    this.delta.y = dy / maxDist;
-
-                    this.updateVisuals();
-                };
-
-                const endState = () => {
-                    this.active = false;
-                    this.delta.x = 0;
-                    this.delta.y = 0;
-                    this.updateVisuals();
-                };
-
-                // Listeners
-                sensor.addEventListener('mousedown', e => startState(e.clientX, e.clientY));
-                window.addEventListener('mousemove', e => moveState(e.clientX, e.clientY));
-                window.addEventListener('mouseup', endState);
-
-                sensor.addEventListener('touchstart', e => {
-                    e.preventDefault();
-                    startState(e.touches[0].clientX, e.touches[0].clientY);
-                }, { passive: false });
-                window.addEventListener('touchmove', e => {
-                    if (this.active) moveState(e.touches[0].clientX, e.touches[0].clientY);
-                }, { passive: false });
-                window.addEventListener('touchend', endState);
-            },
-
-            updateVisuals() {
-                const knob = document.getElementById('joystick-knob');
-                if (!knob) return;
-                const maxVisualDist = 35;
-                const vx = this.delta.x * maxVisualDist;
-                const vy = this.delta.y * maxVisualDist;
-                knob.style.transform = `translate(calc(-50% + ${vx}px), calc(-50% + ${vy}px))`;
-            }
+            // Timer
+            lastTime: 0,
+            meatProductionTimer: 0,
+            enemySpawnTimer: 0
         };
 
-        InputSystem.init();
+        // ==================== THREE.JS SETUP ====================
+        let scene, camera, renderer;
+        let player, playerMesh;
+        let groundMesh;
+        const clock = new THREE.Clock();
 
-        const keys = {};
-        window.onkeydown = e => keys[e.key] = true;
-        window.onkeyup = e => keys[e.key] = false;
+        // Input
+        const keys = { w: false, a: false, s: false, d: false };
+        let joystickVector = { x: 0, y: 0 };
+        let joystick = null;
 
-        // --- Interaction ---
-        const btn = document.getElementById('interaction-btn');
-        btn.onclick = () => {
-            if (STATE.meat > 0) {
-                feedBeast();
+        function initThreeJS() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x228B22);
+            scene.fog = new THREE.Fog(0x228B22, 50, 150);
+
+            // Camera (Orthographic for top-down)
+            const aspect = window.innerWidth / window.innerHeight;
+            const viewSize = 40;
+            camera = new THREE.OrthographicCamera(
+                -viewSize * aspect, viewSize * aspect,
+                viewSize, -viewSize,
+                1, 1000
+            );
+            camera.position.set(0, 60, 40);
+            camera.lookAt(0, 0, 0);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({
+                canvas: document.getElementById('gameCanvas'),
+                antialias: true
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(30, 50, 30);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 2048;
+            dirLight.shadow.mapSize.height = 2048;
+            scene.add(dirLight);
+
+            // Ground
+            const groundGeo = new THREE.PlaneGeometry(200, 200);
+            const groundMat = new THREE.MeshPhongMaterial({
+                color: 0x3d8b40,
+                side: THREE.DoubleSide
+            });
+            groundMesh = new THREE.Mesh(groundGeo, groundMat);
+            groundMesh.rotation.x = -Math.PI / 2;
+            groundMesh.receiveShadow = true;
+            scene.add(groundMesh);
+
+            // Sanctuary fence
+            createSanctuaryArea();
+
+            // Player
+            createPlayer();
+
+            // Spawn initial Hydra
+            spawnInjuredHydra();
+
+            // Handle resize
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function createSanctuaryArea() {
+            // Fence posts around sanctuary
+            const fenceMat = new THREE.MeshPhongMaterial({ color: 0x8B4513 });
+            const postGeo = new THREE.CylinderGeometry(0.3, 0.3, 3, 8);
+
+            const fencePositions = [];
+            for (let x = -25; x <= 25; x += 5) {
+                fencePositions.push({ x, z: -25 });
+                fencePositions.push({ x, z: 25 });
             }
-        };
-
-        function feedBeast() {
-            if (STATE.meat <= 0) return;
-            STATE.meat--;
-            STATE.beast.exp += CONFIG.beast.expPerFeed;
-            notify("投喂巨兽！基因 +" + CONFIG.beast.expPerFeed);
-            updateUI();
-
-            // Feed Effect
-            const p = new THREE.Mesh(new THREE.SphereGeometry(1), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
-            p.position.copy(beastPivot.position);
-            p.position.y = 5 * STATE.beast.scale;
-            scene.add(p);
-
-            // Check Level Up
-            if (STATE.beast.exp >= STATE.beast.maxExp) {
-                STATE.beast.stage++;
-                STATE.beast.exp = 0;
-                STATE.beast.maxExp *= CONFIG.beast.growExpMult;
-                STATE.beast.scale *= CONFIG.beast.growScaleMult;
-
-                // Visual Growth
-                beastPivot.scale.setScalar(STATE.beast.scale);
-                notify(`巨兽进化！阶段 ${STATE.beast.stage}`);
+            for (let z = -20; z <= 20; z += 5) {
+                fencePositions.push({ x: -25, z });
+                fencePositions.push({ x: 25, z });
             }
+
+            fencePositions.forEach(pos => {
+                const post = new THREE.Mesh(postGeo, fenceMat);
+                post.position.set(pos.x, 1.5, pos.z);
+                post.castShadow = true;
+                scene.add(post);
+            });
+
+            // Beast pen area (darker grass)
+            const penGeo = new THREE.PlaneGeometry(20, 15);
+            const penMat = new THREE.MeshPhongMaterial({ color: 0x2d6a2e });
+            const penMesh = new THREE.Mesh(penGeo, penMat);
+            penMesh.rotation.x = -Math.PI / 2;
+            penMesh.position.set(-10, 0.01, 10);
+            scene.add(penMesh);
+
+            // Building area markers
+            createBuildingSpot(15, 10, 'meat_factory');
+            createBuildingSpot(15, -5, 'worker_hut');
+
+            // Create upgrade label (initially hidden, shown by updateBuildingLabels at step 9)
+            showUpgradeLabel(15, 10);
         }
 
-        function notify(msg) {
-            const el = document.getElementById('notify-text');
-            el.innerText = msg;
-            el.style.opacity = 1;
-            setTimeout(() => el.style.opacity = 0, 1500);
+        function createBuildingSpot(x, z, type) {
+            const spotGeo = new THREE.PlaneGeometry(8, 8);
+            const spotMat = new THREE.MeshPhongMaterial({
+                color: 0x555555,
+                transparent: true,
+                opacity: 0.5
+            });
+            const spot = new THREE.Mesh(spotGeo, spotMat);
+            spot.rotation.x = -Math.PI / 2;
+            spot.position.set(x, 0.02, z);
+            spot.userData = { type: type, isSpot: true };
+            scene.add(spot);
+
+            // Create building info label
+            const labelGroup = new THREE.Group();
+
+            // Info text based on type
+            let labelInfo;
+            if (type === 'meat_factory') {
+                labelInfo = {
+                    name: '🏭 造肉厂',
+                    desc: '自动产肉',
+                    cost: CONFIG.meatFactoryCost
+                };
+            } else if (type === 'worker_hut') {
+                labelInfo = {
+                    name: '🏠 工人小屋',
+                    desc: '4工人自动收集',
+                    cost: CONFIG.workerHutCost
+                };
+            }
+
+            // Create floating billboard using canvas texture
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+
+            // Background
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.roundRect(0, 0, 256, 128, 10);
+            ctx.fill();
+            ctx.strokeStyle = '#4CAF50';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Text
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 28px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(labelInfo.name, 128, 35);
+
+            ctx.font = '20px Arial';
+            ctx.fillStyle = '#aaffaa';
+            ctx.fillText(labelInfo.desc, 128, 65);
+
+            ctx.font = 'bold 24px Arial';
+            ctx.fillStyle = '#ffd700';
+            ctx.fillText('💰 ' + labelInfo.cost + ' 金币', 128, 105);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            const spriteMat = new THREE.SpriteMaterial({
+                map: texture,
+                transparent: true
+            });
+            const sprite = new THREE.Sprite(spriteMat);
+            sprite.scale.set(12, 6, 1);
+            sprite.position.set(x, 8, z);
+            sprite.userData = { type: type, isLabel: true };
+            sprite.visible = false; // Start hidden, show via updateBuildingLabels
+            scene.add(sprite);
+
+            // Store reference for removal when building is built
+            game.buildingLabels.push({ type, sprite, spot });
+
+            return spot;
         }
 
-        function updateUI() {
-            document.getElementById('meat-count').innerText = STATE.meat;
-            document.getElementById('beast-exp').innerText = STATE.beast.exp;
-            document.getElementById('beast-max-exp').innerText = Math.floor(STATE.beast.maxExp);
-            document.getElementById('beast-status').innerText = `阶段 ${STATE.beast.stage}`;
+        // Manage label visibility based on game step
+        function updateBuildingLabels() {
+            game.buildingLabels.forEach(label => {
+                let shouldShow = false;
+
+                switch (label.type) {
+                    case 'meat_factory':
+                        // Show meat factory label at step 4 (after enemies spawn, before building)
+                        shouldShow = !game.meatFactoryBuilt && game.step >= 4;
+                        break;
+                    case 'worker_hut':
+                        // Show worker hut label at step 8 (after thunderbird healthy)
+                        shouldShow = !game.workerHutBuilt && game.step >= 8;
+                        break;
+                    case 'upgrade_meat_factory':
+                        // Show upgrade label at step 9 (after worker hut built)
+                        shouldShow = game.meatFactoryBuilt && !game.meatFactoryUpgraded && game.step >= 9;
+                        break;
+                }
+
+                if (label.sprite) label.sprite.visible = shouldShow;
+                if (label.spot) label.spot.visible = shouldShow || game.meatFactoryBuilt || game.workerHutBuilt;
+            });
         }
 
-        // --- Game Loop ---
-        function animate(time) {
-            requestAnimationFrame(animate);
+        function createPlayer() {
+            // Simple character: body + head
+            const group = new THREE.Group();
 
-            // PAUSE UNTIL START (But keep rendering)
-            if (!InputSystem.started) {
-                if (renderer && scene && camera) renderer.render(scene, camera);
+            // Body
+            const bodyGeo = new THREE.CylinderGeometry(0.8, 1, 2, 8);
+            const bodyMat = new THREE.MeshPhongMaterial({ color: 0x9370DB }); // Purple
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 1;
+            body.castShadow = true;
+            group.add(body);
+
+            // Head
+            const headGeo = new THREE.SphereGeometry(0.6, 16, 16);
+            const headMat = new THREE.MeshPhongMaterial({ color: 0xFFE4C4 });
+            const head = new THREE.Mesh(headGeo, headMat);
+            head.position.y = 2.5;
+            head.castShadow = true;
+            group.add(head);
+
+            // Hair (blonde)
+            const hairGeo = new THREE.SphereGeometry(0.65, 16, 16);
+            const hairMat = new THREE.MeshPhongMaterial({ color: 0xFFD700 });
+            const hair = new THREE.Mesh(hairGeo, hairMat);
+            hair.position.set(0, 2.7, -0.1);
+            hair.scale.set(1, 0.8, 1);
+            group.add(hair);
+
+            group.position.set(0, 0, 0);
+            scene.add(group);
+
+            playerMesh = group;
+            player = { x: 0, z: 0, mesh: group };
+        }
+
+        // ==================== BEAST SYSTEM ====================
+        function createBeastMesh(type, stage) {
+            const group = new THREE.Group();
+
+            if (type === 'hydra') {
+                const scale = stage === 'evolved' ? 3 : (stage === 'healthy' ? 1.5 : 1);
+                const color = stage === 'baby' ? 0x90EE90 : 0x228B22;
+
+                // Body
+                const bodyGeo = new THREE.SphereGeometry(1.5 * scale, 16, 16);
+                const bodyMat = new THREE.MeshPhongMaterial({ color });
+                const body = new THREE.Mesh(bodyGeo, bodyMat);
+                body.scale.set(1, 0.6, 1.2);
+                body.position.y = 1 * scale;
+                body.castShadow = true;
+                group.add(body);
+
+                // Heads (1 for baby, 3 for healthy, 9 for evolved)
+                const headCount = stage === 'evolved' ? 9 : (stage === 'healthy' ? 3 : 1);
+                const headGeo = new THREE.SphereGeometry(0.5 * scale, 12, 12);
+                const headMat = new THREE.MeshPhongMaterial({ color });
+
+                for (let i = 0; i < headCount; i++) {
+                    const head = new THREE.Mesh(headGeo, headMat);
+                    const angle = (i / headCount) * Math.PI - Math.PI / 2;
+                    head.position.set(
+                        Math.sin(angle) * 1.5 * scale,
+                        2 * scale + Math.abs(Math.sin(angle)) * 0.5 * scale,
+                        Math.cos(angle) * 0.5 * scale - 1 * scale
+                    );
+                    head.castShadow = true;
+                    group.add(head);
+
+                    // Eyes
+                    const eyeGeo = new THREE.SphereGeometry(0.15 * scale, 8, 8);
+                    const eyeMat = new THREE.MeshPhongMaterial({ color: 0xFFFFFF });
+                    const eye = new THREE.Mesh(eyeGeo, eyeMat);
+                    eye.position.copy(head.position);
+                    eye.position.z += 0.4 * scale;
+                    eye.position.y += 0.1 * scale;
+                    group.add(eye);
+                }
+
+                // Injured indicator
+                if (stage === 'baby') {
+                    const bandageGeo = new THREE.BoxGeometry(0.8, 0.2, 0.1);
+                    const bandageMat = new THREE.MeshPhongMaterial({ color: 0xFFFFFF });
+                    const bandage = new THREE.Mesh(bandageGeo, bandageMat);
+                    bandage.position.set(0, 1.5, 1.2);
+                    group.add(bandage);
+
+                    const crossGeo = new THREE.BoxGeometry(0.3, 0.1, 0.05);
+                    const crossMat = new THREE.MeshPhongMaterial({ color: 0xFF0000 });
+                    const cross1 = new THREE.Mesh(crossGeo, crossMat);
+                    cross1.position.set(0, 1.5, 1.25);
+                    group.add(cross1);
+                }
+            } else if (type === 'thunderbird') {
+                const scale = stage === 'evolved' ? 3 : (stage === 'healthy' ? 1.5 : 1);
+                const color = stage === 'baby' ? 0x87CEEB : 0x4169E1;
+
+                // Body
+                const bodyGeo = new THREE.SphereGeometry(1 * scale, 16, 16);
+                const bodyMat = new THREE.MeshPhongMaterial({ color });
+                const body = new THREE.Mesh(bodyGeo, bodyMat);
+                body.scale.set(1, 0.8, 1.5);
+                body.position.y = 2 * scale;
+                body.castShadow = true;
+                group.add(body);
+
+                // Head
+                const headGeo = new THREE.SphereGeometry(0.6 * scale, 12, 12);
+                const head = new THREE.Mesh(headGeo, bodyMat);
+                head.position.set(0, 2.5 * scale, -0.8 * scale);
+                head.castShadow = true;
+                group.add(head);
+
+                // Beak
+                const beakGeo = new THREE.ConeGeometry(0.2 * scale, 0.5 * scale, 8);
+                const beakMat = new THREE.MeshPhongMaterial({ color: 0xFFA500 });
+                const beak = new THREE.Mesh(beakGeo, beakMat);
+                beak.rotation.x = Math.PI / 2;
+                beak.position.set(0, 2.4 * scale, -1.5 * scale);
+                group.add(beak);
+
+                // Wings
+                const wingGeo = new THREE.BoxGeometry(3 * scale, 0.2 * scale, 1.5 * scale);
+                const wingMat = new THREE.MeshPhongMaterial({ color });
+
+                const leftWing = new THREE.Mesh(wingGeo, wingMat);
+                leftWing.position.set(-2 * scale, 2 * scale, 0);
+                leftWing.rotation.z = 0.3;
+                leftWing.castShadow = true;
+                group.add(leftWing);
+
+                const rightWing = new THREE.Mesh(wingGeo, wingMat);
+                rightWing.position.set(2 * scale, 2 * scale, 0);
+                rightWing.rotation.z = -0.3;
+                rightWing.castShadow = true;
+                group.add(rightWing);
+
+                // Lightning effect for evolved
+                if (stage === 'evolved') {
+                    const lightningMat = new THREE.MeshBasicMaterial({
+                        color: 0xFFFF00,
+                        transparent: true,
+                        opacity: 0.8
+                    });
+                    for (let i = 0; i < 5; i++) {
+                        const boltGeo = new THREE.CylinderGeometry(0.1, 0.1, 2, 4);
+                        const bolt = new THREE.Mesh(boltGeo, lightningMat);
+                        bolt.position.set(
+                            (Math.random() - 0.5) * 6,
+                            1 + Math.random() * 3,
+                            (Math.random() - 0.5) * 4
+                        );
+                        bolt.rotation.set(Math.random(), Math.random(), Math.random());
+                        group.add(bolt);
+                    }
+                }
+
+                // Injured indicator
+                if (stage === 'baby') {
+                    const bandageGeo = new THREE.BoxGeometry(0.6, 0.15, 0.08);
+                    const bandageMat = new THREE.MeshPhongMaterial({ color: 0xFFFFFF });
+                    const bandage = new THREE.Mesh(bandageGeo, bandageMat);
+                    bandage.position.set(0, 2.8, -0.8);
+                    group.add(bandage);
+                }
+            }
+
+            return group;
+        }
+
+        function spawnInjuredHydra() {
+            if (game.hydraSpawned) return;
+            game.hydraSpawned = true;
+
+            const mesh = createBeastMesh('hydra', 'baby');
+            mesh.position.set(-10, 0, 15);
+            scene.add(mesh);
+
+            game.beasts.push({
+                type: 'hydra',
+                stage: 'baby',
+                feedProgress: 0,
+                mesh: mesh,
+                x: -10,
+                z: 15,
+                captured: false,
+                attackCooldown: 0
+            });
+
+            showPrompt('💔 发现受伤的幼年九头蛇！靠近捕获！');
+            updateBeastPanel();
+        }
+
+        function spawnThunderbird() {
+            if (game.thunderbirdSpawned) return;
+            game.thunderbirdSpawned = true;
+
+            const mesh = createBeastMesh('thunderbird', 'baby');
+            mesh.position.set(0, 0, -30);
+            scene.add(mesh);
+
+            game.beasts.push({
+                type: 'thunderbird',
+                stage: 'baby',
+                feedProgress: 0,
+                mesh: mesh,
+                x: 0,
+                z: -30,
+                captured: false,
+                attackCooldown: 0
+            });
+
+            showPrompt('🦅 城外发现受伤的雷鹏鸟！前往捕获！');
+            updateBeastPanel();
+        }
+
+        function captureBeast(beast) {
+            if (beast.captured) return;
+            beast.captured = true;
+
+            // Move to pen
+            const penX = -10 + game.beasts.filter(b => b.captured).length * 5;
+            beast.x = penX;
+            beast.z = 10;
+            beast.mesh.position.set(penX, 0, 10);
+
+            showPrompt(`✅ 成功捕获${beast.type === 'hydra' ? '九头蛇' : '雷鹏鸟'}！用肉块喂养它！`);
+            updateBeastPanel();
+            advanceStep();
+        }
+
+        function feedBeast(beast) {
+            if (game.meat < CONFIG.feedCost) {
+                showPrompt('❌ 肉块不足！需要 ' + CONFIG.feedCost + ' 肉块');
                 return;
             }
 
-            const dt = (time - STATE.lastTime) / 1000;
-            STATE.lastTime = time;
+            game.meat -= CONFIG.feedCost;
+            beast.feedProgress += CONFIG.feedProgressPerFeed;
 
-            // Player Movement
-            let kx = 0, ky = 0;
-            if (keys['w']) ky = -1; if (keys['s']) ky = 1;
-            if (keys['a']) kx = -1; if (keys['d']) kx = 1;
-
-            // Combine Keyboard + Touch
-            let dx = InputSystem.delta.x + kx;
-            let dy = InputSystem.delta.y + ky;
-
-            // Normalize if both active (simple clamp 1)
-            if (Math.abs(dx) > 1) dx = Math.sign(dx);
-            if (Math.abs(dy) > 1) dy = Math.sign(dy);
-
-            if (Math.abs(dx) > 0 || Math.abs(dy) > 0) {
-                playerGroup.position.x += dx * STATE.player.speed;
-                playerGroup.position.z += dy * STATE.player.speed;
-                playerGroup.lookAt(playerGroup.position.x + dx, playerGroup.position.y, playerGroup.position.z + dy);
-
-                // Clamp to fence
-                if (playerGroup.position.length() > 58) {
-                    playerGroup.position.setLength(58);
-                }
-            }
-
-            // Camera Follow
-            camera.position.x = playerGroup.position.x * 0.5;
-            camera.position.z = playerGroup.position.z * 0.5 + 40;
-            camera.lookAt(playerGroup.position.x * 0.2, 0, playerGroup.position.z * 0.2);
-
-            // Item Animation & Pickup
-            for (let i = STATE.items.length - 1; i >= 0; i--) {
-                const item = STATE.items[i];
-                item.position.y = item.userData.y0 + Math.sin(time * 0.003 + item.userData.phase) * 0.3;
-                item.rotation.y += 0.02;
-
-                if (playerGroup.position.distanceTo(item.position) < STATE.player.pickupRange) {
-                    scene.remove(item);
-                    STATE.items.splice(i, 1);
-                    STATE.meat++;
-                    updateUI();
-                }
-            }
-
-            // Respawn Food
-            if (STATE.items.length < CONFIG.spawn.respawnLimit && Math.random() < CONFIG.spawn.respawnChance) {
-                spawnFood();
-            }
-
-            // Beast Animation
-            beastBody.position.y = 3 + Math.sin(time * 0.002) * 0.5;
-            beastBody.rotation.y += 0.005;
-
-            // Interaction Check (Near Beast)
-            const distToBeast = playerGroup.position.distanceTo(beastPivot.position);
-            if (distToBeast < 10 + STATE.beast.scale * 3) {
-                btn.style.display = 'flex';
-                if (STATE.meat > 0) btn.innerHTML = '🥩×' + STATE.meat;
-                else btn.innerHTML = '❌';
+            if (beast.feedProgress >= 100) {
+                beast.feedProgress = 0;
+                evolveBeast(beast);
             } else {
-                btn.style.display = 'none';
+                showPrompt(`🥩 喂食成功！进度: ${beast.feedProgress}%`);
             }
+
+            updateHUD();
+            updateBeastPanel();
+        }
+
+        function evolveBeast(beast) {
+            // Remove old mesh
+            scene.remove(beast.mesh);
+
+            const wasStage = beast.stage;
+
+            if (beast.stage === 'baby') {
+                beast.stage = 'healthy';
+                showPrompt(`💚 ${beast.type === 'hydra' ? '九头蛇' : '雷鹏鸟'}恢复健康！可以战斗了！`);
+            } else if (beast.stage === 'healthy') {
+                beast.stage = 'evolved';
+                showPrompt(`⚡ ${beast.type === 'hydra' ? '九头蛇' : '雷鹏鸟'}进化成巨型形态！战力暴增！`);
+            }
+
+            // Create new mesh
+            beast.mesh = createBeastMesh(beast.type, beast.stage);
+            beast.mesh.position.set(beast.x, 0, beast.z);
+            scene.add(beast.mesh);
+
+            updateBeastPanel();
+
+            // Step progression based on which beast evolved
+            if (beast.type === 'hydra') {
+                if (wasStage === 'baby' && beast.stage === 'healthy') {
+                    // Step 3: Hydra healthy, then auto-trigger step 4 (enemies)
+                    advanceStep(); // -> step 3
+                    setTimeout(() => advanceStep(), 1000); // -> step 4 (enemies spawn)
+                } else if (wasStage === 'healthy' && beast.stage === 'evolved') {
+                    // Step 11: Hydra evolved to giant
+                    if (game.step < 11) game.step = 10;
+                    advanceStep(); // -> step 11
+                }
+            } else if (beast.type === 'thunderbird') {
+                if (wasStage === 'baby' && beast.stage === 'healthy') {
+                    // Step 8: Thunderbird healthy
+                    if (game.step < 8) game.step = 7;
+                    advanceStep(); // -> step 8
+                } else if (wasStage === 'healthy' && beast.stage === 'evolved') {
+                    // Step 12: Thunderbird evolved, then step 13 (boss)
+                    if (game.step < 12) game.step = 11;
+                    advanceStep(); // -> step 12
+                    setTimeout(() => advanceStep(), 2000); // -> step 13 (boss spawns)
+                }
+            }
+        }
+
+        // ==================== BUILDING SYSTEM ====================
+        function createBuilding(type, x, z) {
+            const group = new THREE.Group();
+
+            if (type === 'meat_factory') {
+                // Factory building
+                const baseGeo = new THREE.BoxGeometry(6, 4, 6);
+                const baseMat = new THREE.MeshPhongMaterial({ color: 0x8B4513 });
+                const base = new THREE.Mesh(baseGeo, baseMat);
+                base.position.y = 2;
+                base.castShadow = true;
+                group.add(base);
+
+                // Chimney
+                const chimneyGeo = new THREE.CylinderGeometry(0.5, 0.5, 3, 8);
+                const chimneyMat = new THREE.MeshPhongMaterial({ color: 0x696969 });
+                const chimney = new THREE.Mesh(chimneyGeo, chimneyMat);
+                chimney.position.set(2, 5.5, 0);
+                chimney.castShadow = true;
+                group.add(chimney);
+
+                // Sign
+                const signGeo = new THREE.BoxGeometry(2, 1, 0.1);
+                const signMat = new THREE.MeshPhongMaterial({ color: 0xFF6347 });
+                const sign = new THREE.Mesh(signGeo, signMat);
+                sign.position.set(0, 4.5, 3.1);
+                group.add(sign);
+            } else if (type === 'worker_hut') {
+                // Hut building
+                const baseGeo = new THREE.BoxGeometry(5, 3, 5);
+                const baseMat = new THREE.MeshPhongMaterial({ color: 0xDEB887 });
+                const base = new THREE.Mesh(baseGeo, baseMat);
+                base.position.y = 1.5;
+                base.castShadow = true;
+                group.add(base);
+
+                // Roof
+                const roofGeo = new THREE.ConeGeometry(4, 2, 4);
+                const roofMat = new THREE.MeshPhongMaterial({ color: 0x8B0000 });
+                const roof = new THREE.Mesh(roofGeo, roofMat);
+                roof.position.y = 4;
+                roof.rotation.y = Math.PI / 4;
+                roof.castShadow = true;
+                group.add(roof);
+            }
+
+            group.position.set(x, 0, z);
+            scene.add(group);
+
+            return {
+                type,
+                x,
+                z,
+                mesh: group,
+                level: 1
+            };
+        }
+
+        function removeBuildingLabel(type) {
+            const idx = game.buildingLabels.findIndex(l => l.type === type);
+            if (idx >= 0) {
+                const label = game.buildingLabels[idx];
+                scene.remove(label.sprite);
+                scene.remove(label.spot);
+                game.buildingLabels.splice(idx, 1);
+            }
+        }
+
+        function showUpgradeLabel(x, z) {
+            // Create upgrade label
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.roundRect(0, 0, 256, 128, 10);
+            ctx.fill();
+            ctx.strokeStyle = '#FFD700';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            ctx.fillStyle = '#FFD700';
+            ctx.font = 'bold 26px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('⬆️ 升级造肉厂', 128, 40);
+
+            ctx.font = '18px Arial';
+            ctx.fillStyle = '#aaffaa';
+            ctx.fillText('产出效率翻倍', 128, 70);
+
+            ctx.font = 'bold 22px Arial';
+            ctx.fillStyle = '#ffd700';
+            ctx.fillText('💰 ' + CONFIG.upgradeMeatFactoryCost + ' 金币', 128, 105);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
+            const sprite = new THREE.Sprite(spriteMat);
+            sprite.scale.set(12, 6, 1);
+            sprite.position.set(x, 10, z);
+            sprite.userData = { type: 'upgrade_meat_factory', isLabel: true };
+            sprite.visible = false; // Start hidden, managed by updateBuildingLabels
+            scene.add(sprite);
+            game.buildingLabels.push({ type: 'upgrade_meat_factory', sprite, spot: null });
+        }
+
+        function buildMeatFactory() {
+            if (game.meatFactoryBuilt) return;
+            if (game.coins < CONFIG.meatFactoryCost) {
+                showPrompt('❌ 金币不足！需要 ' + CONFIG.meatFactoryCost + ' 金币');
+                return;
+            }
+
+            game.coins -= CONFIG.meatFactoryCost;
+            game.meatFactoryBuilt = true;
+
+            // Remove construction label
+            removeBuildingLabel('meat_factory');
+
+            const building = createBuilding('meat_factory', 15, 10);
+            game.buildings.push(building);
+
+            showPrompt('🏭 造肉厂建成！自动生产肉块！');
+            updateHUD();
+
+            // Advance from step 4 to step 5, then immediately to step 6 (thunderbird)
+            game.step = 5; // Complete building step
+            advanceStep(); // Move to step 6, triggers thunderbird spawn
+        }
+
+        function buildWorkerHut() {
+            if (game.workerHutBuilt) return;
+            if (game.coins < CONFIG.workerHutCost) {
+                showPrompt('❌ 金币不足！需要 ' + CONFIG.workerHutCost + ' 金币');
+                return;
+            }
+
+            game.coins -= CONFIG.workerHutCost;
+            game.workerHutBuilt = true;
+
+            // Remove construction label
+            removeBuildingLabel('worker_hut');
+
+            const building = createBuilding('worker_hut', 15, -5);
+            game.buildings.push(building);
+
+            // Spawn workers
+            for (let i = 0; i < 4; i++) {
+                spawnWorker(15 + (i - 1.5) * 2, -5);
+            }
+
+            showPrompt('🏠 工人小屋建成！4个工人自动收集资源！');
+            updateHUD();
+
+            // Advance from step 8 to step 9
+            game.step = 8;
+            advanceStep(); // Move to step 9
+        }
+
+        function upgradeMeatFactory() {
+            if (game.meatFactoryUpgraded) return;
+            if (game.coins < CONFIG.upgradeMeatFactoryCost) {
+                showPrompt('❌ 金币不足！需要 ' + CONFIG.upgradeMeatFactoryCost + ' 金币');
+                return;
+            }
+
+            game.coins -= CONFIG.upgradeMeatFactoryCost;
+            game.meatFactoryUpgraded = true;
+
+            // Remove upgrade label
+            removeBuildingLabel('upgrade_meat_factory');
+
+            showPrompt('⬆️ 造肉厂升级！产出效率大幅提升！');
+            updateHUD();
+
+            // Advance from step 9 to step 10
+            game.step = 9;
+            advanceStep(); // Move to step 10
+        }
+
+        function spawnWorker(x, z) {
+            const group = new THREE.Group();
+
+            // Body
+            const bodyGeo = new THREE.CylinderGeometry(0.4, 0.5, 1.2, 8);
+            const bodyMat = new THREE.MeshPhongMaterial({ color: 0x4682B4 });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 0.6;
+            body.castShadow = true;
+            group.add(body);
+
+            // Head
+            const headGeo = new THREE.SphereGeometry(0.35, 12, 12);
+            const headMat = new THREE.MeshPhongMaterial({ color: 0xFFE4C4 });
+            const head = new THREE.Mesh(headGeo, headMat);
+            head.position.y = 1.5;
+            head.castShadow = true;
+            group.add(head);
+
+            group.position.set(x, 0, z);
+            scene.add(group);
+
+            game.workers.push({
+                mesh: group,
+                x,
+                z,
+                targetLoot: null
+            });
+        }
+
+        // ==================== ENEMY SYSTEM ====================
+        function createEnemyMesh(type) {
+            const group = new THREE.Group();
+
+            if (type === 'dark_spirit') {
+                // Dark ghostly body
+                const bodyGeo = new THREE.SphereGeometry(1, 12, 12);
+                const bodyMat = new THREE.MeshPhongMaterial({
+                    color: 0x4B0082,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const body = new THREE.Mesh(bodyGeo, bodyMat);
+                body.scale.set(1, 1.3, 1);
+                body.position.y = 1.5;
+                body.castShadow = true;
+                group.add(body);
+
+                // Glowing eyes
+                const eyeMat = new THREE.MeshBasicMaterial({ color: 0xFF0000 });
+                const eyeGeo = new THREE.SphereGeometry(0.15, 8, 8);
+
+                const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+                leftEye.position.set(-0.3, 1.8, 0.8);
+                group.add(leftEye);
+
+                const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+                rightEye.position.set(0.3, 1.8, 0.8);
+                group.add(rightEye);
+            } else if (type === 'boss') {
+                // Giant dark beast
+                const bodyGeo = new THREE.SphereGeometry(3, 16, 16);
+                const bodyMat = new THREE.MeshPhongMaterial({
+                    color: 0x1a0033,
+                    transparent: true,
+                    opacity: 0.9
+                });
+                const body = new THREE.Mesh(bodyGeo, bodyMat);
+                body.position.y = 3;
+                body.castShadow = true;
+                group.add(body);
+
+                // Horns
+                const hornGeo = new THREE.ConeGeometry(0.5, 2, 6);
+                const hornMat = new THREE.MeshPhongMaterial({ color: 0x8B0000 });
+
+                const leftHorn = new THREE.Mesh(hornGeo, hornMat);
+                leftHorn.position.set(-1.5, 5, 0);
+                leftHorn.rotation.z = 0.3;
+                group.add(leftHorn);
+
+                const rightHorn = new THREE.Mesh(hornGeo, hornMat);
+                rightHorn.position.set(1.5, 5, 0);
+                rightHorn.rotation.z = -0.3;
+                group.add(rightHorn);
+
+                // Giant eyes
+                const eyeMat = new THREE.MeshBasicMaterial({ color: 0xFF0000 });
+                const eyeGeo = new THREE.SphereGeometry(0.4, 8, 8);
+
+                const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+                leftEye.position.set(-1, 4, 2.5);
+                group.add(leftEye);
+
+                const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+                rightEye.position.set(1, 4, 2.5);
+                group.add(rightEye);
+            }
+
+            return group;
+        }
+
+        function spawnEnemy() {
+            // Spawn from map edges
+            const side = Math.floor(Math.random() * 4);
+            let x, z;
+
+            switch (side) {
+                case 0: x = -40; z = Math.random() * 60 - 30; break;
+                case 1: x = 40; z = Math.random() * 60 - 30; break;
+                case 2: x = Math.random() * 60 - 30; z = -40; break;
+                case 3: x = Math.random() * 60 - 30; z = 40; break;
+            }
+
+            const mesh = createEnemyMesh('dark_spirit');
+            mesh.position.set(x, 0, z);
+            scene.add(mesh);
+
+            game.enemies.push({
+                type: 'dark_spirit',
+                hp: 20,
+                maxHp: 20,
+                mesh,
+                x,
+                z,
+                speed: 5
+            });
+        }
+
+        function spawnBoss() {
+            if (game.bossSpawned) return;
+            game.bossSpawned = true;
+
+            const mesh = createEnemyMesh('boss');
+            mesh.position.set(0, 0, -50);
+            scene.add(mesh);
+
+            game.enemies.push({
+                type: 'boss',
+                hp: CONFIG.bossHp,
+                maxHp: CONFIG.bossHp,
+                mesh,
+                x: 0,
+                z: -50,
+                speed: 3
+            });
+
+            showPrompt('⚠️ 最终BOSS出现！准备战斗！');
+        }
+
+        // ==================== LOOT SYSTEM ====================
+        function spawnLoot(x, z, type) {
+            const group = new THREE.Group();
+
+            if (type === 'meat') {
+                const meatGeo = new THREE.SphereGeometry(0.5, 8, 8);
+                const meatMat = new THREE.MeshPhongMaterial({ color: 0xCD5C5C });
+                const meat = new THREE.Mesh(meatGeo, meatMat);
+                meat.position.y = 0.5;
+                meat.castShadow = true;
+                group.add(meat);
+            } else if (type === 'coin') {
+                const coinGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.1, 16);
+                const coinMat = new THREE.MeshPhongMaterial({ color: 0xFFD700 });
+                const coin = new THREE.Mesh(coinGeo, coinMat);
+                coin.rotation.x = Math.PI / 2;
+                coin.position.y = 0.5;
+                coin.castShadow = true;
+                group.add(coin);
+            }
+
+            group.position.set(x, 0, z);
+            scene.add(group);
+
+            game.loot.push({ type, mesh: group, x, z });
+        }
+
+        // ==================== UI FUNCTIONS ====================
+        function showPrompt(text) {
+            const box = document.getElementById('promptBox');
+            box.textContent = text;
+            box.style.display = 'block';
+
+            clearTimeout(box.hideTimeout);
+            box.hideTimeout = setTimeout(() => {
+                box.style.display = 'none';
+            }, 3000);
+        }
+
+        function updateHUD() {
+            document.getElementById('meatCount').textContent = Math.floor(game.meat);
+            document.getElementById('coinCount').textContent = Math.floor(game.coins);
+        }
+
+        function updateBeastPanel() {
+            const panel = document.getElementById('beastPanel');
+            panel.innerHTML = '';
+
+            game.beasts.forEach((beast) => {
+                if (!beast.captured) return; // Only show captured beasts
+
+                const card = document.createElement('div');
+                card.className = 'beast-card' + (beast.stage !== 'baby' ? ' active' : '');
+
+                const stageName = beast.stage === 'baby' ? '受伤' :
+                    (beast.stage === 'healthy' ? '健康' : '巨型');
+                const name = beast.type === 'hydra' ? '九头蛇' : '雷鹏鸟';
+
+                const canFeed = beast.stage !== 'evolved' && game.meat >= CONFIG.feedCost;
+                const feedBtnText = beast.stage === 'evolved' ? '已进化' :
+                    `🥩 喂食 (${CONFIG.feedCost}肉块)`;
+
+                card.innerHTML = `
+                <div class="name">${beast.type === 'hydra' ? '🐍' : '🦅'} ${name}</div>
+                <div class="stage">状态: ${stageName}</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${beast.feedProgress}%"></div>
+                </div>
+                <button class="feed-btn" 
+                    ${!canFeed ? 'disabled' : ''}
+                    onclick="feedBeastByType('${beast.type}')">
+                    ${feedBtnText}
+                </button>
+            `;
+
+                panel.appendChild(card);
+            });
+        }
+
+        // Global feed function for button onclick - uses beast type as unique ID
+        window.feedBeastByType = function (type) {
+            const beast = game.beasts.find(b => b.type === type && b.captured);
+            if (beast && beast.stage !== 'evolved') {
+                feedBeast(beast);
+            }
+        };
+
+        function showVictory() {
+            document.getElementById('victoryScreen').style.display = 'flex';
+        }
+
+        // ==================== GAME FLOW ====================
+        // 15-Step Sequence:
+        // 1: Capture Hydra | 2: Feed Hydra | 3: Hydra Healthy
+        // 4: Enemies spawn | 5: Build Meat Factory | 6: Thunderbird appears
+        // 7: Capture Thunderbird | 8: Feed Thunderbird | 9: Build Worker Hut
+        // 10: Upgrade Meat Factory | 11: Hydra evolves | 12: Thunderbird evolves
+        // 13: Boss spawns | 14: Boss defeated | 15: Victory
+
+        function advanceStep() {
+            game.step++;
+            console.log('Advancing to step:', game.step);
+
+            switch (game.step) {
+                case 2: // After capturing Hydra
+                    showPrompt('🥩 用肉块喂养九头蛇！靠近它即可喂食');
+                    break;
+                case 3: // Hydra becomes healthy
+                    // Triggers enemy spawning
+                    break;
+                case 4: // Enemies start spawning
+                    showPrompt('⚔️ 黑暗灵来袭！九头蛇会自动攻击！击杀获得金币');
+                    break;
+                case 5: // Can build meat factory (need 50 coins)
+                    showPrompt('🏗️ 收集50金币后，走到建筑点建造造肉厂！');
+                    break;
+                case 6: // Thunderbird appears after meat factory built
+                    setTimeout(() => spawnThunderbird(), 2000);
+                    break;
+                case 7: // After capturing Thunderbird
+                    showPrompt('🥩 用造肉厂产出的肉块喂养雷鹏鸟！');
+                    break;
+                case 8: // Thunderbird healthy
+                    showPrompt('💪 雷鹏鸟恢复健康！收集80金币建造工人小屋');
+                    break;
+                case 9: // After building worker hut
+                    showPrompt('⬆️ 收集100金币升级造肉厂！');
+                    break;
+                case 10: // After upgrading meat factory
+                    showPrompt('🐍 继续喂养九头蛇让它进化！');
+                    break;
+                case 11: // Hydra evolved
+                    showPrompt('⚡ 九头蛇进化成巨型！继续喂养雷鹏鸟！');
+                    break;
+                case 12: // Thunderbird evolved
+                    showPrompt('🌟 双巨兽进化完成！准备迎战最终BOSS！');
+                    break;
+                case 13: // Boss spawns
+                    setTimeout(() => spawnBoss(), CONFIG.bossSpawnDelay * 1000);
+                    break;
+                case 14: // Boss defeated
+                    advanceStep(); // Auto-advance to victory
+                    break;
+                case 15: // Victory
+                    setTimeout(showVictory, 2000);
+                    break;
+            }
+        }
+
+        // ==================== GAME UPDATE ====================
+        function update(dt) {
+            if (!game.started) return;
+
+            // Player movement
+            let moveX = 0, moveZ = 0;
+
+            if (keys.w) moveZ -= 1;
+            if (keys.s) moveZ += 1;
+            if (keys.a) moveX -= 1;
+            if (keys.d) moveX += 1;
+
+            // Apply joystick
+            moveX += joystickVector.x;
+            moveZ -= joystickVector.y;
+
+            // Normalize
+            const len = Math.sqrt(moveX * moveX + moveZ * moveZ);
+            if (len > 0) {
+                moveX /= len;
+                moveZ /= len;
+
+                player.x += moveX * CONFIG.playerSpeed * dt;
+                player.z += moveZ * CONFIG.playerSpeed * dt;
+
+                // Clamp to bounds
+                player.x = Math.max(-35, Math.min(35, player.x));
+                player.z = Math.max(-35, Math.min(35, player.z));
+
+                playerMesh.position.set(player.x, 0, player.z);
+
+                // Face movement direction
+                playerMesh.rotation.y = Math.atan2(moveX, -moveZ);
+            }
+
+            // Camera follows player
+            camera.position.x = player.x;
+            camera.position.z = player.z + 40;
+            camera.lookAt(player.x, 0, player.z);
+
+            // Check interactions
+            checkBeastInteractions();
+            checkBuildingInteractions();
+            checkLootCollection();
+
+            // Update beasts
+            updateBeasts(dt);
+
+            // Update projectiles
+            updateProjectiles(dt);
+
+            // Update enemies
+            updateEnemies(dt);
+
+            // Update workers
+            updateWorkers(dt);
+
+            // Meat production
+            if (game.meatFactoryBuilt) {
+                game.meatProductionTimer += dt;
+                const rate = game.meatFactoryUpgraded ? CONFIG.meatProductionRateUpgraded : CONFIG.meatProductionRate;
+                if (game.meatProductionTimer >= 1) {
+                    game.meat += rate;
+                    game.meatProductionTimer = 0;
+                    updateHUD();
+                }
+            }
+
+            // Enemy spawning (after step 4)
+            if (game.step >= 4 && !game.bossDefeated) {
+                game.enemySpawnTimer += dt;
+                if (game.enemySpawnTimer >= CONFIG.enemySpawnInterval) {
+                    spawnEnemy();
+                    game.enemySpawnTimer = 0;
+                }
+            }
+
+            // Update building label visibility based on step
+            updateBuildingLabels();
+        }
+
+        function checkBeastInteractions() {
+            game.beasts.forEach(beast => {
+                const dx = player.x - beast.x;
+                const dz = player.z - beast.z;
+                const dist = Math.sqrt(dx * dx + dz * dz);
+
+                // Capture
+                if (!beast.captured && dist < 3) {
+                    captureBeast(beast);
+                }
+
+                // NOTE: Feeding now requires clicking the button in beast panel
+            });
+        }
+
+        function checkBuildingInteractions() {
+            // Meat factory spot - available after enemies spawn (step 4)
+            // Building it advances to step 5, triggering thunderbird spawn
+            if (!game.meatFactoryBuilt && game.step >= 4) {
+                const dx = player.x - 15;
+                const dz = player.z - 10;
+                if (Math.sqrt(dx * dx + dz * dz) < 5) {
+                    buildMeatFactory();
+                }
+            }
+
+            // Worker hut spot - available after thunderbird healthy (step 8)
+            // Building it advances to step 9
+            if (!game.workerHutBuilt && game.step >= 8) {
+                const dx = player.x - 15;
+                const dz = player.z + 5;
+                if (Math.sqrt(dx * dx + dz * dz) < 5) {
+                    buildWorkerHut();
+                }
+            }
+
+            // Upgrade meat factory - available after worker hut built (step 9)
+            // Upgrading it advances to step 10
+            if (game.meatFactoryBuilt && !game.meatFactoryUpgraded && game.step >= 9) {
+                const dx = player.x - 15;
+                const dz = player.z - 10;
+                if (Math.sqrt(dx * dx + dz * dz) < 5) {
+                    upgradeMeatFactory();
+                }
+            }
+        }
+
+        function checkLootCollection() {
+            for (let i = game.loot.length - 1; i >= 0; i--) {
+                const loot = game.loot[i];
+                const dx = player.x - loot.x;
+                const dz = player.z - loot.z;
+                const dist = Math.sqrt(dx * dx + dz * dz);
+
+                if (dist < CONFIG.collectRange) {
+                    if (loot.type === 'meat') game.meat += 2;
+                    else if (loot.type === 'coin') game.coins += 15; // Increased from 5 to 15
+
+                    scene.remove(loot.mesh);
+                    game.loot.splice(i, 1);
+                    updateHUD();
+                }
+            }
+        }
+
+        function updateBeasts(dt) {
+            game.beasts.forEach(beast => {
+                // Decrease feed cooldown
+                if (beast.feedCooldown) {
+                    beast.feedCooldown -= dt;
+                    if (beast.feedCooldown <= 0) beast.feedCooldown = 0;
+                }
+
+                // Only act if captured and healthy/evolved
+                if (beast.captured && beast.stage !== 'baby') {
+                    beast.attackCooldown -= dt;
+
+                    // Find nearest enemy
+                    let nearest = null;
+                    let nearestDist = Infinity;
+
+                    game.enemies.forEach(enemy => {
+                        const dx = beast.x - enemy.x;
+                        const dz = beast.z - enemy.z;
+                        const dist = Math.sqrt(dx * dx + dz * dz);
+
+                        if (dist < nearestDist) {
+                            nearestDist = dist;
+                            nearest = enemy;
+                        }
+                    });
+
+                    // Auto-move towards distant enemies
+                    if (nearest && nearestDist > CONFIG.beastAttackRange) {
+                        const dx = nearest.x - beast.x;
+                        const dz = nearest.z - beast.z;
+                        const moveSpeed = CONFIG.beastMoveSpeed * dt;
+
+                        beast.x += (dx / nearestDist) * moveSpeed;
+                        beast.z += (dz / nearestDist) * moveSpeed;
+                        beast.mesh.position.set(beast.x, 0, beast.z);
+
+                        // Face direction of movement
+                        beast.mesh.rotation.y = Math.atan2(dx, dz);
+                    }
+
+                    // Ranged attack if in range
+                    if (nearest && nearestDist <= CONFIG.beastAttackRange && beast.attackCooldown <= 0) {
+                        // Fire projectile!
+                        const damage = CONFIG.beastAttackDamage[beast.stage];
+                        fireProjectile(beast, nearest, damage);
+                        beast.attackCooldown = beast.stage === 'evolved' ? 0.5 : 0.8;
+
+                        // Face target
+                        const dx = nearest.x - beast.x;
+                        const dz = nearest.z - beast.z;
+                        beast.mesh.rotation.y = Math.atan2(dx, dz);
+                    }
+                }
+
+                // Idle animation when no enemies
+                if (game.enemies.length === 0 && beast.captured && beast.stage !== 'baby') {
+                    beast.mesh.rotation.y += dt * 0.3;
+                }
+            });
+        }
+
+        // Create and fire a ranged projectile from beast to enemy
+        function fireProjectile(beast, target, damage) {
+            const color = beast.type === 'hydra' ? 0x00FF00 : 0x00BFFF; // Green for hydra, blue for thunderbird
+            const size = beast.stage === 'evolved' ? 0.8 : 0.4;
+
+            const geo = new THREE.SphereGeometry(size, 8, 8);
+            const mat = new THREE.MeshBasicMaterial({
+                color: color,
+                emissive: color,
+                transparent: true,
+                opacity: 0.9
+            });
+            const projectile = new THREE.Mesh(geo, mat);
+            projectile.position.set(beast.x, 2, beast.z);
+            scene.add(projectile);
+
+            game.projectiles.push({
+                mesh: projectile,
+                x: beast.x,
+                y: 2,
+                z: beast.z,
+                targetEnemy: target,
+                damage: damage,
+                speed: 40
+            });
+        }
+
+        function updateProjectiles(dt) {
+            for (let i = game.projectiles.length - 1; i >= 0; i--) {
+                const proj = game.projectiles[i];
+
+                // Check if target still exists
+                if (!proj.targetEnemy || !game.enemies.includes(proj.targetEnemy)) {
+                    scene.remove(proj.mesh);
+                    game.projectiles.splice(i, 1);
+                    continue;
+                }
+
+                // Move towards target
+                const dx = proj.targetEnemy.x - proj.x;
+                const dy = 1 - proj.y;
+                const dz = proj.targetEnemy.z - proj.z;
+                const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+                if (dist < 1.5) {
+                    // Hit!
+                    proj.targetEnemy.hp -= proj.damage;
+
+                    // Hit effect
+                    createHitEffect(proj.x, proj.z);
+
+                    scene.remove(proj.mesh);
+                    game.projectiles.splice(i, 1);
+                } else {
+                    // Move projectile
+                    const moveAmount = proj.speed * dt;
+                    proj.x += (dx / dist) * moveAmount;
+                    proj.y += (dy / dist) * moveAmount;
+                    proj.z += (dz / dist) * moveAmount;
+                    proj.mesh.position.set(proj.x, proj.y, proj.z);
+                }
+            }
+        }
+
+        function createHitEffect(x, z) {
+            const geo = new THREE.RingGeometry(0.5, 1.5, 16);
+            const mat = new THREE.MeshBasicMaterial({
+                color: 0xFFFF00,
+                transparent: true,
+                opacity: 0.8,
+                side: THREE.DoubleSide
+            });
+            const ring = new THREE.Mesh(geo, mat);
+            ring.rotation.x = -Math.PI / 2;
+            ring.position.set(x, 0.5, z);
+            scene.add(ring);
+
+            // Animate and remove
+            let scale = 1;
+            const animate = () => {
+                scale += 0.3;
+                ring.scale.set(scale, scale, scale);
+                mat.opacity -= 0.15;
+                if (mat.opacity > 0) {
+                    requestAnimationFrame(animate);
+                } else {
+                    scene.remove(ring);
+                }
+            };
+            animate();
+        }
+
+        function updateEnemies(dt) {
+            for (let i = game.enemies.length - 1; i >= 0; i--) {
+                const enemy = game.enemies[i];
+
+                // Move towards center/player
+                const targetX = player.x;
+                const targetZ = player.z;
+                const dx = targetX - enemy.x;
+                const dz = targetZ - enemy.z;
+                const dist = Math.sqrt(dx * dx + dz * dz);
+
+                if (dist > 2) {
+                    enemy.x += (dx / dist) * enemy.speed * dt;
+                    enemy.z += (dz / dist) * enemy.speed * dt;
+                    enemy.mesh.position.set(enemy.x, 0, enemy.z);
+                }
+
+                // Check if dead
+                if (enemy.hp <= 0) {
+                    scene.remove(enemy.mesh);
+
+                    // Drop loot
+                    spawnLoot(enemy.x + (Math.random() - 0.5) * 2, enemy.z + (Math.random() - 0.5) * 2, 'coin');
+                    if (Math.random() < 0.3) {
+                        spawnLoot(enemy.x + (Math.random() - 0.5) * 2, enemy.z + (Math.random() - 0.5) * 2, 'meat');
+                    }
+
+                    // Check if boss
+                    if (enemy.type === 'boss') {
+                        game.bossDefeated = true;
+                        showPrompt('🏆 BOSS被击败！胜利！');
+                        advanceStep();
+                    }
+
+                    game.enemies.splice(i, 1);
+                }
+
+                // Animate
+                enemy.mesh.rotation.y += dt * 2;
+            }
+        }
+
+        function updateWorkers(dt) {
+            game.workers.forEach(worker => {
+                // Find nearest unclaimed loot
+                if (!worker.targetLoot || !game.loot.includes(worker.targetLoot)) {
+                    let nearest = null;
+                    let nearestDist = 50;
+
+                    game.loot.forEach(loot => {
+                        const dx = worker.x - loot.x;
+                        const dz = worker.z - loot.z;
+                        const dist = Math.sqrt(dx * dx + dz * dz);
+
+                        if (dist < nearestDist) {
+                            nearestDist = dist;
+                            nearest = loot;
+                        }
+                    });
+
+                    worker.targetLoot = nearest;
+                }
+
+                // Move towards loot
+                if (worker.targetLoot) {
+                    const dx = worker.targetLoot.x - worker.x;
+                    const dz = worker.targetLoot.z - worker.z;
+                    const dist = Math.sqrt(dx * dx + dz * dz);
+
+                    if (dist > 0.5) {
+                        worker.x += (dx / dist) * 8 * dt;
+                        worker.z += (dz / dist) * 8 * dt;
+                        worker.mesh.position.set(worker.x, 0, worker.z);
+                    } else {
+                        // Collect
+                        if (worker.targetLoot.type === 'meat') game.meat += 2;
+                        else if (worker.targetLoot.type === 'coin') game.coins += 15; // Increased from 5 to 15
+
+                        scene.remove(worker.targetLoot.mesh);
+                        const idx = game.loot.indexOf(worker.targetLoot);
+                        if (idx >= 0) game.loot.splice(idx, 1);
+
+                        worker.targetLoot = null;
+                        updateHUD();
+                    }
+                }
+            });
+        }
+
+        // ==================== INPUT HANDLING ====================
+        function initInput() {
+            // Keyboard
+            document.addEventListener('keydown', e => {
+                if (e.key.toLowerCase() === 'w') keys.w = true;
+                if (e.key.toLowerCase() === 'a') keys.a = true;
+                if (e.key.toLowerCase() === 's') keys.s = true;
+                if (e.key.toLowerCase() === 'd') keys.d = true;
+
+                startGame();
+            });
+
+            document.addEventListener('keyup', e => {
+                if (e.key.toLowerCase() === 'w') keys.w = false;
+                if (e.key.toLowerCase() === 'a') keys.a = false;
+                if (e.key.toLowerCase() === 's') keys.s = false;
+                if (e.key.toLowerCase() === 'd') keys.d = false;
+            });
+
+            // Joystick
+            joystick = nipplejs.create({
+                zone: document.getElementById('joystickZone'),
+                mode: 'static',
+                position: { left: '75px', bottom: '75px' },
+                color: '#4CAF50',
+                size: 120
+            });
+
+            joystick.on('move', (evt, data) => {
+                const force = Math.min(data.force, 1);
+                const angle = data.angle.radian;
+                joystickVector.x = Math.cos(angle) * force;
+                joystickVector.y = Math.sin(angle) * force;
+
+                startGame();
+            });
+
+            joystick.on('end', () => {
+                joystickVector.x = 0;
+                joystickVector.y = 0;
+            });
+
+            // Tutorial click
+            document.getElementById('tutorialOverlay').addEventListener('click', startGame);
+        }
+
+        function startGame() {
+            if (game.started) return;
+            game.started = true;
+            document.getElementById('tutorialOverlay').style.display = 'none';
+        }
+
+        // ==================== WINDOW RESIZE ====================
+        function onWindowResize() {
+            const aspect = window.innerWidth / window.innerHeight;
+            const viewSize = 40;
+
+            camera.left = -viewSize * aspect;
+            camera.right = viewSize * aspect;
+            camera.top = viewSize;
+            camera.bottom = -viewSize;
+            camera.updateProjectionMatrix();
+
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // ==================== GAME LOOP ====================
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const dt = clock.getDelta();
+            update(dt);
 
             renderer.render(scene, camera);
         }
-        loadGameConfig().then(() => {
-            animate(0);
-        });
 
-        window.onresize = () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        };
+        // ==================== INIT ====================
+        function init() {
+            initThreeJS();
+            initInput();
+            updateHUD();
+            updateBeastPanel();
+            animate();
+        }
+
+        init();
     </script>
 </body>
 
