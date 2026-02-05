@@ -58,7 +58,7 @@
         #joystickZone {
             position: fixed;
             bottom: 20px;
-            left: 20px;
+            right: 20px;
             width: 150px;
             height: 150px;
             z-index: 200;
@@ -306,6 +306,7 @@
     <div id="promptBox"></div>
 
     <!-- Joystick Zone -->
+    <!-- Tutorial joystick (right bottom, static) -->
     <div id="joystickZone"></div>
 
     <!-- Tutorial Overlay -->
@@ -354,7 +355,7 @@
             meatProductionRateUpgraded: 5,
 
             // Combat - increased ranges and speeds
-            enemySpawnInterval: 3, // seconds
+            enemySpawnInterval: 1.5, // seconds - increased frequency
             beastAttackRange: 25, // INCREASED for ranged attacks
             beastAttackDamage: { baby: 0, healthy: 15, evolved: 60 },
             beastMoveSpeed: 12, // Beasts move towards enemies
@@ -406,7 +407,8 @@
         // Input
         const keys = { w: false, a: false, s: false, d: false };
         let joystickVector = { x: 0, y: 0 };
-        let joystick = null;
+        let tutorialJoystick = null; // Static joystick for tutorial
+        let dynamicJoystick = null;  // Dynamic joystick for gameplay
 
         function initThreeJS() {
             // Scene
@@ -416,13 +418,13 @@
 
             // Camera (Orthographic for top-down)
             const aspect = window.innerWidth / window.innerHeight;
-            const viewSize = 40;
+            const viewSize = 30;
             camera = new THREE.OrthographicCamera(
                 -viewSize * aspect, viewSize * aspect,
                 viewSize, -viewSize,
                 1, 1000
             );
-            camera.position.set(0, 60, 40);
+            camera.position.set(0, 45, 30);
             camera.lookAt(0, 0, 0);
 
             // Renderer
@@ -829,8 +831,9 @@
             if (beast.captured) return;
             beast.captured = true;
 
-            // Move to pen
-            const penX = -10 + game.beasts.filter(b => b.captured).length * 5;
+            // Move to pen with better spacing
+            const capturedCount = game.beasts.filter(b => b.captured).length;
+            const penX = -12 + (capturedCount - 1) * 8; // Increased spacing
             beast.x = penX;
             beast.z = 10;
             beast.mesh.position.set(penX, 0, 10);
@@ -1189,15 +1192,15 @@
         }
 
         function spawnEnemy() {
-            // Spawn from map edges
+            // Spawn from map edges (closer to fence)
             const side = Math.floor(Math.random() * 4);
             let x, z;
 
             switch (side) {
-                case 0: x = -40; z = Math.random() * 60 - 30; break;
-                case 1: x = 40; z = Math.random() * 60 - 30; break;
-                case 2: x = Math.random() * 60 - 30; z = -40; break;
-                case 3: x = Math.random() * 60 - 30; z = 40; break;
+                case 0: x = -30; z = Math.random() * 50 - 25; break;
+                case 1: x = 30; z = Math.random() * 50 - 25; break;
+                case 2: x = Math.random() * 50 - 25; z = -30; break;
+                case 3: x = Math.random() * 50 - 25; z = 30; break;
             }
 
             const mesh = createEnemyMesh('dark_spirit');
@@ -1422,7 +1425,7 @@
 
             // Camera follows player
             camera.position.x = player.x;
-            camera.position.z = player.z + 40;
+            camera.position.z = player.z + 30;
             camera.lookAt(player.x, 0, player.z);
 
             // Check interactions
@@ -1453,11 +1456,15 @@
                 }
             }
 
-            // Enemy spawning (after step 4)
-            if (game.step >= 4 && !game.bossDefeated) {
+            // Enemy spawning (after step 4, until boss spawns at step 13)
+            if (game.step >= 4 && game.step < 13) {
                 game.enemySpawnTimer += dt;
                 if (game.enemySpawnTimer >= CONFIG.enemySpawnInterval) {
-                    spawnEnemy();
+                    // Spawn 2-3 enemies at once for more challenge
+                    const spawnCount = Math.floor(Math.random() * 2) + 2; // 2 or 3 enemies
+                    for (let i = 0; i < spawnCount; i++) {
+                        spawnEnemy();
+                    }
                     game.enemySpawnTimer = 0;
                 }
             }
@@ -1564,8 +1571,34 @@
                         const dz = nearest.z - beast.z;
                         const moveSpeed = CONFIG.beastMoveSpeed * dt;
 
-                        beast.x += (dx / nearestDist) * moveSpeed;
-                        beast.z += (dz / nearestDist) * moveSpeed;
+                        let newX = beast.x + (dx / nearestDist) * moveSpeed;
+                        let newZ = beast.z + (dz / nearestDist) * moveSpeed;
+
+                        // Check collision with other beasts
+                        let collisionDetected = false;
+                        game.beasts.forEach(otherBeast => {
+                            if (otherBeast === beast || !otherBeast.captured) return;
+
+                            const dx2 = newX - otherBeast.x;
+                            const dz2 = newZ - otherBeast.z;
+                            const dist2 = Math.sqrt(dx2 * dx2 + dz2 * dz2);
+
+                            // Minimum distance based on beast sizes
+                            const minDist = (beast.stage === 'evolved' ? 6 : 3) +
+                                (otherBeast.stage === 'evolved' ? 6 : 3);
+
+                            if (dist2 < minDist) {
+                                collisionDetected = true;
+                                // Push away from other beast
+                                const pushX = (dx2 / dist2) * moveSpeed * 2;
+                                const pushZ = (dz2 / dist2) * moveSpeed * 2;
+                                newX += pushX;
+                                newZ += pushZ;
+                            }
+                        });
+
+                        beast.x = newX;
+                        beast.z = newZ;
                         beast.mesh.position.set(beast.x, 0, beast.z);
 
                         // Face direction of movement
@@ -1601,7 +1634,6 @@
             const geo = new THREE.SphereGeometry(size, 8, 8);
             const mat = new THREE.MeshBasicMaterial({
                 color: color,
-                emissive: color,
                 transparent: true,
                 opacity: 0.9
             });
@@ -1716,7 +1748,12 @@
                     if (enemy.type === 'boss') {
                         game.bossDefeated = true;
                         showPrompt('🏆 BOSS被击败！胜利！');
-                        advanceStep();
+                        advanceStep(); // Step 13 -> 14
+                        // Show victory screen after a short delay
+                        setTimeout(() => {
+                            console.log('Showing victory screen, current step:', game.step);
+                            showVictory();
+                        }, 2000);
                     }
 
                     game.enemies.splice(i, 1);
@@ -1793,16 +1830,16 @@
                 if (e.key.toLowerCase() === 'd') keys.d = false;
             });
 
-            // Joystick
-            joystick = nipplejs.create({
+            // Tutorial Joystick (Static, right bottom)
+            tutorialJoystick = nipplejs.create({
                 zone: document.getElementById('joystickZone'),
                 mode: 'static',
-                position: { left: '75px', bottom: '75px' },
+                position: { right: '75px', bottom: '75px' },
                 color: '#4CAF50',
                 size: 120
             });
 
-            joystick.on('move', (evt, data) => {
+            tutorialJoystick.on('move', (evt, data) => {
                 const force = Math.min(data.force, 1);
                 const angle = data.angle.radian;
                 joystickVector.x = Math.cos(angle) * force;
@@ -1811,10 +1848,38 @@
                 startGame();
             });
 
-            joystick.on('end', () => {
+            tutorialJoystick.on('end', () => {
                 joystickVector.x = 0;
                 joystickVector.y = 0;
             });
+
+            // Dynamic Joystick (follows touch, for gameplay) - attached to canvas
+            dynamicJoystick = nipplejs.create({
+                zone: renderer.domElement,
+                mode: 'dynamic',
+                color: '#4CAF50',
+                size: 120,
+                restOpacity: 0.8
+            });
+
+            dynamicJoystick.on('start', () => {
+                startGame();
+            });
+
+            dynamicJoystick.on('move', (evt, data) => {
+                const force = Math.min(data.force, 1);
+                const angle = data.angle.radian;
+                joystickVector.x = Math.cos(angle) * force;
+                joystickVector.y = Math.sin(angle) * force;
+            });
+
+            dynamicJoystick.on('end', () => {
+                joystickVector.x = 0;
+                joystickVector.y = 0;
+            });
+
+            // Dynamic joystick starts hidden (will show on game start)
+            // No need to hide initially as it's created dynamically
 
             // Tutorial click
             document.getElementById('tutorialOverlay').addEventListener('click', startGame);
@@ -1824,6 +1889,10 @@
             if (game.started) return;
             game.started = true;
             document.getElementById('tutorialOverlay').style.display = 'none';
+
+            // Switch from tutorial joystick to dynamic joystick
+            document.getElementById('joystickZone').style.display = 'none';
+            // Dynamic joystick will appear automatically on first touch
         }
 
         // ==================== WINDOW RESIZE ====================
