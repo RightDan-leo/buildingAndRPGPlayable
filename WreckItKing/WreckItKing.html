@@ -757,7 +757,7 @@
 
                 createPlayer();
                 createCamp();
-                createZone(-18, 5, 'dragonUp', '强化精灵龙', CONFIG.upgradeCosts.dragonUp, '攻击范围扩大，自动稳定攻击敌人', '🐲');
+                createZone(5, 0, 'dragonUp', '强化精灵龙', CONFIG.upgradeCosts.dragonUp, '攻击范围扩大，自动稳定攻击敌人', '🐲');
                 createEnvironment();
                 setupTutorialTarget();  // 设置教程箭头指向最近的树
 
@@ -1040,7 +1040,7 @@
                     dragon.scale.set(1.5, 1.5, 1.5);
                     dragon.material.color.setHex(0xff1493);
                     showUpgradeNotification("🐲 精灵龙进化!", "magenta");
-                    createZone(-15, 18, 'axeUpgrade', '冰霜巨斧', CONFIG.upgradeCosts.axeUpgrade, '秒杀采集！一击破坏石头和树木', '❄️');
+                    createZone(-5, 0, 'axeUpgrade', '冰霜巨斧', CONFIG.upgradeCosts.axeUpgrade, '秒杀采集！一击破坏石头和树木', '❄️');
                 }
                 else if (id === 'axeUpgrade') {
                     hasIceAxe = true;
@@ -1062,7 +1062,7 @@
                 else if (id === 'soldier1') {
                     buildings.soldierHut.level = 1; buildHut('soldier', 1); spawnSoldier(); spawnSoldier();
                     showUpgradeNotification("⚔️ +2 士兵!", "#ff6666");
-                    createZone(0, 20, 'dragonUp2', '雷龙觉醒', CONFIG.upgradeCosts.dragonUp2, '发射闪电链，伤害多个敌人', '⚡');
+                    createZone(5, -5, 'dragonUp2', '雷龙觉醒', CONFIG.upgradeCosts.dragonUp2, '发射闪电链，伤害多个敌人', '⚡');
                 }
                 else if (id === 'dragonUp2') {
                     dragonLevel = 3;
@@ -1091,7 +1091,7 @@
                     soldiers.forEach(s => s.userData.dmg *= 2);
                     expandCamp();
                     showUpgradeNotification("💥 营地扩张! 士兵翻倍!", "orange");
-                    createZone(15, 20, 'axeUp2', '冰霜战斧 Lv2', CONFIG.upgradeCosts.axeUp2, '冰冻敌人3秒，攻击冰冻敌人可秒杀', '❄️');
+                    createZone(-5, -5, 'axeUp2', '冰霜战斧 Lv2', CONFIG.upgradeCosts.axeUp2, '冰冻敌人3秒，攻击冰冻敌人可秒杀', '❄️');
                 }
                 else if (id === 'axeUp2') {
                     hasIceAxe2 = true;
