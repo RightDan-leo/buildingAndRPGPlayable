@@ -279,6 +279,53 @@
             font-size: 14px;
             z-index: 50;
         }
+
+        /* Boss Health Bar */
+        #bossHealthBar {
+            display: none;
+            position: fixed;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            max-width: 80%;
+            background: rgba(0, 0, 0, 0.9);
+            border: 3px solid #ff0000;
+            border-radius: 10px;
+            padding: 10px 15px;
+            z-index: 350;
+        }
+
+        #bossHealthBar .boss-name {
+            color: #ff4444;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 8px;
+            text-shadow: 0 0 10px #ff0000;
+        }
+
+        #bossHealthBar .hp-bar {
+            width: 100%;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        #bossHealthBar .hp-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff0000, #ff4444);
+            transition: width 0.3s;
+            box-shadow: 0 0 10px #ff0000;
+        }
+
+        #bossHealthBar .hp-text {
+            color: white;
+            font-size: 14px;
+            text-align: center;
+            margin-top: 5px;
+        }
     </style>
 </head>
 
@@ -329,6 +376,27 @@
         </button>
     </div>
 
+    <!-- Boss Health Bar -->
+    <div id="bossHealthBar">
+        <div class="boss-name">☠️ 最终BOSS - 黑暗巨兽 ☠️</div>
+        <div class="hp-bar">
+            <div class="hp-fill" id="bossHpFill" style="width: 100%;"></div>
+        </div>
+        <div class="hp-text" id="bossHpText">1000 / 1000</div>
+    </div>
+
+    <!-- Skill Selection Modal -->
+    <div id="skillModal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:600; justify-content:center; align-items:center;">
+        <div
+            style="background:linear-gradient(135deg, #2a1a3a, #1a2a4a); border:3px solid #ffd700; border-radius:15px; padding:30px; max-width:500px; text-align:center;">
+            <h2 id="skillModalTitle" style="color:#ffd700; margin-bottom:20px;">🌟 选择技能 🌟</h2>
+            <div id="skillChoices" style="display:flex; gap:20px; justify-content:center;">
+                <!-- Skill buttons will be injected here -->
+            </div>
+        </div>
+    </div>
+
     <!-- Controls Hint -->
     <div id="controlsHint">WASD 或 拖动摇杆移动</div>
 
@@ -355,17 +423,185 @@
             meatProductionRateUpgraded: 5,
 
             // Combat - increased ranges and speeds
-            enemySpawnInterval: 1.5, // seconds - increased frequency
+            enemySpawnInterval: 3, // seconds - reduced spawning
             beastAttackRange: 25, // INCREASED for ranged attacks
             beastAttackDamage: { baby: 0, healthy: 15, evolved: 60 },
             beastMoveSpeed: 12, // Beasts move towards enemies
             enemySpeed: 8, // Faster enemies
-            bossHp: 500,
+            bossHp: 2000, // Quadrupled for longer fight
             bossSpawnDelay: 5,
 
             // Player - faster movement
             playerSpeed: 25,
-            collectRange: 3
+            collectRange: 3,
+
+            // Fence defense
+            fenceMaxHp: 100,
+            fenceRegenRate: 1, // HP per second when not attacked
+            fenceEnemyDamage: 5, // damage per enemy attack
+            fenceBoundary: 25 // fence at ±25
+        };
+
+        // ==================== SOUND MANAGER ====================
+        const SoundManager = {
+            ctx: null,
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            },
+
+            playTone(freq, type, duration, volume = 0.15) {
+                if (!this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+
+                    gain.gain.setValueAtTime(volume, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch (e) { }
+            },
+
+            // Capture beast - hopeful rising sound
+            playCapture() {
+                this.playTone(300, 'sine', 0.1, 0.12);
+                setTimeout(() => this.playTone(400, 'sine', 0.1, 0.12), 100);
+                setTimeout(() => this.playTone(600, 'sine', 0.2, 0.15), 200);
+            },
+
+            // Feed beast - soft nurturing sound
+            playFeed() {
+                this.playTone(500, 'sine', 0.15, 0.1);
+                setTimeout(() => this.playTone(600, 'sine', 0.15, 0.1), 80);
+            },
+
+            // Evolution - epic ascending sweep
+            playEvolve() {
+                this.playTone(200, 'sawtooth', 0.15, 0.08);
+                setTimeout(() => this.playTone(300, 'sawtooth', 0.15, 0.1), 100);
+                setTimeout(() => this.playTone(400, 'triangle', 0.15, 0.12), 200);
+                setTimeout(() => this.playTone(500, 'triangle', 0.15, 0.14), 300);
+                setTimeout(() => this.playTone(700, 'sine', 0.3, 0.18), 400);
+            },
+
+            // Attack - sharp shot sound
+            playAttack() {
+                this.playTone(800, 'square', 0.05, 0.08);
+                this.playTone(400, 'sawtooth', 0.08, 0.06);
+            },
+
+            // Hit enemy - impact thud
+            playHit() {
+                this.playTone(150, 'square', 0.1, 0.1);
+                this.playTone(80, 'sawtooth', 0.12, 0.08);
+            },
+
+            // AOE explosion
+            playAoe() {
+                this.playTone(100, 'sawtooth', 0.2, 0.12);
+                this.playTone(60, 'square', 0.25, 0.1);
+                setTimeout(() => this.playTone(150, 'triangle', 0.15, 0.08), 100);
+            },
+
+            // Chain lightning
+            playChain() {
+                this.playTone(1200, 'sawtooth', 0.05, 0.08);
+                setTimeout(() => this.playTone(1000, 'sawtooth', 0.05, 0.06), 50);
+                setTimeout(() => this.playTone(800, 'sawtooth', 0.05, 0.04), 100);
+            },
+
+            // Boss spawn - ominous warning
+            playBossSpawn() {
+                this.playTone(80, 'sawtooth', 0.4, 0.15);
+                setTimeout(() => this.playTone(60, 'sawtooth', 0.4, 0.18), 200);
+                setTimeout(() => this.playTone(40, 'square', 0.5, 0.2), 400);
+            },
+
+            // Boss defeated - victory fanfare
+            playVictory() {
+                this.playTone(400, 'sine', 0.2, 0.12);
+                setTimeout(() => this.playTone(500, 'sine', 0.2, 0.12), 150);
+                setTimeout(() => this.playTone(600, 'sine', 0.2, 0.14), 300);
+                setTimeout(() => this.playTone(800, 'triangle', 0.4, 0.18), 450);
+            },
+
+            // Skill selection - magical chime
+            playSkillSelect() {
+                this.playTone(700, 'sine', 0.1, 0.1);
+                setTimeout(() => this.playTone(900, 'sine', 0.15, 0.12), 80);
+                setTimeout(() => this.playTone(1100, 'triangle', 0.2, 0.1), 160);
+            },
+
+            // Loot collect - coin sound
+            playCollect() {
+                this.playTone(1000, 'sine', 0.08, 0.1);
+                setTimeout(() => this.playTone(1200, 'sine', 0.08, 0.08), 50);
+            },
+
+            // Building complete
+            playBuild() {
+                this.playTone(300, 'square', 0.1, 0.1);
+                setTimeout(() => this.playTone(400, 'square', 0.1, 0.1), 100);
+                setTimeout(() => this.playTone(500, 'triangle', 0.2, 0.12), 200);
+            }
+        };
+
+
+        // ==================== BEAST SKILLS ====================
+        const BEAST_SKILLS = {
+            hydra: {
+                // Upgrade level 1 (healthy -> level1)
+                1: [
+                    { id: 'venom_boost', name: '毒液增强', desc: '+30%伤害', emoji: '🧪', effect: { damageMultiplier: 1.3 } },
+                    { id: 'multi_head', name: '多头攻击', desc: '攻击2个目标', emoji: '🐲', effect: { multiTarget: 2 } }
+                ],
+                // Upgrade level 2 (level1 -> level2)
+                2: [
+                    { id: 'poison_spray', name: '剧毒喷射', desc: '范围伤害', emoji: '💀', effect: { aoe: true, aoeRadius: 5 } },
+                    { id: 'life_steal', name: '生命汲取', desc: '伤害回血10%', emoji: '💚', effect: { lifeSteal: 0.1 } }
+                ],
+                // Upgrade level 3 (level2 -> level3)
+                3: [
+                    { id: 'poison_cloud', name: '毒气云', desc: '持续伤害区域', emoji: '☁️', effect: { dot: true, dotDamage: 5 } },
+                    { id: 'regen', name: '快速再生', desc: '每秒回复HP', emoji: '💗', effect: { hpRegen: 5 } }
+                ],
+                // Ultimate (level3 -> evolved)
+                ultimate: [
+                    { id: 'nine_heads', name: '九头齐射', desc: '攻击9目标', emoji: '🔥', effect: { multiTarget: 9, damageMultiplier: 1.5 }, isUltimate: true },
+                    { id: 'poison_breath', name: '毒龙吐息', desc: '大范围毁灭', emoji: '☠️', effect: { aoe: true, aoeRadius: 15, damageMultiplier: 2 }, isUltimate: true }
+                ]
+            },
+            thunderbird: {
+                1: [
+                    { id: 'thunder_boost', name: '雷击强化', desc: '+30%伤害', emoji: '⚡', effect: { damageMultiplier: 1.3 } },
+                    { id: 'swift_wind', name: '疾风', desc: '+50%攻速', emoji: '💨', effect: { attackSpeedMultiplier: 1.5 } }
+                ],
+                2: [
+                    { id: 'chain_lightning', name: '连锁闪电', desc: '弹射3敌人', emoji: '🔗', effect: { chainTarget: 3 } },
+                    { id: 'storm_shield', name: '风暴护盾', desc: '减伤30%', emoji: '🛡️', effect: { damageReduction: 0.3 } }
+                ],
+                3: [
+                    { id: 'thunder_cloud', name: '雷云召唤', desc: '范围雷击', emoji: '🌩️', effect: { aoe: true, aoeRadius: 8 } },
+                    { id: 'dash_attack', name: '冲刺攻击', desc: '冲向敌人', emoji: '🏃', effect: { dash: true, dashSpeed: 30 } }
+                ],
+                ultimate: [
+                    { id: 'divine_thunder', name: '天雷降临', desc: '全屏雷击', emoji: '⛈️', effect: { globalAoe: true, damageMultiplier: 3 }, isUltimate: true },
+                    { id: 'phoenix_form', name: '凤凰形态', desc: '无敌+爆发', emoji: '🔶', effect: { invincible: 3, burstDamage: 5 }, isUltimate: true }
+                ]
+            }
         };
 
         // ==================== GAME STATE ====================
@@ -395,7 +631,12 @@
             // Timer
             lastTime: 0,
             meatProductionTimer: 0,
-            enemySpawnTimer: 0
+            enemySpawnTimer: 0,
+
+            // Fence defense
+            fenceHealth: 100,
+            fenceUnderAttack: false,
+            fenceRegenTimer: 0
         };
 
         // ==================== THREE.JS SETUP ====================
@@ -472,26 +713,22 @@
         }
 
         function createSanctuaryArea() {
-            // Fence posts around sanctuary
+            // Fence posts around sanctuary - CIRCULAR
             const fenceMat = new THREE.MeshPhongMaterial({ color: 0x8B4513 });
             const postGeo = new THREE.CylinderGeometry(0.3, 0.3, 3, 8);
 
-            const fencePositions = [];
-            for (let x = -25; x <= 25; x += 5) {
-                fencePositions.push({ x, z: -25 });
-                fencePositions.push({ x, z: 25 });
-            }
-            for (let z = -20; z <= 20; z += 5) {
-                fencePositions.push({ x: -25, z });
-                fencePositions.push({ x: 25, z });
-            }
-
-            fencePositions.forEach(pos => {
+            // Place fence posts in a circle (radius = fenceBoundary)
+            const radius = CONFIG.fenceBoundary;
+            const numPosts = 24; // Posts around the circle
+            for (let i = 0; i < numPosts; i++) {
+                const angle = (i / numPosts) * Math.PI * 2;
+                const x = Math.cos(angle) * radius;
+                const z = Math.sin(angle) * radius;
                 const post = new THREE.Mesh(postGeo, fenceMat);
-                post.position.set(pos.x, 1.5, pos.z);
+                post.position.set(x, 1.5, z);
                 post.castShadow = true;
                 scene.add(post);
-            });
+            }
 
             // Beast pen area (darker grass)
             const penGeo = new THREE.PlaneGeometry(20, 15);
@@ -781,6 +1018,27 @@
             return group;
         }
 
+        // Create a green guide arrow pointing down
+        function createGuideArrow() {
+            const group = new THREE.Group();
+
+            // Arrow body (cone pointing down)
+            const coneGeo = new THREE.ConeGeometry(0.8, 2, 8);
+            const coneMat = new THREE.MeshBasicMaterial({ color: 0x00FF00 });
+            const cone = new THREE.Mesh(coneGeo, coneMat);
+            cone.rotation.x = Math.PI; // Point downward
+            cone.position.y = 0;
+            group.add(cone);
+
+            // Arrow stem
+            const stemGeo = new THREE.CylinderGeometry(0.3, 0.3, 1, 8);
+            const stem = new THREE.Mesh(stemGeo, coneMat);
+            stem.position.y = 1.5;
+            group.add(stem);
+
+            return group;
+        }
+
         function spawnInjuredHydra() {
             if (game.hydraSpawned) return;
             game.hydraSpawned = true;
@@ -788,6 +1046,11 @@
             const mesh = createBeastMesh('hydra', 'baby');
             mesh.position.set(-10, 0, 15);
             scene.add(mesh);
+
+            // Create guide arrow above the beast
+            const guideArrow = createGuideArrow();
+            guideArrow.position.set(-10, 6, 15);
+            scene.add(guideArrow);
 
             game.beasts.push({
                 type: 'hydra',
@@ -797,7 +1060,11 @@
                 x: -10,
                 z: 15,
                 captured: false,
-                attackCooldown: 0
+                attackCooldown: 0,
+                skills: [],
+                level: 0,
+                feedCount: 0,
+                guideArrow: guideArrow // Store reference to remove later
             });
 
             showPrompt('💔 发现受伤的幼年九头蛇！靠近捕获！');
@@ -812,6 +1079,11 @@
             mesh.position.set(0, 0, -30);
             scene.add(mesh);
 
+            // Create guide arrow above the beast
+            const guideArrow = createGuideArrow();
+            guideArrow.position.set(0, 8, -30); // Higher for thunderbird
+            scene.add(guideArrow);
+
             game.beasts.push({
                 type: 'thunderbird',
                 stage: 'baby',
@@ -820,7 +1092,11 @@
                 x: 0,
                 z: -30,
                 captured: false,
-                attackCooldown: 0
+                attackCooldown: 0,
+                skills: [],
+                level: 0,
+                feedCount: 0,
+                guideArrow: guideArrow
             });
 
             showPrompt('🦅 城外发现受伤的雷鹏鸟！前往捕获！');
@@ -831,6 +1107,12 @@
             if (beast.captured) return;
             beast.captured = true;
 
+            // Remove guide arrow
+            if (beast.guideArrow) {
+                scene.remove(beast.guideArrow);
+                beast.guideArrow = null;
+            }
+
             // Move to pen with better spacing
             const capturedCount = game.beasts.filter(b => b.captured).length;
             const penX = -12 + (capturedCount - 1) * 8; // Increased spacing
@@ -838,6 +1120,7 @@
             beast.z = 10;
             beast.mesh.position.set(penX, 0, 10);
 
+            SoundManager.playCapture();
             showPrompt(`✅ 成功捕获${beast.type === 'hydra' ? '九头蛇' : '雷鹏鸟'}！用肉块喂养它！`);
             updateBeastPanel();
             advanceStep();
@@ -856,6 +1139,7 @@
                 beast.feedProgress = 0;
                 evolveBeast(beast);
             } else {
+                SoundManager.playFeed();
                 showPrompt(`🥩 喂食成功！进度: ${beast.feedProgress}%`);
             }
 
@@ -864,48 +1148,150 @@
         }
 
         function evolveBeast(beast) {
-            // Remove old mesh
-            scene.remove(beast.mesh);
+            beast.feedCount++;
+
+            // Determine what happens based on feed count
+            // Feed 1: baby -> healthy (no skill choice)
+            // Feed 2: healthy -> level1 (skill choice 1)
+            // Feed 3: level1 -> level2 (skill choice 2)
+            // Feed 4: level2 -> level3 (skill choice 3)
+            // Feed 5: level3 -> evolved (ultimate skill choice)
 
             const wasStage = beast.stage;
+            let needsSkillSelection = false;
+            let skillLevel = null;
 
-            if (beast.stage === 'baby') {
+            if (beast.feedCount === 1) {
+                // First feed: baby -> healthy, no skill choice
                 beast.stage = 'healthy';
+                beast.level = 0;
+                SoundManager.playEvolve();
                 showPrompt(`💚 ${beast.type === 'hydra' ? '九头蛇' : '雷鹏鸟'}恢复健康！可以战斗了！`);
-            } else if (beast.stage === 'healthy') {
+            } else if (beast.feedCount === 2) {
+                // Second feed: healthy -> level1, skill choice 1
+                beast.stage = 'level1';
+                beast.level = 1;
+                needsSkillSelection = true;
+                skillLevel = 1;
+            } else if (beast.feedCount === 3) {
+                // Third feed: level1 -> level2, skill choice 2
+                beast.stage = 'level2';
+                beast.level = 2;
+                needsSkillSelection = true;
+                skillLevel = 2;
+            } else if (beast.feedCount === 4) {
+                // Fourth feed: level2 -> level3, skill choice 3
+                beast.stage = 'level3';
+                beast.level = 3;
+                needsSkillSelection = true;
+                skillLevel = 3;
+            } else if (beast.feedCount === 5) {
+                // Fifth feed: level3 -> evolved, ultimate skill choice
                 beast.stage = 'evolved';
-                showPrompt(`⚡ ${beast.type === 'hydra' ? '九头蛇' : '雷鹏鸟'}进化成巨型形态！战力暴增！`);
+                beast.level = 4;
+                needsSkillSelection = true;
+                skillLevel = 'ultimate';
             }
 
-            // Create new mesh
-            beast.mesh = createBeastMesh(beast.type, beast.stage);
-            beast.mesh.position.set(beast.x, 0, beast.z);
-            scene.add(beast.mesh);
+            // Update mesh if stage changed visually
+            if (wasStage !== beast.stage) {
+                scene.remove(beast.mesh);
+                // Map stage to visual mesh (only baby, healthy, evolved have unique visuals)
+                const visualStage = beast.stage === 'evolved' ? 'evolved' :
+                    (beast.stage === 'baby' ? 'baby' : 'healthy');
+                beast.mesh = createBeastMesh(beast.type, visualStage);
+                beast.mesh.position.set(beast.x, 0, beast.z);
+                scene.add(beast.mesh);
+            }
 
             updateBeastPanel();
 
-            // Step progression based on which beast evolved
-            if (beast.type === 'hydra') {
-                if (wasStage === 'baby' && beast.stage === 'healthy') {
-                    // Step 3: Hydra healthy, then auto-trigger step 4 (enemies)
-                    advanceStep(); // -> step 3
-                    setTimeout(() => advanceStep(), 1000); // -> step 4 (enemies spawn)
-                } else if (wasStage === 'healthy' && beast.stage === 'evolved') {
-                    // Step 11: Hydra evolved to giant
-                    if (game.step < 11) game.step = 10;
-                    advanceStep(); // -> step 11
-                }
-            } else if (beast.type === 'thunderbird') {
-                if (wasStage === 'baby' && beast.stage === 'healthy') {
-                    // Step 8: Thunderbird healthy
-                    if (game.step < 8) game.step = 7;
-                    advanceStep(); // -> step 8
-                } else if (wasStage === 'healthy' && beast.stage === 'evolved') {
-                    // Step 12: Thunderbird evolved, then step 13 (boss)
-                    if (game.step < 12) game.step = 11;
-                    advanceStep(); // -> step 12
-                    setTimeout(() => advanceStep(), 2000); // -> step 13 (boss spawns)
-                }
+            if (needsSkillSelection) {
+                showSkillSelection(beast, skillLevel);
+            } else {
+                // Handle step progression for first evolution (no skill selection)
+                handleStepProgression(beast, wasStage);
+            }
+        }
+
+        function showSkillSelection(beast, skillLevel) {
+            const skills = BEAST_SKILLS[beast.type][skillLevel];
+            const modal = document.getElementById('skillModal');
+            const title = document.getElementById('skillModalTitle');
+            const choices = document.getElementById('skillChoices');
+
+            const beastName = beast.type === 'hydra' ? '九头蛇' : '雷鹏鸟';
+            const isUltimate = skillLevel === 'ultimate';
+            title.innerHTML = isUltimate ?
+                `⚡ ${beastName}终极技能 ⚡` :
+                `🌟 ${beastName}技能升级 Lv.${skillLevel} 🌟`;
+
+            choices.innerHTML = skills.map((skill, idx) => `
+                <button onclick="selectSkill('${beast.type}', ${idx}, '${skillLevel}')" style="
+                    background: ${isUltimate ? 'linear-gradient(135deg, #ff6b00, #ffd700)' : 'linear-gradient(135deg, #4a0080, #0080ff)'};
+                    border: 2px solid ${isUltimate ? '#ffd700' : '#00ffff'};
+                    border-radius: 10px;
+                    padding: 20px;
+                    min-width: 180px;
+                    cursor: pointer;
+                    color: white;
+                    transition: transform 0.2s;
+                " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                    <div style="font-size: 32px; margin-bottom: 10px;">${skill.emoji || (isUltimate ? '⚡' : '✨')}</div>
+                    <div style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">${skill.name}</div>
+                    <div style="font-size: 14px; opacity: 0.9;">${skill.desc}</div>
+                </button>
+            `).join('');
+
+            modal.style.display = 'flex';
+        }
+
+        window.selectSkill = function (beastType, skillIndex, skillLevel) {
+            const beast = game.beasts.find(b => b.type === beastType);
+            const skill = BEAST_SKILLS[beastType][skillLevel][skillIndex];
+
+            beast.skills.push(skill);
+
+            document.getElementById('skillModal').style.display = 'none';
+
+            SoundManager.playSkillSelect();
+
+            const beastName = beastType === 'hydra' ? '九头蛇' : '雷鹏鸟';
+            const isUltimate = skillLevel === 'ultimate';
+
+            if (isUltimate) {
+                showPrompt(`⚡ ${beastName}获得终极技能: ${skill.name}！战力暴增！`);
+            } else {
+                showPrompt(`✨ ${beastName}学会了: ${skill.name}！`);
+            }
+
+            updateBeastPanel();
+
+            // Handle step progression after skill selection
+            const wasStage = beast.feedCount === 1 ? 'baby' :
+                beast.feedCount === 2 ? 'healthy' :
+                    beast.feedCount === 3 ? 'level1' :
+                        beast.feedCount === 4 ? 'level2' : 'level3';
+            handleStepProgression(beast, wasStage);
+        };
+
+        function handleStepProgression(beast, wasStage) {
+            // Step progression for first evolution (baby -> healthy)
+            if (beast.type === 'hydra' && wasStage === 'baby' && beast.stage === 'healthy') {
+                // Step 3: Hydra healthy, then auto-trigger step 4 (enemies)
+                advanceStep(); // -> step 3
+                setTimeout(() => advanceStep(), 1000); // -> step 4 (enemies spawn)
+            } else if (beast.type === 'thunderbird' && wasStage === 'baby' && beast.stage === 'healthy') {
+                // Step 8: Thunderbird healthy (after first feed)
+                if (game.step < 8) game.step = 7;
+                advanceStep(); // -> step 8
+            }
+
+            // Check if ANY beast reaches feedCount >= 4 for boss spawn
+            if (beast.feedCount >= 4 && !game.bossSpawned) {
+                showPrompt('⚡ 巨兽实力强大！最终BOSS即将出现！');
+                game.step = 12; // Jump to boss step
+                setTimeout(() => advanceStep(), 3000); // -> step 13 (boss spawns)
             }
         }
 
@@ -1031,6 +1417,7 @@
             const building = createBuilding('meat_factory', 15, 10);
             game.buildings.push(building);
 
+            SoundManager.playBuild();
             showPrompt('🏭 造肉厂建成！自动生产肉块！');
             updateHUD();
 
@@ -1228,15 +1615,21 @@
 
             game.enemies.push({
                 type: 'boss',
+                isBoss: true, // Flag for priority targeting
                 hp: CONFIG.bossHp,
                 maxHp: CONFIG.bossHp,
                 mesh,
                 x: 0,
                 z: -50,
-                speed: 3
+                speed: 6 // Doubled for challenge
             });
 
+            SoundManager.playBossSpawn();
             showPrompt('⚠️ 最终BOSS出现！准备战斗！');
+
+            // Show boss health bar
+            document.getElementById('bossHealthBar').style.display = 'block';
+            updateBossHealthBar();
         }
 
         // ==================== LOOT SYSTEM ====================
@@ -1283,6 +1676,21 @@
             document.getElementById('coinCount').textContent = Math.floor(game.coins);
         }
 
+        function updateBossHealthBar() {
+            const boss = game.enemies.find(e => e.isBoss);
+            const bossBar = document.getElementById('bossHealthBar');
+
+            if (boss) {
+                bossBar.style.display = 'block';
+                const hpPercent = Math.max(0, (boss.hp / boss.maxHp) * 100);
+                document.getElementById('bossHpFill').style.width = hpPercent + '%';
+                document.getElementById('bossHpText').textContent = `${Math.max(0, Math.floor(boss.hp))} / ${boss.maxHp}`;
+            } else if (game.bossSpawned) {
+                // Boss defeated - hide bar
+                bossBar.style.display = 'none';
+            }
+        }
+
         function updateBeastPanel() {
             const panel = document.getElementById('beastPanel');
             panel.innerHTML = '';
@@ -1294,12 +1702,18 @@
                 card.className = 'beast-card' + (beast.stage !== 'baby' ? ' active' : '');
 
                 const stageName = beast.stage === 'baby' ? '受伤' :
-                    (beast.stage === 'healthy' ? '健康' : '巨型');
+                    beast.stage === 'healthy' ? '健康' :
+                        beast.stage === 'level1' ? '成长Lv.1' :
+                            beast.stage === 'level2' ? '成长Lv.2' :
+                                beast.stage === 'level3' ? '成长Lv.3' : '巨型';
                 const name = beast.type === 'hydra' ? '九头蛇' : '雷鹏鸟';
 
-                const canFeed = beast.stage !== 'evolved' && game.meat >= CONFIG.feedCost;
+                const canFeed = beast.captured && beast.stage !== 'evolved' && game.meat >= CONFIG.feedCost;
+                const isInjured = beast.stage === 'baby';
                 const feedBtnText = beast.stage === 'evolved' ? '已进化' :
-                    `🥩 喂食 (${CONFIG.feedCost}肉块)`;
+                    isInjured ? `💚 治疗 (${CONFIG.feedCost}肉块)` :
+                        `⬆️ 升级 (${CONFIG.feedCost}肉块)`;
+                const btnColor = isInjured ? 'background: linear-gradient(135deg, #22c55e, #16a34a);' : '';
 
                 card.innerHTML = `
                 <div class="name">${beast.type === 'hydra' ? '🐍' : '🦅'} ${name}</div>
@@ -1309,6 +1723,7 @@
                 </div>
                 <button class="feed-btn" 
                     ${!canFeed ? 'disabled' : ''}
+                    style="${btnColor}"
                     onclick="feedBeastByType('${beast.type}')">
                     ${feedBtnText}
                 </button>
@@ -1445,19 +1860,22 @@
             // Update workers
             updateWorkers(dt);
 
-            // Meat production
+            // Meat production - spawn VISIBLE loot near factory
             if (game.meatFactoryBuilt) {
                 game.meatProductionTimer += dt;
                 const rate = game.meatFactoryUpgraded ? CONFIG.meatProductionRateUpgraded : CONFIG.meatProductionRate;
-                if (game.meatProductionTimer >= 1) {
-                    game.meat += rate;
+                // Spawn meat every 2 seconds
+                if (game.meatProductionTimer >= 2) {
+                    // Spawn meat OUTSIDE the factory building (offset from 15,10)
+                    const offsetX = (Math.random() - 0.5) * 6; // -3 to +3
+                    const offsetZ = 5 + Math.random() * 3; // 5-8 in front
+                    spawnLoot(15 + offsetX, 10 + offsetZ, 'meat');
                     game.meatProductionTimer = 0;
-                    updateHUD();
                 }
             }
 
-            // Enemy spawning (after step 4, until boss spawns at step 13)
-            if (game.step >= 4 && game.step < 13) {
+            // Enemy spawning (after step 2 - right after hydra captured, until boss spawns at step 13)
+            if (game.step >= 2 && game.step < 13) {
                 game.enemySpawnTimer += dt;
                 if (game.enemySpawnTimer >= CONFIG.enemySpawnInterval) {
                     // Spawn 2-3 enemies at once for more challenge
@@ -1469,8 +1887,26 @@
                 }
             }
 
+            // Fence regeneration
+            const enemiesAttackingFence = game.enemies.some(e => e.attackingFence);
+            if (!enemiesAttackingFence && game.fenceHealth < CONFIG.fenceMaxHp) {
+                game.fenceRegenTimer += dt;
+                if (game.fenceRegenTimer >= 1) {
+                    game.fenceHealth = Math.min(CONFIG.fenceMaxHp, game.fenceHealth + CONFIG.fenceRegenRate);
+                    game.fenceRegenTimer = 0;
+                }
+            } else {
+                game.fenceRegenTimer = 0;
+            }
+            game.fenceUnderAttack = enemiesAttackingFence;
+
             // Update building label visibility based on step
             updateBuildingLabels();
+
+            // Update boss health bar
+            if (game.bossSpawned) {
+                updateBossHealthBar();
+            }
         }
 
         function checkBeastInteractions() {
@@ -1533,6 +1969,7 @@
 
                     scene.remove(loot.mesh);
                     game.loot.splice(i, 1);
+                    SoundManager.playCollect();
                     updateHUD();
                 }
             }
@@ -1540,6 +1977,15 @@
 
         function updateBeasts(dt) {
             game.beasts.forEach(beast => {
+                // Animate guide arrow (bounce up and down)
+                if (beast.guideArrow && !beast.captured) {
+                    const time = Date.now() * 0.003;
+                    const baseY = beast.type === 'thunderbird' ? 8 : 6;
+                    beast.guideArrow.position.y = baseY + Math.sin(time) * 1.5;
+                    beast.guideArrow.position.x = beast.x;
+                    beast.guideArrow.position.z = beast.z;
+                }
+
                 // Decrease feed cooldown
                 if (beast.feedCooldown) {
                     beast.feedCooldown -= dt;
@@ -1550,20 +1996,50 @@
                 if (beast.captured && beast.stage !== 'baby') {
                     beast.attackCooldown -= dt;
 
-                    // Find nearest enemy
+                    // Find target - BOSS has HIGHEST priority
+                    // When boss exists, both beasts attack boss first
                     let nearest = null;
                     let nearestDist = Infinity;
 
-                    game.enemies.forEach(enemy => {
-                        const dx = beast.x - enemy.x;
-                        const dz = beast.z - enemy.z;
-                        const dist = Math.sqrt(dx * dx + dz * dz);
+                    // Check for boss first (priority target)
+                    const boss = game.enemies.find(e => e.isBoss);
+                    if (boss) {
+                        nearest = boss;
+                        const dx = beast.x - boss.x;
+                        const dz = beast.z - boss.z;
+                        nearestDist = Math.sqrt(dx * dx + dz * dz);
+                    } else {
+                        // Normal territory-based targeting when no boss
+                        // Hydra attacks enemies in lower half (z > 0)
+                        // Thunderbird attacks enemies in upper half (z <= 0)
+                        game.enemies.forEach(enemy => {
+                            // Territory filter
+                            if (beast.type === 'hydra' && enemy.z < 0) return;
+                            if (beast.type === 'thunderbird' && enemy.z > 0) return;
 
-                        if (dist < nearestDist) {
-                            nearestDist = dist;
-                            nearest = enemy;
-                        }
-                    });
+                            const dx = beast.x - enemy.x;
+                            const dz = beast.z - enemy.z;
+                            const dist = Math.sqrt(dx * dx + dz * dz);
+
+                            if (dist < nearestDist) {
+                                nearestDist = dist;
+                                nearest = enemy;
+                            }
+                        });
+                    }
+
+                    // If no enemy in territory, fallback to any enemy
+                    if (!nearest && game.enemies.length > 0) {
+                        game.enemies.forEach(enemy => {
+                            const dx = beast.x - enemy.x;
+                            const dz = beast.z - enemy.z;
+                            const dist = Math.sqrt(dx * dx + dz * dz);
+                            if (dist < nearestDist) {
+                                nearestDist = dist;
+                                nearest = enemy;
+                            }
+                        });
+                    }
 
                     // Auto-move towards distant enemies
                     if (nearest && nearestDist > CONFIG.beastAttackRange) {
@@ -1607,10 +2083,61 @@
 
                     // Ranged attack if in range
                     if (nearest && nearestDist <= CONFIG.beastAttackRange && beast.attackCooldown <= 0) {
-                        // Fire projectile!
-                        const damage = CONFIG.beastAttackDamage[beast.stage];
-                        fireProjectile(beast, nearest, damage);
-                        beast.attackCooldown = beast.stage === 'evolved' ? 0.5 : 0.8;
+                        // Calculate skill-modified damage and effects
+                        // Map stage to damage (level1/2/3 scale between healthy and evolved)
+                        let baseDamage = CONFIG.beastAttackDamage[beast.stage] ||
+                            (beast.stage === 'level1' ? 25 :
+                                beast.stage === 'level2' ? 35 :
+                                    beast.stage === 'level3' ? 45 : 15);
+                        let damageMultiplier = 1;
+                        let targetCount = 1;
+                        let hasAoe = false;
+                        let aoeRadius = 0;
+                        let attackSpeedMult = 1;
+                        let chainTargets = 0;
+
+                        // Apply skill effects from beast's learned skills
+                        if (beast.skills) {
+                            beast.skills.forEach(skill => {
+                                if (skill.effect.damageMultiplier) damageMultiplier *= skill.effect.damageMultiplier;
+                                if (skill.effect.multiTarget) targetCount = Math.max(targetCount, skill.effect.multiTarget);
+                                if (skill.effect.aoe) { hasAoe = true; aoeRadius = Math.max(aoeRadius, skill.effect.aoeRadius || 5); }
+                                if (skill.effect.attackSpeedMultiplier) attackSpeedMult *= skill.effect.attackSpeedMultiplier;
+                                if (skill.effect.chainTarget) chainTargets = Math.max(chainTargets, skill.effect.chainTarget);
+                                if (skill.effect.globalAoe) { hasAoe = true; aoeRadius = 30; } // Full screen
+                            });
+                        }
+
+                        const finalDamage = Math.floor(baseDamage * damageMultiplier);
+
+                        // Multi-target attack: fire at multiple enemies
+                        if (targetCount > 1) {
+                            // Get up to targetCount enemies
+                            const targets = [];
+                            const sortedEnemies = [...game.enemies].sort((a, b) => {
+                                const distA = Math.sqrt((a.x - beast.x) ** 2 + (a.z - beast.z) ** 2);
+                                const distB = Math.sqrt((b.x - beast.x) ** 2 + (b.z - beast.z) ** 2);
+                                return distA - distB;
+                            });
+                            for (let i = 0; i < Math.min(targetCount, sortedEnemies.length); i++) {
+                                targets.push(sortedEnemies[i]);
+                            }
+                            // Fire at each target
+                            targets.forEach((target, idx) => {
+                                setTimeout(() => {
+                                    if (game.enemies.includes(target)) {
+                                        fireProjectile(beast, target, finalDamage, hasAoe, aoeRadius, chainTargets);
+                                    }
+                                }, idx * 50); // Slight delay between shots
+                            });
+                        } else {
+                            // Single target
+                            fireProjectile(beast, nearest, finalDamage, hasAoe, aoeRadius, chainTargets);
+                        }
+
+                        // Attack cooldown with skill speed multiplier
+                        const baseCooldown = Math.max(0.3, 1.0 - (beast.feedCount || 0) * 0.1);
+                        beast.attackCooldown = baseCooldown / attackSpeedMult;
 
                         // Face target
                         const dx = nearest.x - beast.x;
@@ -1627,9 +2154,24 @@
         }
 
         // Create and fire a ranged projectile from beast to enemy
-        function fireProjectile(beast, target, damage) {
-            const color = beast.type === 'hydra' ? 0x00FF00 : 0x00BFFF; // Green for hydra, blue for thunderbird
-            const size = beast.stage === 'evolved' ? 0.8 : 0.4;
+        function fireProjectile(beast, target, damage, hasAoe = false, aoeRadius = 0, chainTargets = 0) {
+            // Color varies by beast and skill type
+            let color = beast.type === 'hydra' ? 0x00FF00 : 0x00BFFF;
+            if (hasAoe && beast.type === 'hydra') color = 0x9932CC; // Purple for poison AOE
+            if (hasAoe && beast.type === 'thunderbird') color = 0xFFFF00; // Yellow for thunder AOE
+            if (chainTargets > 0) color = 0x00FFFF; // Cyan for chain lightning
+
+            // Size varies by stage and skill type
+            let size = beast.stage === 'evolved' ? 0.8 : 0.4;
+            if (hasAoe) size *= 1.5; // AOE projectiles are larger
+
+            // Calculate spawn position from beast's HEAD (facing direction)
+            const dx = target.x - beast.x;
+            const dz = target.z - beast.z;
+            const dist = Math.sqrt(dx * dx + dz * dz);
+            const headOffset = beast.stage === 'evolved' ? 3 : 1.5;
+            const spawnX = beast.x + (dx / dist) * headOffset;
+            const spawnZ = beast.z + (dz / dist) * headOffset;
 
             const geo = new THREE.SphereGeometry(size, 8, 8);
             const mat = new THREE.MeshBasicMaterial({
@@ -1638,18 +2180,24 @@
                 opacity: 0.9
             });
             const projectile = new THREE.Mesh(geo, mat);
-            projectile.position.set(beast.x, 2, beast.z);
+            projectile.position.set(spawnX, 2, spawnZ);
             scene.add(projectile);
 
             game.projectiles.push({
                 mesh: projectile,
-                x: beast.x,
+                x: spawnX,
                 y: 2,
-                z: beast.z,
+                z: spawnZ,
                 targetEnemy: target,
                 damage: damage,
-                speed: 40
+                speed: 40,
+                hasAoe: hasAoe,
+                aoeRadius: aoeRadius,
+                chainTargets: chainTargets,
+                beastType: beast.type
             });
+
+            SoundManager.playAttack();
         }
 
         function updateProjectiles(dt) {
@@ -1670,11 +2218,67 @@
                 const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
                 if (dist < 1.5) {
-                    // Hit!
+                    // Hit primary target
                     proj.targetEnemy.hp -= proj.damage;
 
-                    // Hit effect
-                    createHitEffect(proj.x, proj.z);
+                    // AOE splash damage
+                    if (proj.hasAoe && proj.aoeRadius > 0) {
+                        // Hit all enemies in radius
+                        game.enemies.forEach(enemy => {
+                            if (enemy === proj.targetEnemy) return; // Skip primary target
+                            const edx = enemy.x - proj.x;
+                            const edz = enemy.z - proj.z;
+                            const eDist = Math.sqrt(edx * edx + edz * edz);
+                            if (eDist <= proj.aoeRadius) {
+                                // Splash damage (50% of main damage)
+                                enemy.hp -= Math.floor(proj.damage * 0.5);
+                            }
+                        });
+                        // AOE visual effect
+                        createAoeEffect(proj.x, proj.z, proj.aoeRadius, proj.beastType);
+                        SoundManager.playAoe();
+                    } else {
+                        // Normal hit effect
+                        createHitEffect(proj.x, proj.z);
+                        SoundManager.playHit();
+                    }
+
+                    // Chain lightning effect
+                    if (proj.chainTargets > 0) {
+                        let lastX = proj.x;
+                        let lastZ = proj.z;
+                        const hitEnemies = [proj.targetEnemy];
+
+                        for (let c = 0; c < proj.chainTargets; c++) {
+                            // Find nearest unhit enemy
+                            let nearestChain = null;
+                            let nearestChainDist = 15; // Max chain range
+
+                            game.enemies.forEach(enemy => {
+                                if (hitEnemies.includes(enemy)) return;
+                                const cdx = enemy.x - lastX;
+                                const cdz = enemy.z - lastZ;
+                                const cDist = Math.sqrt(cdx * cdx + cdz * cdz);
+                                if (cDist < nearestChainDist) {
+                                    nearestChainDist = cDist;
+                                    nearestChain = enemy;
+                                }
+                            });
+
+                            if (nearestChain) {
+                                // Chain damage (70% of original per jump)
+                                const chainDamage = Math.floor(proj.damage * Math.pow(0.7, c + 1));
+                                nearestChain.hp -= chainDamage;
+                                hitEnemies.push(nearestChain);
+
+                                // Chain lightning visual
+                                createChainEffect(lastX, lastZ, nearestChain.x, nearestChain.z);
+                                SoundManager.playChain();
+                                lastX = nearestChain.x;
+                                lastZ = nearestChain.z;
+                            }
+                        }
+                    }
 
                     scene.remove(proj.mesh);
                     game.projectiles.splice(i, 1);
@@ -1687,6 +2291,60 @@
                     proj.mesh.position.set(proj.x, proj.y, proj.z);
                 }
             }
+        }
+
+        // AOE explosion effect
+        function createAoeEffect(x, z, radius, beastType) {
+            const color = beastType === 'hydra' ? 0x9932CC : 0xFFFF00; // Purple or yellow
+            const geo = new THREE.RingGeometry(0.5, radius, 32);
+            const mat = new THREE.MeshBasicMaterial({
+                color: color,
+                transparent: true,
+                opacity: 0.6,
+                side: THREE.DoubleSide
+            });
+            const ring = new THREE.Mesh(geo, mat);
+            ring.rotation.x = -Math.PI / 2;
+            ring.position.set(x, 0.5, z);
+            scene.add(ring);
+
+            // Fade out and remove
+            let opacity = 0.6;
+            const fadeInterval = setInterval(() => {
+                opacity -= 0.15;
+                ring.material.opacity = opacity;
+                if (opacity <= 0) {
+                    clearInterval(fadeInterval);
+                    scene.remove(ring);
+                }
+            }, 50);
+        }
+
+        // Chain lightning visual effect
+        function createChainEffect(x1, z1, x2, z2) {
+            const points = [
+                new THREE.Vector3(x1, 2, z1),
+                new THREE.Vector3((x1 + x2) / 2, 2.5, (z1 + z2) / 2), // Slight arc
+                new THREE.Vector3(x2, 2, z2)
+            ];
+            const curve = new THREE.QuadraticBezierCurve3(points[0], points[1], points[2]);
+            const geometry = new THREE.TubeGeometry(curve, 8, 0.1, 8, false);
+            const material = new THREE.MeshBasicMaterial({ color: 0x00FFFF, transparent: true, opacity: 0.9 });
+            const lightning = new THREE.Mesh(geometry, material);
+            scene.add(lightning);
+
+            // Quick fade
+            setTimeout(() => {
+                let opacity = 0.9;
+                const fadeInterval = setInterval(() => {
+                    opacity -= 0.3;
+                    lightning.material.opacity = opacity;
+                    if (opacity <= 0) {
+                        clearInterval(fadeInterval);
+                        scene.remove(lightning);
+                    }
+                }, 30);
+            }, 100);
         }
 
         function createHitEffect(x, z) {
@@ -1729,9 +2387,36 @@
                 const dist = Math.sqrt(dx * dx + dz * dz);
 
                 if (dist > 2) {
-                    enemy.x += (dx / dist) * enemy.speed * dt;
-                    enemy.z += (dz / dist) * enemy.speed * dt;
-                    enemy.mesh.position.set(enemy.x, 0, enemy.z);
+                    // Calculate new position
+                    let newX = enemy.x + (dx / dist) * enemy.speed * dt;
+                    let newZ = enemy.z + (dz / dist) * enemy.speed * dt;
+
+                    // Check fence collision - CIRCULAR boundary
+                    const radius = CONFIG.fenceBoundary;
+                    const newDist = Math.sqrt(newX * newX + newZ * newZ);
+                    const currentDist = Math.sqrt(enemy.x * enemy.x + enemy.z * enemy.z);
+                    const isInsideFence = newDist < radius;
+                    const currentlyOutsideFence = currentDist >= radius;
+
+                    // Fence is INDESTRUCTIBLE - enemies blocked at circular boundary
+                    if (isInsideFence) {
+                        // Stop at fence (cannot pass through)
+                        enemy.attackingFence = true;
+                        game.fenceUnderAttack = true;
+
+                        // Clamp position to fence boundary circle (stop at edge)
+                        const clampDist = Math.max(currentDist, radius);
+                        const angle = Math.atan2(enemy.z, enemy.x);
+                        enemy.x = Math.cos(angle) * clampDist;
+                        enemy.z = Math.sin(angle) * clampDist;
+                        enemy.mesh.position.set(enemy.x, 0, enemy.z);
+                    } else {
+                        // Normal movement outside fence
+                        enemy.attackingFence = false;
+                        enemy.x = newX;
+                        enemy.z = newZ;
+                        enemy.mesh.position.set(enemy.x, 0, enemy.z);
+                    }
                 }
 
                 // Check if dead
@@ -1747,6 +2432,7 @@
                     // Check if boss
                     if (enemy.type === 'boss') {
                         game.bossDefeated = true;
+                        SoundManager.playVictory();
                         showPrompt('🏆 BOSS被击败！胜利！');
                         advanceStep(); // Step 13 -> 14
                         // Show victory screen after a short delay
@@ -1765,13 +2451,26 @@
         }
 
         function updateWorkers(dt) {
+            // First, collect all currently claimed loot by workers
+            const claimedLoot = new Set();
+            game.workers.forEach(w => {
+                if (w.targetLoot && game.loot.includes(w.targetLoot)) {
+                    claimedLoot.add(w.targetLoot);
+                }
+            });
+
             game.workers.forEach(worker => {
-                // Find nearest unclaimed loot
+                // Find new target if current one is invalid or collected
                 if (!worker.targetLoot || !game.loot.includes(worker.targetLoot)) {
+                    worker.targetLoot = null; // Clear invalid target
+
                     let nearest = null;
-                    let nearestDist = 50;
+                    let nearestDist = Infinity;
 
                     game.loot.forEach(loot => {
+                        // Skip loot already claimed by ANOTHER worker
+                        if (claimedLoot.has(loot)) return;
+
                         const dx = worker.x - loot.x;
                         const dz = worker.z - loot.z;
                         const dist = Math.sqrt(dx * dx + dz * dz);
@@ -1782,30 +2481,50 @@
                         }
                     });
 
-                    worker.targetLoot = nearest;
+                    if (nearest) {
+                        worker.targetLoot = nearest;
+                        claimedLoot.add(nearest); // Mark as claimed
+                    }
                 }
 
-                // Move towards loot
+                // Move towards target loot
                 if (worker.targetLoot) {
                     const dx = worker.targetLoot.x - worker.x;
                     const dz = worker.targetLoot.z - worker.z;
                     const dist = Math.sqrt(dx * dx + dz * dz);
 
                     if (dist > 0.5) {
-                        worker.x += (dx / dist) * 8 * dt;
-                        worker.z += (dz / dist) * 8 * dt;
+                        // Move towards loot
+                        worker.x += (dx / dist) * 10 * dt; // Increased speed from 8 to 10
+                        worker.z += (dz / dist) * 10 * dt;
                         worker.mesh.position.set(worker.x, 0, worker.z);
                     } else {
-                        // Collect
+                        // Collect the loot
                         if (worker.targetLoot.type === 'meat') game.meat += 2;
-                        else if (worker.targetLoot.type === 'coin') game.coins += 15; // Increased from 5 to 15
+                        else if (worker.targetLoot.type === 'coin') game.coins += 15;
 
                         scene.remove(worker.targetLoot.mesh);
                         const idx = game.loot.indexOf(worker.targetLoot);
                         if (idx >= 0) game.loot.splice(idx, 1);
 
-                        worker.targetLoot = null;
+                        claimedLoot.delete(worker.targetLoot);
+                        worker.targetLoot = null; // Clear so worker finds new target next frame
                         updateHUD();
+                        updateBeastPanel(); // Refresh button states when resources change
+                    }
+                } else {
+                    // No loot to collect - return to patrol/idle near worker hut
+                    // Move towards worker hut area (15, -10)
+                    const homeX = 15 + (game.workers.indexOf(worker) - 1.5) * 3; // Spread workers
+                    const homeZ = -10;
+                    const dx = homeX - worker.x;
+                    const dz = homeZ - worker.z;
+                    const dist = Math.sqrt(dx * dx + dz * dz);
+
+                    if (dist > 2) {
+                        worker.x += (dx / dist) * 6 * dt;
+                        worker.z += (dz / dist) * 6 * dt;
+                        worker.mesh.position.set(worker.x, 0, worker.z);
                     }
                 }
             });
@@ -1888,6 +2607,10 @@
         function startGame() {
             if (game.started) return;
             game.started = true;
+
+            // Initialize sound system
+            SoundManager.init();
+
             document.getElementById('tutorialOverlay').style.display = 'none';
 
             // Switch from tutorial joystick to dynamic joystick
