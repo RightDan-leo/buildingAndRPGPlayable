@@ -1067,12 +1067,12 @@
             game.thunderbirdSpawned = true;
 
             const mesh = createBeastMesh('thunderbird', 'baby');
-            mesh.position.set(0, 0, -30);
+            mesh.position.set(18, 0, 18);
             scene.add(mesh);
 
             // Create guide arrow above the beast
             const guideArrow = createGuideArrow();
-            guideArrow.position.set(0, 8, -30); // Higher for thunderbird
+            guideArrow.position.set(18, 8, 18); // Higher for thunderbird
             scene.add(guideArrow);
 
             game.beasts.push({
@@ -1080,8 +1080,8 @@
                 stage: 'baby',
                 feedProgress: 0,
                 mesh: mesh,
-                x: 0,
-                z: -30,
+                x: 18,
+                z: 18,
                 captured: false,
                 attackCooldown: 0,
                 skills: [],
