@@ -1699,7 +1699,7 @@
                                 beast.stage === 'level3' ? '成长Lv.3' : '巨型';
                 const name = beast.type === 'hydra' ? '九头蛇' : '雷鹏鸟';
 
-                const canFeed = beast.captured && beast.stage !== 'evolved' && game.meat >= CONFIG.feedCost;
+                const canFeed = beast.stage !== 'evolved' && game.meat >= CONFIG.feedCost;
                 const isInjured = beast.stage === 'baby';
                 const feedBtnText = beast.stage === 'evolved' ? '已进化' :
                     isInjured ? `💚 治疗 (${CONFIG.feedCost}肉块)` :
@@ -1724,10 +1724,10 @@
             });
         }
 
-        // Global feed function for button onclick - uses beast type as unique ID
+        // Global feed function for button onclick - only requirement is enough meat
         window.feedBeastByType = function (type) {
-            const beast = game.beasts.find(b => b.type === type && b.captured);
-            if (beast && beast.stage !== 'evolved') {
+            const beast = game.beasts.find(b => b.type === type);
+            if (beast) {
                 feedBeast(beast);
             }
         };
@@ -1898,9 +1898,6 @@
             if (game.bossSpawned) {
                 updateBossHealthBar();
             }
-
-            // Keep beast panel buttons in sync with current resources
-            updateBeastPanel();
         }
 
         function checkBeastInteractions() {
@@ -1965,6 +1962,7 @@
                     game.loot.splice(i, 1);
                     SoundManager.playCollect();
                     updateHUD();
+                    updateBeastPanel();
                 }
             }
         }
