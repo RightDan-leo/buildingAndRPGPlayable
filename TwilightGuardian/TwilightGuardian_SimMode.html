@@ -530,16 +530,9 @@ price.flame, 300
 
         async function loadGameConfig() {
             let text = "";
-            try {
-                const response = await fetch('TwilightGuardian_SimMode.csv?t=' + Date.now());
-                if (!response.ok) throw new Error("Config not found");
-                text = await response.text();
-                console.log("Loaded external CSV config.");
-            } catch (e) {
-                console.warn("Could not load external config, using fallback embedded config:", e);
-                const el = document.getElementById('game-config-csv');
-                if (el) text = el.textContent;
-            }
+            // Always use embedded config (no external CSV fetch)
+            const el = document.getElementById('game-config-csv');
+            if (el) text = el.textContent;
 
             if (!text) return;
 
