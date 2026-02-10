@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>游戏大厅 - Game Arcade</title>
+    <meta name="description" content="四款精品 3D 网页游戏，即点即玩！巨兽收容所、生存塔防、微光守卫、无敌破坏王">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <style>
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-deep: #0a0a1a;
+            --bg-card: rgba(20, 20, 45, 0.7);
+            --border-glow: rgba(100, 120, 255, 0.25);
+            --text-primary: #eef0ff;
+            --text-secondary: #8a8fb5;
+            --accent: #6c5ce7;
+            --accent-glow: rgba(108, 92, 231, 0.4);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ===== Animated Background ===== */
+        .bg-animation {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            background:
+                radial-gradient(ellipse at 20% 50%, rgba(108, 92, 231, 0.12) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(0, 200, 255, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 90%, rgba(255, 100, 100, 0.06) 0%, transparent 50%);
+        }
+
+        .stars {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            background-image:
+                radial-gradient(1px 1px at 10% 20%, rgba(255, 255, 255, 0.4), transparent),
+                radial-gradient(1px 1px at 30% 60%, rgba(255, 255, 255, 0.3), transparent),
+                radial-gradient(1.5px 1.5px at 50% 10%, rgba(255, 255, 255, 0.5), transparent),
+                radial-gradient(1px 1px at 70% 40%, rgba(255, 255, 255, 0.3), transparent),
+                radial-gradient(1.5px 1.5px at 85% 75%, rgba(255, 255, 255, 0.4), transparent),
+                radial-gradient(1px 1px at 15% 85%, rgba(255, 255, 255, 0.2), transparent),
+                radial-gradient(1px 1px at 60% 90%, rgba(255, 255, 255, 0.3), transparent),
+                radial-gradient(1.5px 1.5px at 40% 35%, rgba(255, 255, 255, 0.4), transparent);
+            animation: twinkle 8s ease-in-out infinite alternate;
+        }
+
+        @keyframes twinkle {
+            0% {
+                opacity: 0.6;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        /* ===== Portal Page ===== */
+        #portal-page {
+            position: relative;
+            z-index: 1;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px 60px;
+        }
+
+        /* Header */
+        .portal-header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .portal-header h1 {
+            font-size: clamp(2rem, 5vw, 3.2rem);
+            font-weight: 900;
+            background: linear-gradient(135deg, #a78bfa, #6c5ce7, #00cec9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.5px;
+            margin-bottom: 12px;
+        }
+
+        .portal-header p {
+            color: var(--text-secondary);
+            font-size: clamp(0.9rem, 2vw, 1.1rem);
+            max-width: 500px;
+            line-height: 1.6;
+        }
+
+        /* Game Grid */
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+            max-width: 900px;
+            width: 100%;
+        }
+
+        @media (max-width: 640px) {
+            .game-grid {
+                grid-template-columns: 1fr;
+                max-width: 400px;
+            }
+        }
+
+        /* Game Card */
+        .game-card {
+            position: relative;
+            background: var(--bg-card);
+            border: 1px solid var(--border-glow);
+            border-radius: 20px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+                box-shadow 0.35s ease,
+                border-color 0.35s ease;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .game-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 60px rgba(108, 92, 231, 0.2), 0 0 0 1px rgba(108, 92, 231, 0.3);
+            border-color: rgba(108, 92, 231, 0.5);
+        }
+
+        .game-card:active {
+            transform: translateY(-2px) scale(0.98);
+        }
+
+        /* Card Thumbnail */
+        .card-thumb {
+            height: 180px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 72px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-thumb::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+        }
+
+        .card-thumb .icon-wrap {
+            position: relative;
+            z-index: 1;
+            filter: drop-shadow(0 4px 20px rgba(0, 0, 0, 0.3));
+            animation: float 4s ease-in-out infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-8px);
+            }
+        }
+
+        .card-thumb.beast {
+            background: linear-gradient(135deg, #1a3a2a 0%, #0d2818 50%, #1a4030 100%);
+        }
+
+        .card-thumb.tower {
+            background: linear-gradient(135deg, #1a1a3a 0%, #0d1828 50%, #1a2040 100%);
+        }
+
+        .card-thumb.guardian {
+            background: linear-gradient(135deg, #2a1a3a 0%, #1a0d28 50%, #301a40 100%);
+        }
+
+        .card-thumb.king {
+            background: linear-gradient(135deg, #3a2a1a 0%, #281a0d 50%, #403018 100%);
+        }
+
+        /* Subtle particle effect on thumb */
+        .card-thumb::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                radial-gradient(1px 1px at 20% 30%, rgba(255, 255, 255, 0.3), transparent),
+                radial-gradient(1px 1px at 60% 70%, rgba(255, 255, 255, 0.2), transparent),
+                radial-gradient(1px 1px at 80% 20%, rgba(255, 255, 255, 0.25), transparent);
+            pointer-events: none;
+        }
+
+        /* Card Body */
+        .card-body {
+            padding: 20px 22px 24px;
+        }
+
+        .card-body h3 {
+            font-size: 1.2rem;
+            font-weight: 800;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-body .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .card-body .desc {
+            color: var(--text-secondary);
+            font-size: 0.88rem;
+            line-height: 1.5;
+            margin-bottom: 14px;
+        }
+
+        .card-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .tag {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+
+        .tag.rpg {
+            background: rgba(108, 92, 231, 0.2);
+            color: #a78bfa;
+            border: 1px solid rgba(108, 92, 231, 0.3);
+        }
+
+        .tag.td {
+            background: rgba(0, 206, 201, 0.15);
+            color: #00cec9;
+            border: 1px solid rgba(0, 206, 201, 0.3);
+        }
+
+        .tag.strategy {
+            background: rgba(255, 165, 2, 0.15);
+            color: #ffa502;
+            border: 1px solid rgba(255, 165, 2, 0.3);
+        }
+
+        .tag.action {
+            background: rgba(255, 71, 87, 0.15);
+            color: #ff6b81;
+            border: 1px solid rgba(255, 71, 87, 0.3);
+        }
+
+        .tag.sim {
+            background: rgba(46, 213, 115, 0.15);
+            color: #2ed573;
+            border: 1px solid rgba(46, 213, 115, 0.3);
+        }
+
+        /* Play indicator on hover */
+        .play-hint {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: rgba(108, 92, 231, 0.85);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            opacity: 0;
+            transform: translateY(-5px);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(8px);
+        }
+
+        .game-card:hover .play-hint {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ===== Game Frame (iframe container) ===== */
+        #game-frame-container {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            background: #000;
+        }
+
+        #game-frame-container.active {
+            display: block;
+        }
+
+        #game-iframe {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            z-index: 1;
+        }
+
+        /* Back Button - inside game-frame-container, above iframe */
+        #back-btn {
+            position: absolute;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: none;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 24px;
+            background: rgba(10, 10, 30, 0.9);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(108, 92, 231, 0.5);
+            border-radius: 30px;
+            color: #eef0ff;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+            pointer-events: auto;
+            opacity: 0.75;
+        }
+
+        #back-btn:hover {
+            background: rgba(108, 92, 231, 0.7);
+            opacity: 1;
+            box-shadow: 0 6px 30px rgba(108, 92, 231, 0.4);
+        }
+
+        #back-btn.active {
+            display: flex;
+        }
+
+        #back-btn svg {
+            width: 14px;
+            height: 14px;
+            fill: currentColor;
+        }
+
+        /* Footer */
+        .portal-footer {
+            margin-top: 60px;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            text-align: center;
+            opacity: 0.6;
+        }
+
+        /* Loading overlay */
+        #loading-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 1002;
+            background: rgba(10, 10, 26, 0.95);
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        #loading-overlay.active {
+            display: flex;
+        }
+
+        .loader {
+            width: 48px;
+            height: 48px;
+            border: 4px solid rgba(108, 92, 231, 0.2);
+            border-top-color: #6c5ce7;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loader-text {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="bg-animation"></div>
+    <div class="stars"></div>
+
+    <!-- ===== Portal Page ===== -->
+    <div id="portal-page">
+        <header class="portal-header">
+            <h1>🎮 游戏大厅</h1>
+            <p>四款精品 3D 网页游戏，即点即玩。选择一款开始冒险！</p>
+        </header>
+
+        <div class="game-grid">
+
+            <!-- BeastKeeper -->
+            <div class="game-card" onclick="launchGame('BeastKeeper/BeastKeeper.html', '巨兽收容所')">
+                <div class="card-thumb beast">
+                    <span class="icon-wrap">🐉</span>
+                </div>
+                <div class="card-body">
+                    <h3>巨兽收容所</h3>
+                    <div class="subtitle">Beast Keeper</div>
+                    <p class="desc">捕获受伤幼兽、喂养治疗，带着进化后的巨兽出去战斗！</p>
+                    <div class="card-tags">
+                        <span class="tag rpg">养成</span>
+                        <span class="tag action">战斗</span>
+                        <span class="tag sim">经营</span>
+                    </div>
+                </div>
+                <span class="play-hint">▶ 开始游戏</span>
+            </div>
+
+            <!-- Survival Tower Defense -->
+            <div class="game-card" onclick="launchGame('SurvivalTowerDefense/survival_tower_defense_3d.html', '生存塔防')">
+                <div class="card-thumb tower">
+                    <span class="icon-wrap">🏰</span>
+                </div>
+                <div class="card-body">
+                    <h3>生存塔防</h3>
+                    <div class="subtitle">Survival Tower Defense</div>
+                    <p class="desc">护送营地突围！采集资源，建造防御塔，抵达安全终点。</p>
+                    <div class="card-tags">
+                        <span class="tag td">塔防</span>
+                        <span class="tag strategy">策略</span>
+                        <span class="tag action">生存</span>
+                    </div>
+                </div>
+                <span class="play-hint">▶ 开始游戏</span>
+            </div>
+
+            <!-- Twilight Guardian -->
+            <div class="game-card" onclick="launchGame('TwilightGuardian/TwilightGuardian_SimMode.html', '微光守卫')">
+                <div class="card-thumb guardian">
+                    <span class="icon-wrap">🌙</span>
+                </div>
+                <div class="card-body">
+                    <h3>微光守卫</h3>
+                    <div class="subtitle">Twilight Guardian</div>
+                    <p class="desc">昼夜交替的城防战！白天建设基地，夜晚抵御黑暗军团进攻。</p>
+                    <div class="card-tags">
+                        <span class="tag td">塔防</span>
+                        <span class="tag sim">经营</span>
+                        <span class="tag strategy">策略</span>
+                    </div>
+                </div>
+                <span class="play-hint">▶ 开始游戏</span>
+            </div>
+
+            <!-- Wreck It King -->
+            <div class="game-card" onclick="launchGame('WreckItKing/WreckItKing.html', '无敌破坏王')">
+                <div class="card-thumb king">
+                    <span class="icon-wrap">⚔️</span>
+                </div>
+                <div class="card-body">
+                    <h3>无敌破坏王</h3>
+                    <div class="subtitle">Wreck It King</div>
+                    <p class="desc">砍树挖矿收集资源，建造箭塔兵营，击败黑暗军团 BOSS！</p>
+                    <div class="card-tags">
+                        <span class="tag action">动作</span>
+                        <span class="tag sim">建造</span>
+                        <span class="tag rpg">成长</span>
+                    </div>
+                </div>
+                <span class="play-hint">▶ 开始游戏</span>
+            </div>
+
+        </div>
+
+        <footer class="portal-footer">
+            Built with Three.js · 即点即玩，无需安装
+        </footer>
+    </div>
+
+    <!-- ===== Game iframe Container ===== -->
+    <div id="game-frame-container">
+        <iframe id="game-iframe" allowfullscreen></iframe>
+        <button id="back-btn" onclick="exitGame()">
+            <svg viewBox="0 0 24 24">
+                <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
+            </svg>
+            返回游戏大厅
+        </button>
+    </div>
+
+    <!-- Loading overlay -->
+    <div id="loading-overlay">
+        <div class="loader"></div>
+        <div class="loader-text">加载中…</div>
+    </div>
+
+    <script>
+        const portalPage = document.getElementById('portal-page');
+        const frameContainer = document.getElementById('game-frame-container');
+        const iframe = document.getElementById('game-iframe');
+        const backBtn = document.getElementById('back-btn');
+        const loadingOverlay = document.getElementById('loading-overlay');
+
+        function launchGame(url, name) {
+            // Show loading
+            loadingOverlay.classList.add('active');
+
+            // Hide portal
+            portalPage.style.display = 'none';
+            document.body.style.overflow = 'hidden';
+
+            // Set iframe src
+            iframe.src = url;
+
+            // When loaded, show game
+            iframe.onload = function () {
+                loadingOverlay.classList.remove('active');
+                frameContainer.classList.add('active');
+                backBtn.classList.add('active');
+            };
+
+            // Fallback: if onload doesn't fire within 5s, show anyway
+            setTimeout(function () {
+                loadingOverlay.classList.remove('active');
+                frameContainer.classList.add('active');
+                backBtn.classList.add('active');
+            }, 5000);
+
+            document.title = name + ' - 游戏大厅';
+        }
+
+        function exitGame() {
+            // Hide game
+            frameContainer.classList.remove('active');
+            backBtn.classList.remove('active');
+
+            // Clear iframe to stop the game
+            iframe.src = 'about:blank';
+
+            // Show portal
+            portalPage.style.display = '';
+            document.body.style.overflow = '';
+            document.title = '游戏大厅 - Game Arcade';
+        }
+
+        // Handle browser back button
+        window.addEventListener('popstate', function () {
+            if (frameContainer.classList.contains('active')) {
+                exitGame();
+            }
+        });
+
+        // Push state when launching game so back button works
+        const origLaunch = launchGame;
+        launchGame = function (url, name) {
+            history.pushState({ game: url }, name);
+            origLaunch(url, name);
+        };
+    </script>
+
+</body>
+
+</html>
