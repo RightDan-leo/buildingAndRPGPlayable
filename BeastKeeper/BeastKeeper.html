@@ -1898,6 +1898,9 @@
             if (game.bossSpawned) {
                 updateBossHealthBar();
             }
+
+            // Keep beast panel buttons in sync with current resources
+            updateBeastPanel();
         }
 
         function checkBeastInteractions() {
