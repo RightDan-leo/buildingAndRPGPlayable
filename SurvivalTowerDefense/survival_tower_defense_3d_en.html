@@ -1,0 +1,4144 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Survival Tower Defense 3D</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            background: #1a1a2e;
+            font-family: 'Arial', sans-serif;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        /* Disable canvas pointer events when modal is active */
+        #turret-modal.active~canvas,
+        body.modal-active canvas {
+            pointer-events: none !important;
+        }
+
+        /* UI Overlay - Simplified Two Boxes */
+        #ui-overlay {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        .stat-box {
+            background: rgba(0, 0, 0, 0.85);
+            padding: 15px 25px;
+            border-radius: 12px;
+            border: 2px solid #555;
+            backdrop-filter: blur(5px);
+            text-align: center;
+        }
+
+        .stat-box .stat-label {
+            color: #aaa;
+            font-size: 14px;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .stat-box .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            color: #888;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .hp-value {
+            color: #ff6b6b;
+        }
+
+        .wood-value {
+            color: #8b5a2b;
+        }
+
+        .player-wood {
+            color: #f0d084;
+        }
+
+        /* Turret Selection Modal */
+        #turret-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 300;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #turret-modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #2a2a4a 0%, #1a1a3a 100%);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            border: 3px solid #ffcc00;
+            box-shadow: 0 0 30px rgba(255, 204, 0, 0.3);
+        }
+
+        .modal-content h2 {
+            color: #ffcc00;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+
+        .modal-content p {
+            color: #aaa;
+            margin-bottom: 25px;
+        }
+
+        .turret-options {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .turret-btn {
+            padding: 20px 30px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            min-width: 180px;
+            position: relative;
+        }
+
+        /* Ensure child elements don't block button clicks */
+        .turret-btn>* {
+            pointer-events: none;
+        }
+
+        .turret-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(255, 255, 255, 0.3);
+        }
+
+        .turret-a {
+            background: linear-gradient(135deg, #4488ff 0%, #2266cc 100%);
+            color: #fff;
+            border: 2px solid #66aaff;
+        }
+
+        .turret-b {
+            background: linear-gradient(135deg, #ff9500 0%, #cc6600 100%);
+            color: #fff;
+            border: 2px solid #ffaa00;
+        }
+
+        .turret-c {
+            background: linear-gradient(135deg, #9900cc 0%, #660099 100%);
+            color: #fff;
+            border: 2px solid #aa00aa;
+        }
+
+        .worker-btn {
+            background: linear-gradient(135deg, #00cccc 0%, #008888 100%);
+            color: #fff;
+            border: 2px solid #00ffff;
+        }
+
+        .turret-d {
+            background: linear-gradient(135deg, #32cd32 0%, #006400 100%);
+            color: #fff;
+            border: 2px solid #00ff00;
+        }
+
+        .turret-btn small {
+            display: block;
+            margin-top: 8px;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        /* Locked turret styles */
+        .turret-btn.locked {
+            opacity: 0.5;
+            pointer-events: none;
+            filter: grayscale(80%);
+            position: relative;
+        }
+
+        .turret-btn .lock-icon {
+            position: absolute;
+            top: 5px;
+            right: 8px;
+            font-size: 18px;
+        }
+
+        /* Unlock animation */
+        @keyframes unlock-pulse {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7);
+            }
+
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 0 20px 10px rgba(255, 215, 0, 0.3);
+            }
+
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(255, 215, 0, 0);
+            }
+        }
+
+        .turret-btn.just-unlocked {
+            animation: unlock-pulse 0.8s ease-out;
+        }
+
+        /* Upgrade Modal */
+        #upgrade-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 150;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #upgrade-modal.active {
+            display: flex;
+        }
+
+        .upgrade-content {
+            max-width: 500px;
+            text-align: center;
+        }
+
+        #upgrade-choices {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .upgrade-card {
+            flex: 1;
+            max-width: 200px;
+            padding: 20px 15px;
+            background: linear-gradient(135deg, rgba(50, 50, 80, 0.9) 0%, rgba(30, 30, 50, 0.9) 100%);
+            border: 3px solid #4488ff;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upgrade-card:hover {
+            transform: scale(1.08);
+            border-color: #00ff00;
+            box-shadow: 0 0 25px rgba(0, 255, 0, 0.5);
+        }
+
+        .card-emoji {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .card-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #ffffff;
+            margin-bottom: 8px;
+        }
+
+        .card-desc {
+            font-size: 14px;
+            color: #aaaaff;
+            line-height: 1.3;
+        }
+
+        #cancel-upgrade-btn {
+            margin-top: 15px;
+        }
+
+        /* Game Over Screen */
+        #game-over {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 200;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        #game-over.active {
+            display: flex;
+        }
+
+        #game-over h1 {
+            color: #ff4444;
+            font-size: 72px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 30px #ff0000;
+        }
+
+        #game-over p {
+            color: #aaa;
+            font-size: 24px;
+            margin-bottom: 30px;
+        }
+
+        #restart-btn {
+            padding: 15px 40px;
+            font-size: 20px;
+            background: linear-gradient(135deg, #55cc55 0%, #338833 100%);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        #restart-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* Victory Screen */
+        #victory-screen {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 30, 0, 0.95);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            pointer-events: none;
+        }
+
+        #victory-screen.active {
+            display: flex;
+            pointer-events: auto !important;
+        }
+
+        #victory-screen h1 {
+            font-size: 72px;
+            margin-bottom: 20px;
+        }
+
+        #victory-screen p {
+            color: #aaffaa;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        #download-btn,
+        #victory-btn {
+            pointer-events: auto !important;
+            position: relative;
+            z-index: 1000;
+        }
+
+        #victory-btn {
+            padding: 15px 40px;
+            font-size: 20px;
+            background: linear-gradient(135deg, #55cc55 0%, #338833 100%);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        #victory-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* Controls hint */
+        #controls-hint {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 12px 18px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #fff;
+            font-size: 13px;
+            line-height: 1.6;
+            z-index: 10;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+        }
+
+        #controls-hint strong {
+            color: #ffcc00;
+        }
+
+        /* Minimap */
+        #minimap {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 150px;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #444;
+            border-radius: 10px;
+            z-index: 10;
+        }
+
+        /* Dynamic Joystick */
+        #joystick-zone {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 50%;
+            z-index: 50;
+            touch-action: none;
+        }
+
+        /* Cart safe zone - blocks joystick in center area for upgrade arrow clicks */
+        #cart-safe-zone {
+            position: fixed;
+            top: 20%;
+            left: 20%;
+            width: 60%;
+            height: 55%;
+            z-index: 1000;
+            pointer-events: auto;
+            /* background: rgba(255,0,0,0.2); */
+            /* Uncomment to debug */
+        }
+
+        /* Disable cart safe zone when any modal is open */
+        body.modal-active #cart-safe-zone {
+            pointer-events: none;
+        }
+
+        #joystick-base {
+            position: fixed;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            border: 3px solid rgba(255, 255, 255, 0.5);
+            display: none;
+            z-index: 51;
+            pointer-events: none;
+        }
+
+        #joystick-knob {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.9) 0%, rgba(200, 200, 200, 0.8) 100%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        /* Tutorial Hand Animation */
+        #tutorial-hand {
+            position: fixed;
+            bottom: 40px;
+            left: calc(50% - 10px);
+            transform: translateX(-50%);
+            width: 60px;
+            height: 60px;
+            z-index: 100;
+            pointer-events: none;
+            animation: handSwipe 1.5s ease-in-out infinite;
+        }
+
+        #tutorial-hand::before {
+            content: '\1F590';
+            font-size: 40px;
+            display: block;
+        }
+
+        @keyframes handSwipe {
+
+            0%,
+            100% {
+                transform: translateX(-50%) translateY(0);
+            }
+
+            25% {
+                transform: translateX(-30%) translateY(-10px);
+            }
+
+            50% {
+                transform: translateX(-50%) translateY(-15px);
+            }
+
+            75% {
+                transform: translateX(-70%) translateY(-10px);
+            }
+        }
+
+        #tutorial-arrow {
+            display: none;
+            /* Hidden - user requested removal */
+        }
+
+        #tutorial-arrow::before {
+            content: '\2B07';
+            font-size: 40px;
+            color: #ffcc00;
+            text-shadow: 0 0 10px orange;
+        }
+
+        @keyframes handBounce {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-15px);
+            }
+        }
+
+        @keyframes arrowPulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.6;
+                transform: scale(0.9);
+            }
+        }
+
+        /* Idle Joystick Position (visible before game starts) */
+        #idle-joystick {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            border: 3px solid rgba(255, 255, 255, 0.5);
+            z-index: 52;
+        }
+
+        #idle-joystick-knob {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.9) 0%, rgba(200, 200, 200, 0.8) 100%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        /* Tutorial Overlay - Game Hint */
+        #tutorial-overlay {
+            position: fixed;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(180deg, rgba(0, 0, 0, 0.9) 0%, rgba(30, 30, 60, 0.95) 100%);
+            padding: 25px 35px;
+            border-radius: 15px;
+            border: 2px solid #ffcc00;
+            color: white;
+            text-align: center;
+            z-index: 200;
+            max-width: 400px;
+            box-shadow: 0 0 30px rgba(255, 204, 0, 0.3);
+            pointer-events: none;
+        }
+
+        #tutorial-overlay h2 {
+            color: #ffcc00;
+            font-size: 28px;
+            margin: 0 0 15px 0;
+            text-shadow: 0 0 10px orange;
+        }
+
+        #tutorial-overlay p {
+            font-size: 16px;
+            line-height: 1.6;
+            margin: 10px 0;
+        }
+
+        #tutorial-overlay .hint-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        #tutorial-overlay .action-hint {
+            color: #00ffcc;
+            font-weight: bold;
+            font-size: 18px;
+            margin-top: 20px;
+            animation: pulseHint 2s infinite;
+        }
+
+        @keyframes pulseHint {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.8;
+                transform: scale(1.05);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- UI Overlay - Simplified -->
+    <div id="ui-overlay">
+        <div class="stat-box">
+            <span class="stat-label">🪵 Wood Reserve</span>
+            <span id="base-wood" class="stat-value" style="color: #ffcc00;">0</span>
+        </div>
+        <div class="stat-box">
+            <span class="stat-label">🏁 Distance</span>
+            <span id="player-wood" class="stat-value" style="color: #00ff88;">120m</span>
+        </div>
+    </div>
+
+    <!-- Controls Hint -->
+    <div id="controls-hint">
+        <strong>Controls:</strong> WASD move | Collect trees & Kill enemies | Bring back wood<br>
+        <strong>View:</strong> Mouse rotate | Scroll zoom
+    </div>
+
+    <!-- Minimap -->
+    <canvas id="minimap"></canvas>
+
+    <!-- Dynamic Joystick Elements -->
+    <div id="joystick-zone"></div>
+    <div id="joystick-base">
+        <div id="joystick-knob"></div>
+    </div>
+
+    <!-- Cart Safe Zone - blocks joystick in center so we can click upgrade arrows -->
+    <div id="cart-safe-zone"></div>
+
+    <!-- Idle Joystick (shown before game starts) -->
+    <div id="idle-joystick">
+        <div id="idle-joystick-knob"></div>
+    </div>
+
+    <!-- Tutorial Hand (pointing to joystick) -->
+    <div id="tutorial-hand"></div>
+    <div id="tutorial-arrow"></div>
+
+    <!-- Tutorial Overlay - Game Objective Hint -->
+    <div id="tutorial-overlay">
+        <div class="hint-icon">&#x1F69A;</div>
+        <h2>Camp Siege</h2>
+        <p>&#x1F3AF; Protect camp to reach <span style="color:#00ffff">120m</span> destination</p>
+        <p>&#x1F332; Approach trees to collect wood</p>
+        <p>&#x1F3D7; Build turrets with wood</p>
+        <div class="action-hint">&#x1F447; Drag screen to move and start</div>
+    </div>
+
+
+    <!-- Turret Selection Modal -->
+    <div id="turret-modal">
+        <div class="modal-content">
+            <h2>&#x1F3D7; Build Turret</h2>
+            <p style="font-size: 20px; margin: 15px 0;">🪵 Cost: <span
+                    style="color: #ffcc00; font-weight: bold; font-size: 24px;">50 wood</span> choose type:</p>
+            <div class="turret-options">
+                <button id="turret-btn-A" class="turret-btn turret-a">
+                    <strong>Standard Turret</strong>
+                    <small>Medium range / Balanced<br>Ammo: 2 wood/shot</small>
+                </button>
+                <button id="turret-btn-C" class="turret-btn turret-c locked">
+                    <span class="lock-icon">🔒</span>
+                    <strong>Mortar</strong>
+                    <small>Long range / AOE damage<br>Ammo: 4 wood/shot</small>
+                </button>
+                <button id="turret-btn-E" class="turret-btn worker-btn locked">
+                    <span class="lock-icon">🔒</span>
+                    <strong>Engineer Camp</strong>
+                    <small>Summon 1 worker<br>Auto-collect &amp; attack</small>
+                </button>
+                <button id="turret-btn-D" class="turret-btn turret-d locked">
+                    <span class="lock-icon">🔒</span>
+                    <strong>Med Tower</strong>
+                    <small>Restore camp HP<br>5 HP/s</small>
+                </button>
+                <button id="turret-btn-B" class="turret-btn turret-b locked">
+                    <span class="lock-icon">🔒</span>
+                    <strong>⭐Gatling⭐</strong>
+                    <small>Close range / Rapid fire<br>Ultimate weapon</small>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upgrade Modal - Two Choice System -->
+    <div id="upgrade-modal">
+        <div class="modal-content upgrade-content">
+            <h2 id="upgrade-title">⬆️ Upgrade Turret</h2>
+            <p>Cost:: <span id="upgrade-cost" style="color:#ffcc00;">50 wood</span> - choose a skill</p>
+            <div id="upgrade-choices">
+                <div id="choice1-card" class="upgrade-card" onclick="game.confirmUpgrade(1)">
+                    <div class="card-emoji" id="choice1-emoji">⚡</div>
+                    <div class="card-name" id="choice1-name">Skill Name</div>
+                    <div class="card-desc" id="choice1-desc">Skill Description</div>
+                </div>
+                <div id="choice2-card" class="upgrade-card" onclick="game.confirmUpgrade(2)">
+                    <div class="card-emoji" id="choice2-emoji">💥</div>
+                    <div class="card-name" id="choice2-name">Skill Name</div>
+                    <div class="card-desc" id="choice2-desc">Skill Description</div>
+                </div>
+            </div>
+            <button id="cancel-upgrade-btn" class="turret-btn" onclick="game.cancelUpgrade()">❌ Cancel</button>
+        </div>
+    </div>
+    <!-- Game Over Screen -->
+    <div id="game-over">
+        <h1>Game Over</h1>
+        <p>Camp destroyed!</p>
+        <p id="final-score"></p>
+        <button id="restart-btn" onclick="game.restart()">Try Again</button>
+    </div>
+
+    <!-- Victory Screen -->
+    <div id="victory-screen">
+        <h1 style="color:#00ff00; text-shadow: 0 0 30px #00ff00;">🎉 Victory!</h1>
+        <p>Camp reached the destination!</p>
+        <p id="victory-score"></p>
+        <button id="download-btn"
+            style="margin: 10px; padding: 15px 30px; font-size: 20px; background: linear-gradient(135deg, #ff6600 0%, #ff3300 100%); border: none; border-radius: 10px; color: white; cursor: pointer; box-shadow: 0 0 20px rgba(255,102,0,0.5);"
+            onclick="window.open('https://callofdragons.farlightgames.com/', '_blank')">📥
+            Download Call of Dragons</button>
+        <button id="victory-btn"
+            style="margin: 10px; padding: 15px 30px; font-size: 18px; background: linear-gradient(135deg, #4488ff 0%, #2266cc 100%); border: none; border-radius: 10px; color: white; cursor: pointer;"
+            onclick="game.restart()">🔄 Try Again</button>
+    </div>
+
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Nipplejs for dynamic joystick -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.9.0/nipplejs.min.js"></script>
+
+    <script>
+        // ==========================================
+        // SURVIVAL TOWER DEFENSE 3D GAME
+        // ==========================================
+
+        const game = {
+            // Three.js objects
+            scene: null,
+            camera: null,
+            renderer: null,
+            clock: null,
+
+            // Game state
+            running: true,
+            paused: false,
+            gameOver: false,
+
+            // World settings
+            roadWidth: 20,
+            worldWidth: 100,
+
+            // Game objects
+            base: null,
+            player: null,
+            enemies: [],
+            trees: [],
+            loots: [],
+            projectiles: [],
+            workers: [],
+
+            // 3D meshes
+            baseMesh: null,
+            playerMesh: null,
+            groundMesh: null,
+            roadMesh: null,
+            turretMeshes: [],
+
+            // Camera control
+            cameraAngle: 0,
+            cameraHeight: 60,
+            cameraDistance: 80,
+            isDragging: false,
+            lastMouseX: 0,
+
+            // Timing
+            gameTime: 0,
+            enemySpawnTimer: 0,
+            enemySpawnRate: 1.32, // First 20s: 75% fewer enemies (0.33 -> 0.66 -> 1.32)
+            spawnUpgradeTimer: 0,
+            spawnBoosted: false,  // 20s spawn boost trigger
+            elitesSpawned: false, // Elite spawn trigger at 30s
+            bossSpawned: false,   // Boss spawn trigger at 60s
+
+            // Stats
+            enemiesKilled: 0,
+
+            // Input
+            keys: {},
+
+            // Joystick state
+            joystick: {
+                active: false,
+                startX: 0,
+                startY: 0,
+                currentX: 0,
+                currentY: 0,
+                inputX: 0,  // -1 to 1
+                inputY: 0   // -1 to 1
+            },
+            gameStarted: false,
+            tutorialDismissed: false,
+
+            // Materials (shared)
+            materials: {},
+
+            // Destination (120 units = 60 seconds at speed 2)
+            destinationZ: -120, // 1 minute game duration
+
+            // Tower unlock system defaults
+            turretUnlockLevel: 0,
+            turretUnlockSequence: ['A', 'C', 'E', 'D', 'B'],
+
+            // Upgrade system
+            selectedTurretForUpgrade: null,
+            upgradeArrows: [], // 3D arrows for upgrade indicators
+            UPGRADE_DATA: {
+                'A': { // Standard Tower
+                    name: 'Standard Turret',
+                    choice1: {
+                        emoji: '⚡',
+                        name: 'Rapid Fire',
+                        desc: 'Fire Rate +100%',
+                        fireRateMultiplier: 2,
+                        damageMultiplier: 1.5
+                    },
+                    choice2: {
+                        emoji: '💥',
+                        name: 'Explosive Rounds',
+                        desc: 'Bullets explode for AOE damage',
+                        explosive: true,
+                        explosionRadius: 3
+                    }
+                },
+                'B': { // Railgun
+                    name: 'Railgun',
+                    choice1: {
+                        emoji: '🎯',
+                        name: 'Piercing Shot',
+                        desc: 'Bullets pierce up to 3 enemies',
+                        piercing: true,
+                        maxPierce: 3
+                    },
+                    choice2: {
+                        emoji: '⚡',
+                        name: 'Super Charge',
+                        desc: 'Damage +200%',
+                        damageMultiplier: 4
+                    }
+                },
+                'C': { // Mortar
+                    name: 'Mortar',
+                    choice1: {
+                        emoji: '🔥',
+                        name: 'Incendiary',
+                        desc: 'Leaves fire zone after explosion',
+                        burning: true,
+                        burnDuration: 3
+                    },
+                    choice2: {
+                        emoji: '💣',
+                        name: 'Cluster Bomb',
+                        desc: 'Blast radius +100%',
+                        splashMultiplier: 2
+                    }
+                },
+                'D': { // Healing Tower
+                    name: 'Med Tower',
+                    choice1: {
+                        emoji: '💚',
+                        name: 'Strong Healing',
+                        desc: 'Healing +50%',
+                        healingMultiplier: 1.5
+                    },
+                    choice2: {
+                        emoji: '🛡️',
+                        name: 'Shield Generator',
+                        desc: '100 shield for the cart',
+                        shieldGenerator: true,
+                        shieldAmount: 100
+                    }
+                },
+                'E': { // Engineer Camp
+                    name: 'Engineer Camp',
+                    choice1: {
+                        emoji: '👷',
+                        name: 'Double Workers',
+                        desc: 'Workers +4',
+                        extraWorkers: 4
+                    },
+                    choice2: {
+                        emoji: '🔧',
+                        name: 'Auto Repair',
+                        desc: 'Restore 2 HP/sec to base',
+                        autoRepair: true,
+                        repairRate: 2
+                    }
+                },
+                'F': { // Gatling - NOTE: Gatling turret type is 'B', but we keep 'F' here to separate from Railgun, we'll need to check actual usage
+                    name: 'Gatling',
+                    choice1: {
+                        emoji: '🔥',
+                        name: 'Overheat Mode',
+                        desc: 'Double damage during sustained fire',
+                        overheatBonus: true,
+                        overheatDamageMultiplier: 2.5,
+                        fireRateMultiplier: 1.5
+                    },
+                    choice2: {
+                        emoji: '❄️',
+                        name: 'Cooling System',
+                        desc: 'Never overheats, constant fire rate',
+                        noCooldown: true,
+                        fireRateMultiplier: 1.8
+                    }
+                }
+            },
+            upgradeTutorialShown: false, // Track if upgrade tutorial was shown (only once)
+
+            // Audio System (Robust)
+            audio: {
+                ctx: null,
+                masterGain: null,
+                init: function () {
+                    if (this.ctx) return;
+                    try {
+                        const AudioContext = window.AudioContext || window.webkitAudioContext;
+                        this.ctx = new AudioContext();
+                        this.masterGain = this.ctx.createGain();
+                        this.masterGain.gain.value = 0.5; // Master Volume
+                        this.masterGain.connect(this.ctx.destination);
+                        console.log("Audio Initialized");
+                    } catch (e) {
+                        console.error("Audio Init Failed", e);
+                    }
+                },
+                resume: function () {
+                    if (this.ctx && this.ctx.state === 'suspended') {
+                        this.ctx.resume().then(() => console.log("Audio Resumed"));
+                    }
+                },
+                play: function (type) {
+                    if (!this.ctx) this.init();
+                    this.resume(); // Try to resume on every play
+
+                    if (!this.ctx) return;
+
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(this.masterGain);
+
+                    const now = this.ctx.currentTime;
+
+                    if (type === 'shoot') {
+                        osc.type = 'square';
+                        osc.frequency.setValueAtTime(600, now);
+                        osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+                        gain.gain.setValueAtTime(0.2, now);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                        osc.start(now);
+                        osc.stop(now + 0.1);
+                    } else if (type === 'hit') {
+                        osc.type = 'sawtooth';
+                        osc.frequency.setValueAtTime(150, now);
+                        osc.frequency.linearRampToValueAtTime(50, now + 0.1);
+                        gain.gain.setValueAtTime(0.2, now);
+                        gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
+                        osc.start(now);
+                        osc.stop(now + 0.1);
+                    } else if (type === 'chop') {
+                        // Crunchier sound
+                        osc.type = 'sawtooth';
+                        osc.frequency.setValueAtTime(120, now);
+                        osc.frequency.exponentialRampToValueAtTime(60, now + 0.08);
+                        gain.gain.setValueAtTime(0.5, now);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                        osc.start(now);
+                        osc.stop(now + 0.08);
+                    } else if (type === 'build') {
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(400, now);
+                        osc.frequency.linearRampToValueAtTime(800, now + 0.2);
+                        gain.gain.setValueAtTime(0.3, now);
+                        gain.gain.linearRampToValueAtTime(0, now + 0.2);
+                        osc.start(now);
+                        osc.stop(now + 0.2);
+                    } else if (type === 'collect') {
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(800, now);
+                        osc.frequency.linearRampToValueAtTime(1200, now + 0.1);
+                        gain.gain.setValueAtTime(0.2, now);
+                        gain.gain.linearRampToValueAtTime(0, now + 0.1);
+                        osc.start(now);
+                        osc.stop(now + 0.1);
+                    } else if (type === 'win') {
+                        osc.type = 'triangle';
+                        [0, 0.2, 0.4, 0.6].forEach((t, i) => {
+                            const o = this.ctx.createOscillator();
+                            const g = this.ctx.createGain();
+                            o.connect(g);
+                            g.connect(this.masterGain);
+                            o.type = 'sine';
+                            o.frequency.value = 440 * (i + 1) * 0.5; // Harmonic
+                            g.gain.setValueAtTime(0.3, now + t);
+                            g.gain.linearRampToValueAtTime(0, now + t + 0.3);
+                            o.start(now + t);
+                            o.stop(now + t + 0.3);
+                        });
+                    } else if (type === 'gatling') {
+                        // Rapid short burst sound for Gatling
+                        osc.type = 'sawtooth';
+                        osc.frequency.setValueAtTime(150, now);
+                        osc.frequency.exponentialRampToValueAtTime(80, now + 0.03);
+                        gain.gain.setValueAtTime(0.15, now);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.03);
+                        osc.start(now);
+                        osc.stop(now + 0.03);
+                    }
+                }
+            },
+
+            // ==========================================
+            // INITIALIZATION
+            // ==========================================
+            init() {
+                this.setupThreeJS();
+                this.setupMaterials();
+                this.setupLighting();
+                this.setupGround();
+                this.setupGame();
+                this.setupInput();
+
+                // Audio Resume Safety
+                document.addEventListener('click', () => {
+                    if (this.audio.ctx && this.audio.ctx.state === 'suspended') {
+                        this.audio.ctx.resume();
+                    }
+                }, { once: false });
+
+                // Setup Joystick for touch controls
+                this.setupJoystick();
+
+                // Setup cart safe zone to block joystick in center
+                this.setupCartSafeZone();
+
+                this.animate();
+            },
+
+            // Setup cart safe zone to intercept clicks in center of screen
+            setupCartSafeZone() {
+                const self = this;
+                const safeZone = document.getElementById('cart-safe-zone');
+                if (!safeZone) return;
+
+                // Block ALL touch/pointer events in cart area
+                const blockEvent = (e) => {
+                    e.stopImmediatePropagation();
+                    // Don't preventDefault on pointerup - we need it for click detection
+                };
+
+                // Handle click/tap in cart area for upgrade (arrows OR turret itself)
+                const handleCartClick = (e) => {
+                    console.log('🎯 handleCartClick triggered', { type: e.type, x: e.clientX, y: e.clientY });
+                    e.stopImmediatePropagation();
+
+                    console.log('📊 Game state:', {
+                        paused: self.paused,
+                        gameOver: self.gameOver,
+                        turretUnlockLevel: self.turretUnlockLevel,
+                        turretsCount: self.base.turrets.length,
+                        upgradeArrowsCount: self.upgradeArrows ? self.upgradeArrows.length : 0
+                    });
+
+                    if (self.paused || self.gameOver) {
+                        console.log('❌ Blocked: paused or gameOver');
+                        return;
+                    }
+                    // Check if upgrade system is available
+                    if (self.turretUnlockLevel < 4) {
+                        console.log('❌ Blocked: turretUnlockLevel < 4 (Gatling not unlocked)');
+                        return;
+                    }
+
+                    const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+                    const clientY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+                    console.log('📍 Click position:', { clientX, clientY });
+
+                    // Raycast to check for upgrade arrow or turret
+                    const rect = self.renderer.domElement.getBoundingClientRect();
+                    const mouse = new THREE.Vector2(
+                        ((clientX - rect.left) / rect.width) * 2 - 1,
+                        -((clientY - rect.top) / rect.height) * 2 + 1
+                    );
+                    console.log('🖱️ Mouse normalized:', { x: mouse.x, y: mouse.y });
+
+                    self.raycaster.setFromCamera(mouse, self.camera);
+
+                    // First check upgrade arrows
+                    console.log('🔍 Checking arrows... count:', self.upgradeArrows ? self.upgradeArrows.length : 0);
+                    if (self.upgradeArrows && self.upgradeArrows.length > 0) {
+                        const arrowIntersects = self.raycaster.intersectObjects(self.upgradeArrows, true);
+                        console.log('➡️ Arrow intersects:', arrowIntersects.length);
+                        if (arrowIntersects.length > 0) {
+                            let arrowGroup = arrowIntersects[0].object;
+                            while (arrowGroup.parent && !arrowGroup.userData.turret) {
+                                arrowGroup = arrowGroup.parent;
+                            }
+                            if (arrowGroup.userData.turret) {
+                                console.log('✅ Arrow hit! Opening upgrade modal');
+                                self.showUpgradeModal(arrowGroup.userData.turret);
+                                return;
+                            }
+                        }
+                    }
+
+                    // Also check turret meshes directly
+                    console.log('🔧 All turrets:', self.base.turrets.map(t => ({
+                        type: t.type,
+                        upgraded: t.upgraded,
+                        hasMesh: !!t.mesh,
+                        slotIndex: t.slotIndex
+                    })));
+
+                    const turretMeshes = self.base.turrets
+                        .filter(t => !t.upgraded && t.mesh)
+                        .map(t => t.mesh);
+                    console.log('🔍 Checking turret meshes... count:', turretMeshes.length);
+
+                    // Try raycasting ALL scene children to see what we hit
+                    const allIntersects = self.raycaster.intersectObjects(self.scene.children, true);
+                    console.log('🌍 Scene intersects:', allIntersects.length,
+                        allIntersects.slice(0, 3).map(i => i.object.type + ':' + (i.object.name || 'unnamed')));
+
+                    if (turretMeshes.length > 0) {
+                        const turretIntersects = self.raycaster.intersectObjects(turretMeshes, true);
+                        console.log('🏰 Turret intersects:', turretIntersects.length);
+                        if (turretIntersects.length > 0) {
+                            // Find which turret was clicked by checking all parents
+                            let clickedObj = turretIntersects[0].object;
+                            console.log('🎯 Clicked mesh:', clickedObj.type, clickedObj.name);
+
+                            // Check each parent until we find a turret mesh
+                            let foundTurret = null;
+                            let current = clickedObj;
+                            while (current && !foundTurret) {
+                                foundTurret = self.base.turrets.find(t => t.mesh === current);
+                                current = current.parent;
+                            }
+
+                            console.log('🔗 Found turret:', foundTurret ? foundTurret.type : 'null');
+                            if (foundTurret && !foundTurret.upgraded) {
+                                console.log('✅ Turret hit! Opening upgrade modal');
+                                self.showUpgradeModal(foundTurret);
+                                return;
+                            }
+                        }
+                    }
+
+                    // FALLBACK: If we hit anything in scene, check if it's a turret child
+                    if (allIntersects.length > 0) {
+                        for (const hit of allIntersects) {
+                            let current = hit.object;
+                            while (current) {
+                                const turret = self.base.turrets.find(t => t.mesh === current);
+                                if (turret && !turret.upgraded) {
+                                    console.log('✅ FALLBACK: Found turret via scene raycast:', turret.type);
+                                    self.showUpgradeModal(turret);
+                                    return;
+                                }
+                                current = current.parent;
+                            }
+                        }
+                    }
+
+                    console.log('📭 No hit detected');
+                };
+
+                // Block touchstart to prevent nipplejs from starting
+                safeZone.addEventListener('touchstart', blockEvent, { capture: true, passive: false });
+                safeZone.addEventListener('touchmove', blockEvent, { capture: true, passive: false });
+                safeZone.addEventListener('touchend', handleCartClick, { capture: true });
+
+                // Also block pointer events for mouse
+                safeZone.addEventListener('pointerdown', blockEvent, { capture: true });
+                safeZone.addEventListener('pointermove', blockEvent, { capture: true });
+                safeZone.addEventListener('pointerup', handleCartClick, { capture: true });
+                safeZone.addEventListener('click', handleCartClick, { capture: true });
+            },
+
+            setupJoystick() {
+                const self = this;
+
+                // Skip if joystick already exists (avoid duplication)
+                if (self.joystickManager) {
+                    return;
+                }
+
+                // Only handle idle joystick if game not started yet
+                const idleJoystick = document.getElementById('idle-joystick');
+                const tutorialHand = document.getElementById('tutorial-hand');
+                const tutorialArrow = document.getElementById('tutorial-arrow');
+
+                // Use nipplejs library like WreckItKing
+                if (typeof nipplejs !== 'undefined') {
+                    self.joystickManager = nipplejs.create({
+                        zone: document.body,
+                        mode: 'dynamic',
+                        color: 'white',
+                        size: 100
+                    });
+
+                    self.joystickManager.on('start', (evt, data) => {
+                        // Check if touch is in cart area (center of screen) - if so, cancel joystick
+                        const joystickEl = data.el;
+                        if (joystickEl) {
+                            const rect = joystickEl.getBoundingClientRect();
+                            const centerX = rect.left + rect.width / 2;
+                            const centerY = rect.top + rect.height / 2;
+                            const screenW = window.innerWidth;
+                            const screenH = window.innerHeight;
+
+                            // Cart safe zone: center 60% of screen width, middle 50% of screen height
+                            const inCartZoneX = centerX > screenW * 0.2 && centerX < screenW * 0.8;
+                            const inCartZoneY = centerY > screenH * 0.25 && centerY < screenH * 0.75;
+
+                            if (inCartZoneX && inCartZoneY) {
+                                // Touch is in cart area - destroy this joystick instance
+                                self.joystickManager.destroy();
+                                self.joystickManager = null;
+                                self.joystick.inputX = 0;
+                                self.joystick.inputY = 0;
+                                self.joystick.active = false;
+                                // Recreate joystick for next touch
+                                setTimeout(() => self.setupJoystick(), 100);
+                                return;
+                            }
+                        }
+
+                        // Start game on first input
+                        if (!self.gameStarted) {
+                            self.gameStarted = true;
+                        }
+
+                        // Dismiss tutorial
+                        if (!self.tutorialDismissed) {
+                            self.tutorialDismissed = true;
+                            if (tutorialHand) tutorialHand.style.display = 'none';
+                            if (tutorialArrow) tutorialArrow.style.display = 'none';
+                            if (idleJoystick) idleJoystick.style.display = 'none';
+                            const tutorialOverlay = document.getElementById('tutorial-overlay'); if (tutorialOverlay) tutorialOverlay.style.display = 'none';
+                        }
+
+                        // Resume audio
+                        if (self.audio.ctx && self.audio.ctx.state === 'suspended') {
+                            self.audio.ctx.resume();
+                        }
+                    });
+
+                    self.joystickManager.on('move', (evt, data) => {
+                        const angle = data.angle.radian;
+                        self.joystick.inputX = Math.cos(angle);
+                        self.joystick.inputY = -Math.sin(angle);
+                        self.joystick.active = true;
+                    });
+
+                    self.joystickManager.on('end', () => {
+                        self.joystick.inputX = 0;
+                        self.joystick.inputY = 0;
+                        self.joystick.active = false;
+                    });
+                } else {
+                    console.warn('nipplejs not loaded, joystick disabled');
+                }
+            },
+
+            setupThreeJS() {
+                // Scene
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x87ceeb); // Sky blue
+                // No fog - so player can see goal from start
+
+                // Camera
+                this.camera = new THREE.PerspectiveCamera(
+                    60,
+                    window.innerWidth / window.innerHeight,
+                    0.1,
+                    1000
+                );
+
+                // Renderer
+                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                document.body.appendChild(this.renderer.domElement);
+
+                // Clock
+                this.clock = new THREE.Clock();
+
+                // Handle resize
+                window.addEventListener('resize', () => {
+                    this.camera.aspect = window.innerWidth / window.innerHeight;
+                    this.camera.updateProjectionMatrix();
+                    this.renderer.setSize(window.innerWidth, window.innerHeight);
+                });
+            },
+
+            setupMaterials() {
+                this.materials = {
+                    grass: new THREE.MeshLambertMaterial({ color: 0x228b22 }),
+                    road: new THREE.MeshLambertMaterial({ color: 0x444444 }),
+                    roadLine: new THREE.MeshBasicMaterial({ color: 0xffffff }),
+                    base: new THREE.MeshPhongMaterial({ color: 0x3366cc, shininess: 30 }),
+                    baseTop: new THREE.MeshPhongMaterial({ color: 0x4477dd, shininess: 50 }),
+                    player: new THREE.MeshPhongMaterial({ color: 0xf0f0f0, shininess: 60 }),
+                    playerGlow: new THREE.MeshBasicMaterial({ color: 0xffcc00 }),
+                    enemy: new THREE.MeshPhongMaterial({ color: 0xcc2222, shininess: 30 }),
+                    tree: new THREE.MeshLambertMaterial({ color: 0x006400 }),
+                    trunk: new THREE.MeshLambertMaterial({ color: 0x8b4513 }),
+                    loot: new THREE.MeshPhongMaterial({ color: 0x8b5a2b, shininess: 40 }),
+                    turretA: new THREE.MeshPhongMaterial({ color: 0x3377cc, shininess: 50 }),
+                    turretB: new THREE.MeshPhongMaterial({ color: 0xff8c00, shininess: 50 }),
+                    turretC: new THREE.MeshPhongMaterial({ color: 0x8b008b, shininess: 50 }),
+                    turretD: new THREE.MeshPhongMaterial({ color: 0x32cd32, shininess: 50 }),
+                    projectile: new THREE.MeshBasicMaterial({ color: 0xffff00 }),
+                    projectileGlow: new THREE.MeshBasicMaterial({ color: 0xff6600 })
+                };
+            },
+
+            setupLighting() {
+                // Ambient light
+                const ambient = new THREE.AmbientLight(0x404050, 0.6);
+                this.scene.add(ambient);
+
+                // Main directional light (sun)
+                const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+                sun.position.set(50, 100, 50);
+                sun.castShadow = true;
+                sun.shadow.mapSize.width = 2048;
+                sun.shadow.mapSize.height = 2048;
+                sun.shadow.camera.near = 10;
+                sun.shadow.camera.far = 300;
+                sun.shadow.camera.left = -100;
+                sun.shadow.camera.right = 100;
+                sun.shadow.camera.top = 100;
+                sun.shadow.camera.bottom = -100;
+                this.scene.add(sun);
+                this.sunLight = sun;
+
+                // Hemisphere light for natural outdoor lighting
+                const hemi = new THREE.HemisphereLight(0x87ceeb, 0x228b22, 0.4);
+                this.scene.add(hemi);
+            },
+
+            setupGround() {
+                // Create infinite scrolling ground segments
+                this.groundSegments = [];
+                this.roadSegments = [];
+
+                const segmentLength = 100;
+                const numSegments = 5;
+
+                for (let i = 0; i < numSegments; i++) {
+                    // Grass ground
+                    const groundGeo = new THREE.PlaneGeometry(this.worldWidth, segmentLength);
+                    const ground = new THREE.Mesh(groundGeo, this.materials.grass);
+                    ground.rotation.x = -Math.PI / 2;
+                    ground.position.z = -i * segmentLength + segmentLength;
+                    ground.receiveShadow = true;
+                    this.scene.add(ground);
+                    this.groundSegments.push(ground);
+
+                    // Road
+                    const roadGeo = new THREE.PlaneGeometry(this.roadWidth, segmentLength);
+                    const road = new THREE.Mesh(roadGeo, this.materials.road);
+                    road.rotation.x = -Math.PI / 2;
+                    road.position.y = 0.01;
+                    road.position.z = -i * segmentLength + segmentLength;
+                    road.receiveShadow = true;
+                    this.scene.add(road);
+                    this.roadSegments.push(road);
+
+                    const lineGeo = new THREE.PlaneGeometry(0.3, segmentLength);
+                    const line = new THREE.Mesh(lineGeo, this.materials.roadLine);
+                    line.rotation.x = -Math.PI / 2;
+                    line.position.y = 0.02;
+                    line.position.z = -i * segmentLength + segmentLength;
+                    this.scene.add(line);
+                }
+            },
+
+            setupGame() {
+                // Clear previous objects
+                this.enemies.forEach(e => this.scene.remove(e.mesh));
+                this.trees.forEach(t => this.scene.remove(t.mesh));
+                this.loots.forEach(l => this.scene.remove(l.mesh));
+                this.projectiles.forEach(p => this.scene.remove(p.mesh));
+                this.turretMeshes.forEach(t => this.scene.remove(t));
+                if (this.workers) {
+                    this.workers.forEach(w => this.scene.remove(w.mesh));
+                }
+
+                if (this.baseMesh) this.scene.remove(this.baseMesh);
+                if (this.playerMesh) this.scene.remove(this.playerMesh);
+
+                // Reset ground segments position (important for restart!)
+                if (this.groundSegments && this.groundSegments.length > 0) {
+                    const segmentLength = 100;
+                    for (let i = 0; i < this.groundSegments.length; i++) {
+                        this.groundSegments[i].position.z = -i * segmentLength + segmentLength;
+                        if (this.roadSegments[i]) {
+                            this.roadSegments[i].position.z = -i * segmentLength + segmentLength;
+                        }
+                    }
+                }
+
+                this.enemies = [];
+                this.trees = [];
+                this.loots = [];
+                this.projectiles = [];
+                this.turretMeshes = [];
+                this.workers = [];
+
+                // Create base
+                this.base = {
+                    x: 0,
+                    z: 0,
+                    width: 15,
+                    height: 15,
+                    hp: 400,
+                    maxHp: 400,
+                    wood: 0,
+                    speed: 2, // units per second
+                    slots: Array(9).fill(null),
+                    turrets: []
+                };
+
+                this.createBaseMesh();
+
+                // Create player
+                this.player = {
+                    x: 0,
+                    z: 20,
+                    size: 3,
+                    speed: 25,
+                    wood: 0
+                };
+
+                this.createPlayerMesh();
+
+                // Generate trees
+                this.generateTrees();
+
+                // Create goal marker at destination
+                this.createGoalMarker();
+
+                // Reset game state
+                this.enemiesKilled = 0;
+                this.gameTime = 0;
+                this.enemySpawnTimer = 0;
+                this.enemySpawnRate = 1.32; // First 20s: 75% fewer enemies
+                this.spawnUpgradeTimer = 0;
+                this.spawnBoosted = false;
+                this.elitesSpawned = false;
+                this.bossSpawned = false;
+                this.gameOver = false;
+                this.paused = false;
+                this.running = true;
+
+                // Tower unlock system
+                // Unlock sequence: A (always) -> C (mortar) -> E (engineer) -> D (healing) -> B (gatling)
+                this.turretUnlockLevel = 0; // Level 0 = only Standard (A)
+                this.turretUnlockSequence = ['A', 'C', 'E', 'D', 'B']; // Order of unlocks
+                this.updateTurretModal(); // Apply initial lock states
+
+                document.getElementById('game-over').classList.remove('active');
+                document.getElementById('victory-screen').classList.remove('active');
+                document.getElementById('turret-modal').classList.remove('active');
+                document.body.classList.remove('modal-active');
+
+                this.createGuideArrow();
+            },
+
+            // Called when player clicks "Start" button
+            startParams() {
+                this.gameStarted = true;
+                this.audio.init();
+                this.audio.resume();
+            },
+
+            createBaseMesh() {
+                // Base group
+                this.baseMesh = new THREE.Group();
+
+                // Main platform
+                const baseGeo = new THREE.BoxGeometry(this.base.width, 3, this.base.height);
+                const baseMesh = new THREE.Mesh(baseGeo, this.materials.base);
+                baseMesh.position.y = 1.5;
+                baseMesh.castShadow = true;
+                baseMesh.receiveShadow = true;
+                this.baseMesh.add(baseMesh);
+
+                // Top platform
+                const topGeo = new THREE.BoxGeometry(this.base.width - 2, 0.5, this.base.height - 2);
+                const topMesh = new THREE.Mesh(topGeo, this.materials.baseTop);
+                topMesh.position.y = 3.25;
+                topMesh.castShadow = true;
+                this.baseMesh.add(topMesh);
+
+                // Corner pillars
+                const pillarGeo = new THREE.CylinderGeometry(0.5, 0.6, 4, 8);
+                const pillarMat = new THREE.MeshPhongMaterial({ color: 0x1a3d7a });
+
+                const corners = [
+                    [-this.base.width / 2 + 1, -this.base.height / 2 + 1],
+                    [this.base.width / 2 - 1, -this.base.height / 2 + 1],
+                    [-this.base.width / 2 + 1, this.base.height / 2 - 1],
+                    [this.base.width / 2 - 1, this.base.height / 2 - 1]
+                ];
+
+                corners.forEach(([x, z]) => {
+                    const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+                    pillar.position.set(x, 2, z);
+                    pillar.castShadow = true;
+                    this.baseMesh.add(pillar);
+                });
+
+                // HP bar background
+                const hpBgGeo = new THREE.BoxGeometry(this.base.width, 0.5, 1);
+                const hpBgMat = new THREE.MeshBasicMaterial({ color: 0x333333 });
+                this.hpBarBg = new THREE.Mesh(hpBgGeo, hpBgMat);
+                this.hpBarBg.position.set(0, 5, -this.base.height / 2 - 1);
+                this.baseMesh.add(this.hpBarBg);
+
+                // HP bar fill
+                const hpFillGeo = new THREE.BoxGeometry(this.base.width - 0.2, 0.6, 0.9);
+                const hpFillMat = new THREE.MeshBasicMaterial({ color: 0x44cc44 });
+                this.hpBarFill = new THREE.Mesh(hpFillGeo, hpFillMat);
+                this.hpBarFill.position.set(0, 5.05, -this.base.height / 2 - 1);
+                this.baseMesh.add(this.hpBarFill);
+
+                this.baseMesh.position.set(this.base.x, 0, this.base.z);
+                this.scene.add(this.baseMesh);
+            },
+
+            createGoalMarker() {
+                // Remove existing goal marker if any
+                if (this.goalMarker) {
+                    this.scene.remove(this.goalMarker);
+                }
+
+                this.goalMarker = new THREE.Group();
+
+                // Golden gate - two pillars
+                const pillarGeo = new THREE.CylinderGeometry(2, 2.5, 25, 8);
+                const pillarMat = new THREE.MeshPhongMaterial({
+                    color: 0xffd700,
+                    emissive: 0x664400,
+                    shininess: 100
+                });
+
+                const leftPillar = new THREE.Mesh(pillarGeo, pillarMat);
+                leftPillar.position.set(-12, 12.5, 0);
+                leftPillar.castShadow = true;
+                this.goalMarker.add(leftPillar);
+
+                const rightPillar = new THREE.Mesh(pillarGeo, pillarMat);
+                rightPillar.position.set(12, 12.5, 0);
+                rightPillar.castShadow = true;
+                this.goalMarker.add(rightPillar);
+
+                // Top arch
+                const archGeo = new THREE.BoxGeometry(28, 3, 3);
+                const archMesh = new THREE.Mesh(archGeo, pillarMat);
+                archMesh.position.set(0, 26, 0);
+                archMesh.castShadow = true;
+                this.goalMarker.add(archMesh);
+
+                // Light pillar (vertical beam) - very tall so visible from far
+                const beamGeo = new THREE.CylinderGeometry(3, 5, 100, 16);
+                const beamMat = new THREE.MeshBasicMaterial({
+                    color: 0xffff00,
+                    transparent: true,
+                    opacity: 0.6
+                });
+                this.goalBeam = new THREE.Mesh(beamGeo, beamMat);
+                this.goalBeam.position.set(0, 50, 0);
+                this.goalMarker.add(this.goalBeam);
+
+                // Ground glow ring
+                const glowRingGeo = new THREE.RingGeometry(8, 15, 32);
+                const glowRingMat = new THREE.MeshBasicMaterial({
+                    color: 0xffcc00,
+                    transparent: true,
+                    opacity: 0.5,
+                    side: THREE.DoubleSide
+                });
+                const glowRing = new THREE.Mesh(glowRingGeo, glowRingMat);
+                glowRing.rotation.x = -Math.PI / 2;
+                glowRing.position.y = 0.1;
+                this.goalMarker.add(glowRing);
+
+                // Position at destination
+                this.goalMarker.position.set(0, 0, this.destinationZ);
+                this.scene.add(this.goalMarker);
+
+                // Add point light for glow effect
+                const goalLight = new THREE.PointLight(0xffcc00, 2, 50);
+                goalLight.position.set(0, 15, 0);
+                this.goalMarker.add(goalLight);
+            },
+
+            createPlayerMesh() {
+                this.playerMesh = new THREE.Group();
+
+                // Body
+                const bodyGeo = new THREE.BoxGeometry(this.player.size, this.player.size * 1.2, this.player.size);
+                const body = new THREE.Mesh(bodyGeo, this.materials.player);
+                body.position.y = this.player.size * 0.6;
+                body.castShadow = true;
+                this.playerMesh.add(body);
+
+                // Head
+                const headGeo = new THREE.SphereGeometry(this.player.size * 0.4, 16, 16);
+                const head = new THREE.Mesh(headGeo, this.materials.player);
+                head.position.y = this.player.size * 1.5;
+                head.castShadow = true;
+                this.playerMesh.add(head);
+
+                // Glow ring
+                const ringGeo = new THREE.RingGeometry(this.player.size * 0.8, this.player.size * 1.0, 32);
+                const ring = new THREE.Mesh(ringGeo, this.materials.playerGlow);
+                ring.rotation.x = -Math.PI / 2;
+                ring.position.y = 0.1;
+                this.playerMesh.add(ring);
+
+                // Eyes
+                const eyeGeo = new THREE.SphereGeometry(0.2, 8, 8);
+                const eyeMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+
+                const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+                leftEye.position.set(-0.5, this.player.size * 1.5, this.player.size * 0.3);
+                this.playerMesh.add(leftEye);
+
+                const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+                rightEye.position.set(0.5, this.player.size * 1.5, this.player.size * 0.3);
+                this.playerMesh.add(rightEye);
+
+                this.playerMesh.position.set(this.player.x, 0, this.player.z);
+                this.scene.add(this.playerMesh);
+            },
+
+            generateTrees() {
+                const roadHalf = this.roadWidth / 2;
+                const worldHalf = this.worldWidth / 2;
+
+                // Generate trees on both sides
+                for (let i = 0; i < 100; i++) {
+                    const side = Math.random() < 0.5 ? -1 : 1;
+                    const x = side * (roadHalf + 5 + Math.random() * (worldHalf - roadHalf - 10));
+                    const z = this.base.z - 50 + Math.random() * 200 - 100;
+
+                    this.createTree(x, z);
+                }
+            },
+
+            createTree(x, z) {
+                const treeGroup = new THREE.Group();
+                const scale = 0.8 + Math.random() * 0.4;
+
+                // Trunk
+                const trunkGeo = new THREE.CylinderGeometry(0.3 * scale, 0.4 * scale, 2 * scale, 8);
+                const trunk = new THREE.Mesh(trunkGeo, this.materials.trunk);
+                trunk.position.y = scale;
+                trunk.castShadow = true;
+                treeGroup.add(trunk);
+
+                // Foliage layers
+                const foliageGeo1 = new THREE.ConeGeometry(2 * scale, 3 * scale, 8);
+                const foliage1 = new THREE.Mesh(foliageGeo1, this.materials.tree);
+                foliage1.position.y = 3 * scale;
+                foliage1.castShadow = true;
+                treeGroup.add(foliage1);
+
+                const foliageGeo2 = new THREE.ConeGeometry(1.5 * scale, 2.5 * scale, 8);
+                const foliage2 = new THREE.Mesh(foliageGeo2, this.materials.tree);
+                foliage2.position.y = 4.5 * scale;
+                foliage2.castShadow = true;
+                treeGroup.add(foliage2);
+
+                const foliageGeo3 = new THREE.ConeGeometry(1 * scale, 2 * scale, 8);
+                const foliage3 = new THREE.Mesh(foliageGeo3, this.materials.tree);
+                foliage3.position.y = 5.5 * scale;
+                foliage3.castShadow = true;
+                treeGroup.add(foliage3);
+
+                treeGroup.position.set(x, 0, z);
+                this.scene.add(treeGroup);
+
+                this.trees.push({
+                    x: x,
+                    z: z,
+                    radius: 2 * scale,
+                    mesh: treeGroup
+                });
+            },
+
+            createEnemy(x, z) {
+                const enemyGroup = new THREE.Group();
+
+                // Body
+                const bodyGeo = new THREE.BoxGeometry(2, 2.5, 2);
+                const body = new THREE.Mesh(bodyGeo, this.materials.enemy);
+                body.position.y = 1.25;
+                body.castShadow = true;
+                enemyGroup.add(body);
+
+                // Eyes
+                const eyeGeo = new THREE.SphereGeometry(0.2, 8, 8);
+                const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+                const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+                leftEye.position.set(-0.4, 1.8, 1);
+                enemyGroup.add(leftEye);
+
+                const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+                rightEye.position.set(0.4, 1.8, 1);
+                enemyGroup.add(rightEye);
+
+                // Angry eyebrows
+                const browGeo = new THREE.BoxGeometry(0.4, 0.1, 0.1);
+                const browMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+
+                const leftBrow = new THREE.Mesh(browGeo, browMat);
+                leftBrow.position.set(-0.4, 2.1, 1);
+                leftBrow.rotation.z = 0.3;
+                enemyGroup.add(leftBrow);
+
+                const rightBrow = new THREE.Mesh(browGeo, browMat);
+                rightBrow.position.set(0.4, 2.1, 1);
+                rightBrow.rotation.z = -0.3;
+                enemyGroup.add(rightBrow);
+
+                // HP Bar removed for normal enemies (only elite/boss show HP)
+
+                enemyGroup.position.set(x, 0, z);
+                this.scene.add(enemyGroup);
+
+                return {
+                    x: x,
+                    z: z,
+                    size: 2,
+                    speed: 8 + Math.random() * 4,
+                    hp: 3,      // Increased from 2 (+50%)
+                    maxHp: 3,
+                    mesh: enemyGroup
+                };
+            },
+
+            // ELITE ENEMY - Purple, 3x size, 20 HP
+            createEliteEnemy(x, z) {
+                const enemyGroup = new THREE.Group();
+                const scale = 3;
+
+                // Body - Purple elite
+                const bodyGeo = new THREE.BoxGeometry(2 * scale, 2.5 * scale, 2 * scale);
+                const eliteMat = new THREE.MeshPhongMaterial({ color: 0x8800ff }); // Purple
+                const body = new THREE.Mesh(bodyGeo, eliteMat);
+                body.position.y = 1.25 * scale;
+                body.castShadow = true;
+                enemyGroup.add(body);
+
+                // Glowing eyes - Yellow
+                const eyeGeo = new THREE.SphereGeometry(0.4 * scale, 8, 8);
+                const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+
+                const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+                leftEye.position.set(-0.4 * scale, 1.8 * scale, 1 * scale);
+                enemyGroup.add(leftEye);
+
+                const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+                rightEye.position.set(0.4 * scale, 1.8 * scale, 1 * scale);
+                enemyGroup.add(rightEye);
+
+                // Crown/horns
+                const hornGeo = new THREE.ConeGeometry(0.3 * scale, 1.5 * scale, 4);
+                const hornMat = new THREE.MeshPhongMaterial({ color: 0xffcc00 });
+
+                const leftHorn = new THREE.Mesh(hornGeo, hornMat);
+                leftHorn.position.set(-0.6 * scale, 3.5 * scale, 0);
+                leftHorn.rotation.z = 0.3;
+                enemyGroup.add(leftHorn);
+
+                const rightHorn = new THREE.Mesh(hornGeo, hornMat);
+                rightHorn.position.set(0.6 * scale, 3.5 * scale, 0);
+                rightHorn.rotation.z = -0.3;
+                enemyGroup.add(rightHorn);
+
+                // HP Bar background
+                const hpBarBgGeo = new THREE.BoxGeometry(6, 0.5, 0.2);
+                const hpBarBgMat = new THREE.MeshBasicMaterial({ color: 0x333333 });
+                const hpBarBg = new THREE.Mesh(hpBarBgGeo, hpBarBgMat);
+                hpBarBg.position.set(0, 4.5 * scale, 0);
+                enemyGroup.add(hpBarBg);
+
+                // HP Bar foreground (green)
+                const hpBarGeo = new THREE.BoxGeometry(6, 0.5, 0.3);
+                const hpBarMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+                const hpBar = new THREE.Mesh(hpBarGeo, hpBarMat);
+                hpBar.position.set(0, 4.5 * scale, 0.1);
+                hpBar.name = 'hpBar';
+                enemyGroup.add(hpBar);
+
+                enemyGroup.position.set(x, 0, z);
+                this.scene.add(enemyGroup);
+
+                return {
+                    x: x,
+                    z: z,
+                    size: 2 * scale,
+                    speed: 15, // Doubled from 7.5
+                    hp: 600,      // Adjusted (was 800)
+                    maxHp: 600,
+                    mesh: enemyGroup,
+                    isElite: true
+                };
+            },
+
+            // BOSS ENEMY - Black/Gold, 5x size, 100 HP
+            createBoss(x, z) {
+                const enemyGroup = new THREE.Group();
+                const scale = 5;
+
+                // Body - Dark with gold trim
+                const bodyGeo = new THREE.BoxGeometry(2 * scale, 3 * scale, 2 * scale);
+                const bossMat = new THREE.MeshPhongMaterial({ color: 0x220022 }); // Dark purple/black
+                const body = new THREE.Mesh(bodyGeo, bossMat);
+                body.position.y = 1.5 * scale;
+                body.castShadow = true;
+                enemyGroup.add(body);
+
+                // Gold armor trim
+                const armorGeo = new THREE.BoxGeometry(2.2 * scale, 0.5 * scale, 2.2 * scale);
+                const armorMat = new THREE.MeshPhongMaterial({ color: 0xffd700 }); // Gold
+                const armor = new THREE.Mesh(armorGeo, armorMat);
+                armor.position.y = 2.5 * scale;
+                enemyGroup.add(armor);
+
+                // Glowing red eyes
+                const eyeGeo = new THREE.SphereGeometry(0.5 * scale, 8, 8);
+                const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+
+                const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+                leftEye.position.set(-0.5 * scale, 2 * scale, 1 * scale);
+                enemyGroup.add(leftEye);
+
+                const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+                rightEye.position.set(0.5 * scale, 2 * scale, 1 * scale);
+                enemyGroup.add(rightEye);
+
+                // Crown
+                const crownGeo = new THREE.ConeGeometry(1 * scale, 2 * scale, 6);
+                const crownMat = new THREE.MeshPhongMaterial({ color: 0xffd700 });
+                const crown = new THREE.Mesh(crownGeo, crownMat);
+                crown.position.set(0, 4 * scale, 0);
+                enemyGroup.add(crown);
+
+                // Side spikes
+                for (let i = 0; i < 4; i++) {
+                    const angle = (i / 4) * Math.PI * 2;
+                    const spikeGeo = new THREE.ConeGeometry(0.4 * scale, 1.5 * scale, 4);
+                    const spike = new THREE.Mesh(spikeGeo, crownMat);
+                    spike.position.set(Math.sin(angle) * 1.5 * scale, 3.5 * scale, Math.cos(angle) * 1.5 * scale);
+                    spike.rotation.x = Math.sin(angle) * 0.5;
+                    spike.rotation.z = Math.cos(angle) * 0.5;
+                    enemyGroup.add(spike);
+                }
+
+                // HP Bar (no background - just the red bar, visible from both sides)
+                const hpBarGeo = new THREE.BoxGeometry(10, 0.8, 0.3);
+                const hpBarMat = new THREE.MeshBasicMaterial({ color: 0xff0000, side: THREE.DoubleSide });
+                const hpBar = new THREE.Mesh(hpBarGeo, hpBarMat);
+                hpBar.position.set(0, 5 * scale, 0);
+
+                hpBar.name = 'hpBar';
+                enemyGroup.add(hpBar);
+
+                enemyGroup.position.set(x, 0, z);
+                this.scene.add(enemyGroup);
+
+                return {
+                    x: x,
+                    z: z,
+                    size: 2 * scale,
+                    speed: 9, // Doubled from 4.5
+                    hp: 2000,     // Doubled from 1000
+                    maxHp: 2000,
+                    mesh: enemyGroup,
+                    isBoss: true
+                };
+            },
+
+            createLoot(x, z) {
+                const lootGroup = new THREE.Group();
+
+                // Wood bundle
+                const woodGeo = new THREE.CylinderGeometry(0.3, 0.3, 1.5, 8);
+
+                for (let i = 0; i < 3; i++) {
+                    const log = new THREE.Mesh(woodGeo, this.materials.loot);
+                    log.position.set((i - 1) * 0.4, 0.3, 0);
+                    log.rotation.z = Math.PI / 2;
+                    log.rotation.y = Math.random() * 0.3;
+                    log.castShadow = true;
+                    lootGroup.add(log);
+                }
+
+                // Glow effect
+                const glowGeo = new THREE.RingGeometry(0.8, 1.2, 16);
+                const glowMat = new THREE.MeshBasicMaterial({
+                    color: 0xf0d084,
+                    transparent: true,
+                    opacity: 0.5,
+                    side: THREE.DoubleSide
+                });
+                const glow = new THREE.Mesh(glowGeo, glowMat);
+                glow.rotation.x = -Math.PI / 2;
+                glow.position.y = 0.05;
+                lootGroup.add(glow);
+
+                lootGroup.position.set(x, 0, z);
+                this.scene.add(lootGroup);
+
+                const loot = {
+                    x: x,
+                    z: z,
+                    wood: 10,
+                    lifetime: 30,
+                    mesh: lootGroup
+                };
+
+                this.loots.push(loot);
+                return loot;
+            },
+
+            createTurret(type, offsetX, offsetZ, slot) {
+                const turretGroup = new THREE.Group();
+
+                let material, range, fireRate, damage, splash, ammoCost;
+
+                switch (type) {
+                    case 'A': // Standard Tower - 75% nerfed
+                        material = this.materials.turretA;
+                        range = 30; // Increased (was 22)
+                        fireRate = 8; // was 15
+                        damage = 60; // Increased (was 38)
+                        splash = 1; // was 2
+                        ammoCost = 0.2; // Reduced (was 0.4, originally 0.2)
+                        break;
+                    case 'B': // Gatling - 75% nerfed
+                        material = this.materials.turretB;
+                        range = 20; // Increased (was 15)
+                        fireRate = 15; // was 30
+                        damage = 15; // Increased (was 10)
+                        splash = 0;
+                        ammoCost = 0.06; // Doubled (was 0.03)
+                        break;
+                    case 'C': // Mortar - 75% nerfed
+                        material = this.materials.turretC;
+                        range = 50; // Increased (was 38)
+                        fireRate = 3; // was 6
+                        damage = 225; // Increased (was 150)
+                        splash = 6; // was 12
+                        ammoCost = 0.6; // Doubled (was 0.3)
+                        break;
+                    case 'D': // Healing Tower - 75% nerfed
+                        material = this.materials.turretD;
+                        range = 15; // Increased (was 10)
+                        fireRate = 3; // was 5
+                        damage = -10; // was -20
+                        splash = 0;
+                        ammoCost = 0.2;
+                        break;
+                    case 'E': // Engineer Camp
+                        material = new THREE.MeshPhongMaterial({ color: 0x00ffff });
+                        range = 30;
+                        fireRate = 0;
+                        damage = 0;
+                        splash = 0;
+                        ammoCost = 0;
+                        // Spawn 1 worker (was 4)
+                        for (let i = 0; i < 1; i++) {
+                            this.createWorker();
+                        }
+                        break;
+                }
+
+                // Base
+                const baseGeo = new THREE.CylinderGeometry(1.5, 1.8, 1, 16);
+                const baseMesh = new THREE.Mesh(baseGeo, material);
+                baseMesh.position.y = 3.5;
+                baseMesh.castShadow = true;
+                turretGroup.add(baseMesh);
+
+                // Turret head
+                const headGeo = new THREE.SphereGeometry(1, 16, 16);
+                const head = new THREE.Mesh(headGeo, material);
+                head.position.y = 4.5;
+                head.castShadow = true;
+                turretGroup.add(head);
+
+                // Barrel - special multi-barrel for Gatling
+                let barrel;
+                let barrelGroup = null;
+                const barrelMat = new THREE.MeshPhongMaterial({ color: 0x222222 });
+
+                if (type === 'B') {
+                    // Gatling: Create rotating multi-barrel group
+                    barrelGroup = new THREE.Group();
+                    barrelGroup.position.set(0, 4.5, 0);
+
+                    // Create 6 barrels in a circle
+                    const numBarrels = 6;
+                    const barrelRadius = 0.4;
+                    for (let i = 0; i < numBarrels; i++) {
+                        const angle = (i / numBarrels) * Math.PI * 2;
+                        const bGeo = new THREE.CylinderGeometry(0.12, 0.15, 2.5, 6);
+                        const b = new THREE.Mesh(bGeo, barrelMat);
+                        b.rotation.x = Math.PI / 2;
+                        b.position.set(
+                            Math.cos(angle) * barrelRadius,
+                            Math.sin(angle) * barrelRadius,
+                            1.5
+                        );
+                        barrelGroup.add(b);
+                    }
+
+                    // Center barrel housing
+                    const housingGeo = new THREE.CylinderGeometry(0.5, 0.6, 1.5, 8);
+                    const housing = new THREE.Mesh(housingGeo, barrelMat);
+                    housing.rotation.x = Math.PI / 2;
+                    housing.position.z = 0.8;
+                    barrelGroup.add(housing);
+
+                    turretGroup.add(barrelGroup);
+                    barrel = barrelGroup;
+                } else {
+                    // Standard single barrel for other turrets
+                    const barrelGeo = new THREE.CylinderGeometry(0.2, 0.3, 2, 8);
+                    barrel = new THREE.Mesh(barrelGeo, barrelMat);
+                    barrel.position.set(0, 4.5, 1.5);
+                    barrel.rotation.x = Math.PI / 2;
+                    barrel.castShadow = true;
+                    turretGroup.add(barrel);
+                }
+
+                turretGroup.userData = { barrel, barrelGroup, type };
+                this.baseMesh.add(turretGroup);
+                turretGroup.position.set(offsetX, 0, offsetZ);
+
+                this.turretMeshes.push(turretGroup);
+
+                return {
+                    type: type,
+                    offsetX: offsetX,
+                    offsetZ: offsetZ,
+                    slot: slot,
+                    range: range,
+                    fireRate: fireRate,
+                    damage: damage,
+                    splash: splash,
+                    ammoCost: ammoCost,
+                    cooldown: 0,
+                    heatLevel: 0, // For Gatling heat effect
+                    upgraded: false, // Upgrade tracking
+                    mesh: turretGroup
+                };
+            },
+
+            createProjectile(startX, startY, startZ, targetX, targetZ, damage, splash, type, upgraded = false) {
+                // BASE turrets: white simple bullets
+                // UPGRADED turrets: colored special bullets with effects
+                let size, color, elongated = false;
+
+                if (!upgraded) {
+                    // BASE TURRETS - All use simple white bullets
+                    size = 0.4;
+                    color = 0xffffff; // White
+                } else {
+                    // UPGRADED TURRETS - Special colored bullets with effects
+                    switch (type) {
+                        case 'A': // Standard - bright yellow
+                            size = 0.6;
+                            color = 0xffff00;
+                            break;
+                        case 'B': // Gatling - tracer bullets
+                            size = 0.4;
+                            color = 0xff4400;
+                            elongated = true;
+                            break;
+                        case 'C': // Mortar - big orange shells
+                            size = 1.2;
+                            color = 0xff6600;
+                            break;
+                        default:
+                            size = 0.5;
+                            color = 0xffff00;
+                    }
+                }
+
+                let projMesh;
+
+                if (upgraded && elongated) {
+                    // UPGRADED GATLING - Long tracer bullet with glow trail
+                    const projGeo = new THREE.CylinderGeometry(size * 0.5, size * 0.3, 2.0, 6);
+                    const projMat = new THREE.MeshBasicMaterial({ color: color });
+                    projMesh = new THREE.Mesh(projGeo, projMat);
+
+                    // Glow trail effect
+                    const trailGeo = new THREE.CylinderGeometry(size * 0.8, size * 0.1, 3.0, 6);
+                    const trailMat = new THREE.MeshBasicMaterial({
+                        color: 0xff8800,
+                        transparent: true,
+                        opacity: 0.5
+                    });
+                    const trail = new THREE.Mesh(trailGeo, trailMat);
+                    trail.position.y = -1.5;
+                    projMesh.add(trail);
+
+                    // Point toward target
+                    const dx = targetX - startX;
+                    const dz = targetZ - startZ;
+                    projMesh.rotation.z = Math.PI / 2;
+                    projMesh.rotation.y = Math.atan2(dx, dz);
+                } else if (upgraded) {
+                    // UPGRADED OTHER - Sphere with glow
+                    const projGeo = new THREE.SphereGeometry(size, 8, 8);
+                    const projMat = new THREE.MeshBasicMaterial({ color: color });
+                    projMesh = new THREE.Mesh(projGeo, projMat);
+
+                    // Glow effect
+                    const glowGeo = new THREE.SphereGeometry(size * 1.5, 8, 8);
+                    const glowMat = new THREE.MeshBasicMaterial({
+                        color: color,
+                        transparent: true,
+                        opacity: 0.3
+                    });
+                    const glow = new THREE.Mesh(glowGeo, glowMat);
+                    projMesh.add(glow);
+                } else {
+                    // BASE TURRETS - Simple white sphere, no glow
+                    const projGeo = new THREE.SphereGeometry(size, 6, 6);
+                    const projMat = new THREE.MeshBasicMaterial({ color: color });
+                    projMesh = new THREE.Mesh(projGeo, projMat);
+                }
+
+                projMesh.position.set(startX, startY, startZ);
+                this.scene.add(projMesh);
+
+                // Trail particles array for Gatling
+                const trailParticles = [];
+
+                return {
+                    x: startX,
+                    y: startY,
+                    z: startZ,
+                    targetX: targetX,
+                    targetZ: targetZ,
+                    speed: type === 'B' ? 80 : (type === 'C' ? 35 : 50), // Gatling fastest, Mortar slowest
+                    damage: damage,
+                    splash: splash,
+                    type: type,
+                    mesh: projMesh,
+                    trailParticles: trailParticles,
+                    elongated: elongated
+                };
+            },
+
+            setupInput() {
+                // Keyboard
+                document.addEventListener('keydown', (e) => {
+                    this.keys[e.key.toLowerCase()] = true;
+                });
+                document.addEventListener('keyup', (e) => {
+                    this.keys[e.key.toLowerCase()] = false;
+                });
+
+                // Mouse for camera control
+                this.renderer.domElement.addEventListener('mousedown', (e) => {
+                    if (e.button === 0) {
+                        this.isDragging = true;
+                        this.lastMouseX = e.clientX;
+                    }
+                });
+
+                document.addEventListener('mouseup', () => {
+                    this.isDragging = false;
+                });
+
+                document.addEventListener('mousemove', (e) => {
+                    if (this.isDragging) {
+                        const deltaX = e.clientX - this.lastMouseX;
+                        this.cameraAngle += deltaX * 0.01;
+                        this.lastMouseX = e.clientX;
+                    }
+                });
+
+                // Scroll for zoom
+                this.renderer.domElement.addEventListener('wheel', (e) => {
+                    this.cameraDistance += e.deltaY * 0.05;
+                    this.cameraDistance = Math.max(30, Math.min(150, this.cameraDistance));
+                });
+
+                // Click for upgrade arrows - use DOCUMENT-level capture to bypass joystick
+                this.raycaster = new THREE.Raycaster();
+                let pointerDownPos = null;
+                let pointerDownTime = 0;
+
+                const handleUpgradeClick = (clientX, clientY) => {
+                    if (this.paused || this.gameOver) return false;
+                    if (this.upgradeArrows.length === 0) return false;
+
+                    // Calculate mouse position in normalized device coordinates
+                    const rect = this.renderer.domElement.getBoundingClientRect();
+                    const mouse = new THREE.Vector2(
+                        ((clientX - rect.left) / rect.width) * 2 - 1,
+                        -((clientY - rect.top) / rect.height) * 2 + 1
+                    );
+
+                    this.raycaster.setFromCamera(mouse, this.camera);
+
+                    // Check intersection with upgrade arrows
+                    const intersects = this.raycaster.intersectObjects(this.upgradeArrows, true);
+                    if (intersects.length > 0) {
+                        // Find the arrow group (parent)
+                        let arrowGroup = intersects[0].object;
+                        while (arrowGroup.parent && !arrowGroup.userData.turret) {
+                            arrowGroup = arrowGroup.parent;
+                        }
+                        if (arrowGroup.userData.turret) {
+                            this.showUpgradeModal(arrowGroup.userData.turret);
+                            return true; // Handled
+                        }
+                    }
+                    return false;
+                };
+
+                // Use CAPTURE phase on document to intercept before joystick
+                document.addEventListener('pointerdown', (e) => {
+                    pointerDownPos = { x: e.clientX, y: e.clientY };
+                    pointerDownTime = Date.now();
+                }, true); // Capture phase
+
+                document.addEventListener('pointerup', (e) => {
+                    if (!pointerDownPos) return;
+
+                    const dx = e.clientX - pointerDownPos.x;
+                    const dy = e.clientY - pointerDownPos.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const duration = Date.now() - pointerDownTime;
+
+                    // Only count as tap if moved less than 15px and held less than 400ms
+                    if (dist < 15 && duration < 400) {
+                        const handled = handleUpgradeClick(e.clientX, e.clientY);
+                        if (handled) {
+                            e.stopPropagation();
+                            e.preventDefault();
+                        }
+                    }
+
+                    pointerDownPos = null;
+                }, true); // Capture phase
+            },
+
+            // ==========================================
+            // GAME LOOP
+            // ==========================================
+            animate() {
+                if (!this.running) return;
+                requestAnimationFrame(() => this.animate());
+
+                const dt = this.clock.getDelta();
+
+                if (!this.paused && !this.gameOver) {
+                    this.update(dt);
+                }
+
+                this.updateCamera();
+                this.render();
+                this.updateUI();
+                this.updateMinimap();
+            },
+
+            // ==========================================
+            // UPDATE LOGIC
+            // ==========================================
+            update(dt) {
+                if (dt > 0.1) dt = 0.1;
+
+
+                // Waiting phase: don't update game until first input
+                if (!this.gameStarted) {
+                    return;
+                }
+                this.gameTime += dt;
+                this.spawnUpgradeTimer += dt;
+
+                // 20 SECOND SPAWN BOOST - 50% MORE enemies after 20s
+                if (this.gameTime >= 20 && !this.spawnBoosted) {
+                    this.spawnBoosted = true;
+                    this.enemySpawnRate = 0.22; // 50% more than original 0.33 (was 0.66 for first 20s)
+                    console.log("⚠️ Enemy spawn rate increased!");
+                    this.showSpawnAlert("⚠️ Enemies incoming!", "#ff8800");
+                }
+
+                // ELITE SPAWN at 30 seconds - from LEFT and RIGHT sides
+                if (this.gameTime >= 30 && !this.elitesSpawned) {
+                    this.elitesSpawned = true;
+                    console.log("🔮 Spawning 2 ELITE enemies!");
+                    this.showSpawnAlert("⚔️ Elites incoming!", "#8800ff");
+                    // Elite 1 from LEFT side
+                    const leftX = -this.worldWidth / 2 - 15;
+                    const leftZ = this.base.z + (Math.random() - 0.5) * 30;
+                    this.enemies.push(this.createEliteEnemy(leftX, leftZ));
+                    // Elite 2 from RIGHT side
+                    const rightX = this.worldWidth / 2 + 15;
+                    const rightZ = this.base.z + (Math.random() - 0.5) * 30;
+                    this.enemies.push(this.createEliteEnemy(rightX, rightZ));
+                }
+
+                // BOSS SPAWN at 45 seconds - from BEHIND (bottom of screen)
+                if (this.gameTime >= 45 && !this.bossSpawned) {
+                    this.bossSpawned = true;
+                    console.log("👑 Spawning BOSS!");
+                    this.showSpawnAlert("👑 BOSS incoming!", "#ff0000");
+                    // Spawn boss from BEHIND the cart (positive z = bottom of screen)
+                    const z = this.base.z + 80;
+                    this.enemies.push(this.createBoss(0, z));
+                }
+
+                // Increase spawn rate over time
+                if (this.spawnUpgradeTimer >= 10) {
+                    this.spawnUpgradeTimer = 0;
+                    this.enemySpawnRate = Math.max(0.15, this.enemySpawnRate - 1 / 3);
+                }
+
+                this.updateBase(dt);
+                this.updatePlayer(dt);
+                this.updateEnemies(dt);
+                this.updateTurrets(dt);
+                this.updateProjectiles(dt);
+                this.updateWorkers(dt);
+                this.spawnEnemies(dt);
+                this.cleanupObjects();
+                this.checkCollisions();
+                this.checkTurretBuild();
+                this.updateGuideArrow();
+                this.updateUpgradeArrows(dt);
+                this.updateShieldEffect(Date.now() * 0.001); // Animate shield effect
+
+                // Check victory condition
+                if (this.base.z <= this.destinationZ) {
+                    this.triggerVictory();
+                }
+
+                // Regenerate trees
+                if (this.trees.length < 50) {
+                    this.addNewTrees();
+                }
+            },
+
+            recruitWorker() {
+                if (this.base.wood >= 50) {
+                    this.base.wood -= 50;
+                    this.createWorker();
+                    this.audio.play('build');
+
+                    // Close modal if open
+                    document.getElementById('turret-modal').classList.remove('active');
+                    document.body.classList.remove('modal-active');
+                    this.paused = false;
+                }
+            },
+
+            createWorker() {
+                const workerGroup = new THREE.Group();
+                // Little robot visuals
+                const body = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 1.5), new THREE.MeshStandardMaterial({ color: 0x00ffff }));
+                body.position.y = 0.75;
+                const head = new THREE.Mesh(new THREE.SphereGeometry(0.6), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+                head.position.y = 1.8;
+                workerGroup.add(body); workerGroup.add(head);
+
+                workerGroup.position.copy(this.baseMesh.position);
+                workerGroup.position.x += (Math.random() - 0.5) * 10;
+
+                this.scene.add(workerGroup);
+
+                this.workers.push({
+                    mesh: workerGroup,
+                    state: 'IDLE', // IDLE, MOVING, RETURNING
+                    target: null,
+                    speed: 20
+                });
+            },
+
+            updateWorkers(dt) {
+                this.workers.forEach(w => {
+                    const wPos = w.mesh.position;
+
+                    if (w.state === 'IDLE') {
+                        // Find closest loot first
+                        let closest = null;
+                        let minDist = 50; // Detection range
+
+                        this.loots.forEach(l => {
+                            const d = wPos.distanceTo(l.mesh.position);
+                            if (d < minDist) {
+                                minDist = d;
+                                closest = l;
+                            }
+                        });
+
+                        if (closest) {
+                            w.target = closest;
+                            w.targetType = 'loot';
+                            w.state = 'MOVING';
+                        } else {
+                            // No loot - find closest tree to chop
+                            let closestTree = null;
+                            let minTreeDist = 30; // Tree detection range
+
+                            this.trees.forEach(t => {
+                                if (!t.beingChopped) { // Don't target trees being chopped
+                                    const d = wPos.distanceTo(t.mesh.position);
+                                    if (d < minTreeDist) {
+                                        minTreeDist = d;
+                                        closestTree = t;
+                                    }
+                                }
+                            });
+
+                            if (closestTree) {
+                                w.target = closestTree;
+                                w.targetType = 'tree';
+                                closestTree.beingChopped = true;
+                                w.state = 'MOVING';
+                            } else {
+                                // Follow base if no loot or trees
+                                const distToBase = wPos.distanceTo(this.baseMesh.position);
+                                if (distToBase > 15) {
+                                    const dir = new THREE.Vector3().subVectors(this.baseMesh.position, wPos).normalize();
+                                    wPos.add(dir.multiplyScalar(w.speed * dt));
+                                    w.mesh.lookAt(this.baseMesh.position);
+                                }
+                            }
+                        }
+                    }
+                    else if (w.state === 'MOVING') {
+                        if (!w.target) {
+                            w.state = 'IDLE';
+                            return;
+                        }
+
+                        // Check if target is still valid
+                        if (w.targetType === 'loot' && !this.loots.includes(w.target)) {
+                            w.state = 'IDLE';
+                            w.target = null;
+                            return;
+                        }
+                        if (w.targetType === 'tree' && !this.trees.includes(w.target)) {
+                            w.state = 'IDLE';
+                            w.target = null;
+                            return;
+                        }
+
+                        const dir = new THREE.Vector3().subVectors(w.target.mesh.position, wPos).normalize();
+                        wPos.add(dir.multiplyScalar(w.speed * dt));
+                        w.mesh.lookAt(w.target.mesh.position);
+
+                        if (wPos.distanceTo(w.target.mesh.position) < 2) {
+                            if (w.targetType === 'loot') {
+                                // Collect loot
+                                this.audio.play('collect');
+                                this.base.wood += w.target.wood;
+
+                                // Remove loot
+                                this.scene.remove(w.target.mesh);
+                                const idx = this.loots.indexOf(w.target);
+                                if (idx > -1) this.loots.splice(idx, 1);
+
+                                w.target = null;
+                                w.state = 'IDLE';
+                            } else if (w.targetType === 'tree') {
+                                // Chop tree - start chopping
+                                w.state = 'CHOPPING';
+                                w.chopTimer = 0;
+                            }
+                        }
+                    }
+                    else if (w.state === 'CHOPPING') {
+                        if (!w.target || !this.trees.includes(w.target)) {
+                            w.state = 'IDLE';
+                            w.target = null;
+                            return;
+                        }
+
+                        w.chopTimer += dt;
+                        // Chop animation - worker bobs up and down
+                        w.mesh.position.y = 0.5 + Math.sin(w.chopTimer * 10) * 0.1;
+
+                        if (w.chopTimer >= 1.5) { // 1.5 seconds to chop tree
+                            // Get wood from tree
+                            this.audio.play('build');
+                            this.base.wood += 5; // 5 wood per tree
+
+                            // Remove tree
+                            this.scene.remove(w.target.mesh);
+                            const idx = this.trees.indexOf(w.target);
+                            if (idx > -1) this.trees.splice(idx, 1);
+
+                            w.mesh.position.y = 0.5;
+                            w.target = null;
+                            w.state = 'IDLE';
+                        }
+                    }
+                });
+            },
+
+            updateBase(dt) {
+                // Move base forward (negative Z)
+                this.base.z -= this.base.speed * dt;
+                this.baseMesh.position.z = this.base.z;
+
+                // Update ground segments for infinite scrolling
+                this.groundSegments.forEach((segment, i) => {
+                    if (segment.position.z > this.base.z + 150) {
+                        segment.position.z -= this.groundSegments.length * 100;
+                    }
+                });
+
+                this.roadSegments.forEach((segment, i) => {
+                    if (segment.position.z > this.base.z + 150) {
+                        segment.position.z -= this.roadSegments.length * 100;
+                    }
+                });
+
+                // Update turret world positions
+                this.base.turrets.forEach(turret => {
+                    turret.x = this.base.x + turret.offsetX;
+                    turret.z = this.base.z + turret.offsetZ;
+                });
+
+                // Update HP bar
+                const hpPercent = Math.max(0, this.base.hp / this.base.maxHp);
+
+                // Update scale from center
+                this.hpBarFill.scale.x = hpPercent;
+
+                // Adjust position to make it scale from left side
+                const fullWidth = this.base.width - 0.2;
+                this.hpBarFill.position.x = -fullWidth * (1 - hpPercent) / 2;
+
+                if (hpPercent > 0.5) {
+                    this.hpBarFill.material.color.setHex(0x44cc44);
+                } else if (hpPercent > 0.25) {
+                    this.hpBarFill.material.color.setHex(0xcccc44);
+                } else {
+                    this.hpBarFill.material.color.setHex(0xcc4444);
+                }
+
+                // Update sun position to follow
+                this.sunLight.position.set(this.base.x + 50, 100, this.base.z + 50);
+                this.sunLight.target.position.set(this.base.x, 0, this.base.z);
+            },
+
+            updatePlayer(dt) {
+                // WASD movement OR joystick input relative to camera angle
+                let moveX = 0, moveZ = 0;
+
+                // Keyboard input
+                if (this.keys['w']) moveZ = -1;
+                if (this.keys['s']) moveZ = 1;
+                if (this.keys['a']) moveX = -1;
+                if (this.keys['d']) moveX = 1;
+
+                // Joystick input (overrides keyboard if active)
+                if (this.joystick.active || (Math.abs(this.joystick.inputX) > 0.1 || Math.abs(this.joystick.inputY) > 0.1)) {
+                    moveX = this.joystick.inputX;
+                    moveZ = this.joystick.inputY;
+                }
+
+                if (moveX !== 0 || moveZ !== 0) {
+                    // Normalize
+                    const len = Math.sqrt(moveX * moveX + moveZ * moveZ);
+                    moveX /= len;
+                    moveZ /= len;
+
+                    // Apply camera rotation
+                    const cos = Math.cos(this.cameraAngle);
+                    const sin = Math.sin(this.cameraAngle);
+                    const rotX = moveX * cos - moveZ * sin;
+                    const rotZ = moveX * sin + moveZ * cos;
+
+                    this.player.x += rotX * this.player.speed * dt;
+                    this.player.z += rotZ * this.player.speed * dt;
+                }
+
+                // Keep player in bounds
+                const halfWorld = this.worldWidth / 2 - 5;
+                this.player.x = Math.max(-halfWorld, Math.min(halfWorld, this.player.x));
+
+                // Keep player near base (can't go too far ahead or behind)
+                const minZ = this.base.z - 60;
+                const maxZ = this.base.z + 40;
+                this.player.z = Math.max(minZ, Math.min(maxZ, this.player.z));
+
+                // Update mesh
+                this.playerMesh.position.set(this.player.x, 0, this.player.z);
+
+                // Face movement direction
+                if (moveX !== 0 || moveZ !== 0) {
+                    const angle = Math.atan2(moveX, moveZ);
+                    this.playerMesh.rotation.y = angle + this.cameraAngle;
+                }
+
+                // Player auto-attack (shoot bullets at nearest enemy)
+                if (!this.player.attackCooldown) this.player.attackCooldown = 0;
+                this.player.attackCooldown -= dt;
+
+                if (this.player.attackCooldown <= 0 && this.enemies.length > 0) {
+                    // Find nearest enemy within range
+                    const attackRange = 25; // Increased from 15
+                    let nearestEnemy = null;
+                    let nearestDist = attackRange;
+
+                    this.enemies.forEach(enemy => {
+                        const dx = enemy.x - this.player.x;
+                        const dz = enemy.z - this.player.z;
+                        const dist = Math.sqrt(dx * dx + dz * dz);
+                        if (dist < nearestDist) {
+                            nearestDist = dist;
+                            nearestEnemy = enemy;
+                        }
+                    });
+
+                    if (nearestEnemy) {
+                        // Create bullet
+                        const bulletGeo = new THREE.SphereGeometry(0.8, 8, 8); // Bigger bullet
+                        const bulletMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 }); // Green for player
+                        const bulletMesh = new THREE.Mesh(bulletGeo, bulletMat);
+                        bulletMesh.position.set(this.player.x, 1.5, this.player.z);
+                        this.scene.add(bulletMesh);
+                        console.log('🔫 Player shot bullet at enemy!', nearestEnemy.x, nearestEnemy.z);
+
+                        this.projectiles.push({
+                            mesh: bulletMesh,
+                            x: this.player.x,
+                            y: 1.5, // FIXED: Must initialize y for gravity calculation
+                            z: this.player.z,
+                            targetX: nearestEnemy.x,
+                            targetZ: nearestEnemy.z,
+                            speed: 30,
+                            damage: 5, // Low damage
+                            splash: 0
+                        });
+
+                        this.player.attackCooldown = 0.5; // 2 shots per second
+                        this.audio.play('shoot');
+                    }
+                }
+            },
+
+            updateEnemies(dt) {
+                this.enemies.forEach(enemy => {
+                    const dx = this.base.x - enemy.x;
+                    const dz = this.base.z - enemy.z;
+                    const dist = Math.sqrt(dx * dx + dz * dz);
+
+                    // Stop distance based on enemy type (prevent clipping into cart)
+                    const stopDist = enemy.isBoss ? 10 : (enemy.isElite ? 6 : 3);
+
+                    if (dist > stopDist) {
+                        enemy.x += (dx / dist) * enemy.speed * dt;
+                        enemy.z += (dz / dist) * enemy.speed * dt;
+                    }
+
+                    enemy.mesh.position.set(enemy.x, 0, enemy.z);
+
+                    // Face base
+                    enemy.mesh.rotation.y = Math.atan2(dx, dz);
+
+                    // Update HP bar for ALL enemies (including normal)
+                    const hpBar = enemy.mesh.getObjectByName('hpBar');
+                    if (hpBar) {
+                        const hpRatio = Math.max(0, enemy.hp / enemy.maxHp);
+                        hpBar.scale.x = hpRatio;
+                        // Width: Normal=2, Elite=6, Boss=10 → halfWidth = 1, 3, 5
+                        const halfWidth = enemy.isBoss ? 5 : (enemy.isElite ? 3 : 1);
+                        // Shift so bar drains from right side (left origin)
+                        hpBar.position.x = -halfWidth * (1 - hpRatio);
+                    }
+
+                    // Reduce attack cooldown for ALL enemies
+                    if (enemy.attackCooldown !== undefined && enemy.attackCooldown > 0) {
+                        enemy.attackCooldown -= dt;
+                    }
+                });
+            },
+
+            updateTurrets(dt) {
+                this.base.turrets.forEach(turret => {
+                    turret.cooldown -= dt;
+
+                    if (turret.cooldown <= 0) {
+
+                        // HEALER LOGIC
+                        if (turret.type === 'D') {
+                            if (this.base.hp < this.base.maxHp && this.base.wood >= 1) {
+                                this.base.hp = Math.min(this.base.maxHp, this.base.hp + 5);
+                                this.base.wood -= 1; // Cost 1 wood per heal
+                                turret.cooldown = 1; // 1 sec cooldown
+
+                                // Visual & Audio
+                                this.audio.play('collect'); // Reuse nice chime sound
+
+                                // Floating text effect (simple console for now or minimal visual)
+                                // We can make the turret jump a bit
+                                turret.mesh.position.y = 1;
+                                setTimeout(() => { if (turret.mesh) turret.mesh.position.y = 0; }, 200);
+                            }
+                            return;
+                        }
+
+                        // ATTACK LOGIC (A, B, C)
+                        let target = null;
+                        let minDist = turret.range;
+
+                        this.enemies.forEach(enemy => {
+                            const dx = enemy.x - turret.x;
+                            const dz = enemy.z - turret.z;
+                            const dist = Math.sqrt(dx * dx + dz * dz);
+
+                            if (dist < minDist) {
+                                minDist = dist;
+                                target = enemy;
+                            }
+                        });
+
+                        if (target) {
+                            this.fireTurret(turret, target);
+                            turret.cooldown = 1 / turret.fireRate; // Fixed: cooldown is 1/fireRate seconds
+                        }
+                    }
+
+                    // Rotate turret to face nearest enemy
+                    let nearestEnemy = null;
+                    let nearestDist = turret.range;
+
+                    this.enemies.forEach(enemy => {
+                        const dx = enemy.x - turret.x;
+                        const dz = enemy.z - turret.z;
+                        const dist = Math.sqrt(dx * dx + dz * dz);
+
+                        if (dist < nearestDist) {
+                            nearestDist = dist;
+                            nearestEnemy = enemy;
+                        }
+                    });
+
+                    if (nearestEnemy) {
+                        const angle = Math.atan2(
+                            nearestEnemy.x - turret.x,
+                            nearestEnemy.z - turret.z
+                        );
+                        turret.mesh.rotation.y = angle;
+
+                        // Gatling: spin barrels when firing
+                        if (turret.type === 'B' && turret.mesh.userData.barrelGroup) {
+                            turret.mesh.userData.barrelGroup.rotation.z += dt * 30; // Fast spin
+                            turret.heatLevel = Math.min(1, turret.heatLevel + dt * 0.5); // Heat up
+                        }
+                    } else {
+                        // No enemy: cool down and slow spin
+                        if (turret.type === 'B') {
+                            turret.heatLevel = Math.max(0, turret.heatLevel - dt * 0.3);
+                            if (turret.mesh.userData.barrelGroup) {
+                                // Gradually slow down spin
+                                turret.mesh.userData.barrelGroup.rotation.z += dt * 5 * turret.heatLevel;
+                            }
+                        }
+                    }
+                });
+            },
+
+            fireTurret(turret, target) {
+                // Consume ammo
+                if (this.base.wood < turret.ammoCost) return; // Not enough ammo
+                this.base.wood -= turret.ammoCost;
+
+                const proj = this.createProjectile(
+                    turret.x,
+                    4.5,
+                    turret.z,
+                    target.x,
+                    target.z,
+                    turret.damage,
+                    turret.splash,
+                    turret.type,
+                    turret.upgraded // Pass upgrade status for visual effects
+                );
+
+                this.projectiles.push(proj);
+
+                // NO VFX - completely removed per user request
+
+                // Use different sound for Gatling
+                if (turret.type === 'B') {
+                    this.audio.play('gatling');
+                    // Create shell ejection particle
+                    this.createShellParticle(turret.x, 4.5, turret.z, turret.mesh.rotation.y);
+                } else {
+                    this.audio.play('shoot');
+                }
+            },
+
+            // Create base turret fire VFX for all turrets
+            createTurretFireVFX(turret) {
+                const x = turret.x, y = 4.5, z = turret.z;
+
+                // Different colors per turret type
+                let flashColor = 0xffff00; // Default yellow
+                let flashSize = 1.0;
+                let particleCount = 3;
+
+                switch (turret.type) {
+                    case 'A': // Standard - yellow flash
+                        flashColor = 0xffdd00;
+                        flashSize = 1.2;
+                        particleCount = 4;
+                        break;
+                    case 'B': // Gatling - rapid orange sparks
+                        flashColor = 0xff8800;
+                        flashSize = 0.6;
+                        particleCount = 2;
+                        break;
+                    case 'C': // Mortar - big red explosion
+                        flashColor = 0xff4400;
+                        flashSize = 2.0;
+                        particleCount = 8;
+                        break;
+                    default:
+                        return; // No VFX for healing/engineer
+                }
+
+                // Muzzle flash sphere
+                const flashGeo = new THREE.SphereGeometry(flashSize * 0.5, 8, 8);
+                const flashMat = new THREE.MeshBasicMaterial({
+                    color: flashColor,
+                    transparent: true,
+                    opacity: 1.0
+                });
+                const flash = new THREE.Mesh(flashGeo, flashMat);
+                flash.position.set(x, y + 1, z);
+                this.scene.add(flash);
+
+                // Animate flash fade
+                const startTime = Date.now();
+                const animateFlash = () => {
+                    const elapsed = (Date.now() - startTime) / 1000;
+                    if (elapsed < 0.15) {
+                        flash.scale.setScalar(1 + elapsed * 4);
+                        flash.material.opacity = 1 - elapsed * 6;
+                        requestAnimationFrame(animateFlash);
+                    } else {
+                        this.scene.remove(flash);
+                        flash.geometry.dispose();
+                        flash.material.dispose();
+                    }
+                };
+                animateFlash();
+
+                // Spark particles
+                for (let i = 0; i < particleCount; i++) {
+                    const sparkGeo = new THREE.SphereGeometry(0.1 + Math.random() * 0.1, 4, 4);
+                    const sparkMat = new THREE.MeshBasicMaterial({
+                        color: flashColor,
+                        transparent: true,
+                        opacity: 1
+                    });
+                    const spark = new THREE.Mesh(sparkGeo, sparkMat);
+                    spark.position.set(x, y + 1, z);
+                    this.scene.add(spark);
+
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 3 + Math.random() * 4;
+                    const vx = Math.cos(angle) * speed;
+                    const vz = Math.sin(angle) * speed;
+                    const vy = 1 + Math.random() * 2;
+
+                    const sparkStart = Date.now();
+                    const animateSpark = () => {
+                        const t = (Date.now() - sparkStart) / 1000;
+                        if (t < 0.25) {
+                            spark.position.x += vx * 0.016;
+                            spark.position.z += vz * 0.016;
+                            spark.position.y += (vy - t * 10) * 0.016;
+                            spark.material.opacity = 1 - t * 4;
+                            requestAnimationFrame(animateSpark);
+                        } else {
+                            this.scene.remove(spark);
+                            spark.geometry.dispose();
+                            spark.material.dispose();
+                        }
+                    };
+                    animateSpark();
+                }
+            },
+
+            // Create cool visual effects for upgraded turrets when attacking
+            createUpgradeAttackVFX(turret) {
+                const choice = turret.upgradeChoice;
+                const x = turret.x, y = 4.5, z = turret.z;
+
+                // Muzzle flash ring effect
+                const ringGeo = new THREE.RingGeometry(0.5, 1.5, 16);
+                let flashColor = 0x00aaff; // Default blue
+
+                // Color based on skill type
+                if (choice.explosive || choice.burning) flashColor = 0xff4400;
+                else if (choice.piercing) flashColor = 0x00ff88;
+                else if (choice.fireRateMultiplier) flashColor = 0xffff00;
+                else if (choice.damageMultiplier) flashColor = 0xff0088;
+                else if (choice.noCooldown) flashColor = 0x00ffff;
+
+                const ringMat = new THREE.MeshBasicMaterial({
+                    color: flashColor,
+                    transparent: true,
+                    opacity: 0.8,
+                    side: THREE.DoubleSide
+                });
+                const ring = new THREE.Mesh(ringGeo, ringMat);
+                ring.position.set(x, y + 0.5, z);
+                ring.rotation.x = -Math.PI / 2;
+                this.scene.add(ring);
+
+                // Animate ring expansion and fade
+                const startTime = Date.now();
+                const animateRing = () => {
+                    const elapsed = (Date.now() - startTime) / 1000;
+                    if (elapsed < 0.3) {
+                        ring.scale.setScalar(1 + elapsed * 6);
+                        ring.material.opacity = 0.8 - elapsed * 2.5;
+                        requestAnimationFrame(animateRing);
+                    } else {
+                        this.scene.remove(ring);
+                        ring.geometry.dispose();
+                        ring.material.dispose();
+                    }
+                };
+                animateRing();
+
+                // Spark particles for explosive/burning upgrades
+                if (choice.explosive || choice.burning || choice.damageMultiplier > 1.5) {
+                    for (let i = 0; i < 6; i++) {
+                        const sparkGeo = new THREE.SphereGeometry(0.15, 4, 4);
+                        const sparkMat = new THREE.MeshBasicMaterial({
+                            color: flashColor,
+                            transparent: true,
+                            opacity: 1
+                        });
+                        const spark = new THREE.Mesh(sparkGeo, sparkMat);
+                        spark.position.set(x, y + 0.5, z);
+                        this.scene.add(spark);
+
+                        const angle = Math.random() * Math.PI * 2;
+                        const speed = 5 + Math.random() * 5;
+                        const vx = Math.cos(angle) * speed;
+                        const vz = Math.sin(angle) * speed;
+                        const vy = 2 + Math.random() * 3;
+
+                        const sparkStart = Date.now();
+                        const animateSpark = () => {
+                            const t = (Date.now() - sparkStart) / 1000;
+                            if (t < 0.4) {
+                                spark.position.x += vx * 0.016;
+                                spark.position.z += vz * 0.016;
+                                spark.position.y += (vy - t * 15) * 0.016;
+                                spark.material.opacity = 1 - t * 2.5;
+                                requestAnimationFrame(animateSpark);
+                            } else {
+                                this.scene.remove(spark);
+                                spark.geometry.dispose();
+                                spark.material.dispose();
+                            }
+                        };
+                        animateSpark();
+                    }
+                }
+            },
+
+            // Shell casing ejection for Gatling
+            createShellParticle(x, y, z, turretAngle) {
+                const shellGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.15, 4);
+                const shellMat = new THREE.MeshBasicMaterial({ color: 0xccaa00 }); // Brass color
+                const shell = new THREE.Mesh(shellGeo, shellMat);
+                shell.position.set(x, y, z);
+
+                // Calculate ejection direction (to the right of turret)
+                const ejectAngle = turretAngle - Math.PI / 2;
+                const velocity = {
+                    x: Math.sin(ejectAngle) * 3 + (Math.random() - 0.5) * 2,
+                    y: 3 + Math.random() * 2,
+                    z: Math.cos(ejectAngle) * 3 + (Math.random() - 0.5) * 2
+                };
+
+                this.scene.add(shell);
+
+                // Animate shell
+                let time = 0;
+                const animateShell = () => {
+                    time += 0.016;
+                    velocity.y -= 15 * 0.016; // Gravity
+                    shell.position.x += velocity.x * 0.016;
+                    shell.position.y += velocity.y * 0.016;
+                    shell.position.z += velocity.z * 0.016;
+                    shell.rotation.x += 0.3;
+                    shell.rotation.z += 0.2;
+
+                    if (time < 0.5 && shell.position.y > 0) {
+                        requestAnimationFrame(animateShell);
+                    } else {
+                        this.scene.remove(shell);
+                        shell.geometry.dispose();
+                        shell.material.dispose();
+                    }
+                };
+                animateShell();
+            },
+
+            updateProjectiles(dt) {
+                for (let i = this.projectiles.length - 1; i >= 0; i--) {
+                    const proj = this.projectiles[i];
+
+                    const dx = proj.targetX - proj.x;
+                    const dz = proj.targetZ - proj.z;
+                    const dist = Math.sqrt(dx * dx + dz * dz);
+
+                    if (dist < 2) {
+                        // Hit
+                        if (proj.splash > 0) {
+                            // Create explosion effect
+                            this.createExplosion(proj.x, proj.z, proj.splash);
+
+                            // Splash damage - reduce HP, not instant kill!
+                            for (let j = this.enemies.length - 1; j >= 0; j--) {
+                                const enemy = this.enemies[j];
+                                const edx = enemy.x - proj.x;
+                                const edz = enemy.z - proj.z;
+                                const eDist = Math.sqrt(edx * edx + edz * edz);
+
+                                if (eDist < proj.splash) {
+                                    enemy.hp -= proj.damage;
+                                    if (enemy.hp <= 0) {
+                                        this.killEnemy(j);
+                                    }
+                                }
+                            }
+                        } else {
+                            // Single target
+                            let hitEnemy = -1;
+                            let minDist = 3;
+
+                            this.enemies.forEach((enemy, idx) => {
+                                const edx = enemy.x - proj.x;
+                                const edz = enemy.z - proj.z;
+                                const eDist = Math.sqrt(edx * edx + edz * edz);
+
+                                if (eDist < minDist) {
+                                    minDist = eDist;
+                                    hitEnemy = idx;
+                                }
+                            });
+
+                            if (hitEnemy >= 0) {
+                                this.enemies[hitEnemy].hp -= proj.damage;
+                                if (this.enemies[hitEnemy].hp <= 0) {
+                                    this.killEnemy(hitEnemy);
+                                }
+                            }
+                        }
+
+                        this.scene.remove(proj.mesh);
+                        this.projectiles.splice(i, 1);
+                    } else {
+                        // Move toward target
+                        const moveSpeed = proj.speed * dt;
+                        proj.x += (dx / dist) * moveSpeed;
+                        proj.z += (dz / dist) * moveSpeed;
+                        proj.y -= 0.5 * dt; // Gravity effect
+
+                        proj.mesh.position.set(proj.x, Math.max(0.5, proj.y), proj.z);
+
+                        // Gatling bullet trail
+                        if (proj.type === 'B' && Math.random() > 0.5) {
+                            const trailGeo = new THREE.SphereGeometry(0.1, 4, 4);
+                            const trailMat = new THREE.MeshBasicMaterial({
+                                color: 0xff8800,
+                                transparent: true,
+                                opacity: 0.8
+                            });
+                            const trail = new THREE.Mesh(trailGeo, trailMat);
+                            trail.position.set(proj.x, proj.y, proj.z);
+                            this.scene.add(trail);
+
+                            // Fade out trail
+                            const fadeTrail = () => {
+                                trailMat.opacity -= 0.1;
+                                if (trailMat.opacity > 0) {
+                                    requestAnimationFrame(fadeTrail);
+                                } else {
+                                    this.scene.remove(trail);
+                                    trailGeo.dispose();
+                                    trailMat.dispose();
+                                }
+                            };
+                            setTimeout(fadeTrail, 16);
+                        }
+                    }
+                }
+            },
+
+            createExplosion(x, z, radius) {
+                // Create particle explosion
+                const particles = new THREE.Group();
+
+                for (let i = 0; i < 20; i++) {
+                    const geo = new THREE.SphereGeometry(0.3, 4, 4);
+                    const mat = new THREE.MeshBasicMaterial({
+                        color: Math.random() > 0.5 ? 0xff6600 : 0xffcc00
+                    });
+                    const particle = new THREE.Mesh(geo, mat);
+
+                    particle.position.set(
+                        (Math.random() - 0.5) * radius,
+                        Math.random() * 3,
+                        (Math.random() - 0.5) * radius
+                    );
+
+                    particles.add(particle);
+                }
+
+                particles.position.set(x, 0, z);
+                this.scene.add(particles);
+
+                // Remove after animation
+                setTimeout(() => {
+                    this.scene.remove(particles);
+                }, 200);
+            },
+
+            spawnEnemies(dt) {
+                this.enemySpawnTimer -= dt;
+
+                if (this.enemySpawnTimer <= 0) {
+                    this.enemySpawnTimer = this.enemySpawnRate;
+
+                    // Spawn from edges
+                    const edge = Math.floor(Math.random() * 4);
+                    let x, z;
+
+                    switch (edge) {
+                        case 0: // Front
+                            x = (Math.random() - 0.5) * this.worldWidth;
+                            z = this.base.z - 80;
+                            break;
+                        case 1: // Back
+                            x = (Math.random() - 0.5) * this.worldWidth;
+                            z = this.base.z + 60;
+                            break;
+                        case 2: // Left
+                            x = -this.worldWidth / 2 - 10;
+                            z = this.base.z + (Math.random() - 0.5) * 100;
+                            break;
+                        case 3: // Right
+                            x = this.worldWidth / 2 + 10;
+                            z = this.base.z + (Math.random() - 0.5) * 100;
+                            break;
+                    }
+
+                    this.enemies.push(this.createEnemy(x, z));
+                }
+            },
+
+            killEnemy(index) {
+                const enemy = this.enemies[index];
+
+                // Debug log for elite/boss kills
+                if (enemy.isElite) console.log("🔮 ELITE killed! HP was:", enemy.hp);
+                if (enemy.isBoss) console.log("👑 BOSS killed! HP was:", enemy.hp);
+
+                // 50% chance to drop loot (not guaranteed)
+                if (Math.random() < 0.5) {
+                    this.loots.push(this.createLoot(enemy.x, enemy.z));
+                }
+
+                // Remove enemy
+                this.scene.remove(enemy.mesh);
+                this.enemies.splice(index, 1);
+                this.enemiesKilled++;
+            },
+
+            // Calculate progressive tower build cost (50, 60, 70...)
+            getTurretBuildCost() {
+                return 50 + this.base.turrets.length * 10;
+            },
+
+            // Calculate progressive upgrade cost (50, 60, 70... based on upgraded count)
+            getUpgradeCost() {
+                const upgradedCount = this.base.turrets.filter(t => t.upgraded).length;
+                return 50 + upgradedCount * 10;
+            },
+
+            checkCollisions() {
+                // Player vs Trees
+                for (let i = this.trees.length - 1; i >= 0; i--) {
+                    // Auto-Collect Trees logic -> Change to Chop -> Spawn Loot
+                    const tree = this.trees[i];
+                    const dist = this.playerMesh.position.distanceTo(tree.mesh.position);
+                    if (dist < 3) { // Close to tree
+                        // Chop!
+                        this.audio.play('chop');
+
+                        // Spawn Loot instead of direct wood
+                        this.createLoot(tree.x, tree.z);
+
+                        this.scene.remove(tree.mesh);
+                        this.trees.splice(i, 1);
+                    }
+                }
+
+                // Player vs Enemies
+                for (let i = this.enemies.length - 1; i >= 0; i--) {
+                    const enemy = this.enemies[i];
+                    const dx = this.player.x - enemy.x;
+                    const dz = this.player.z - enemy.z;
+                    const dist = Math.sqrt(dx * dx + dz * dz);
+
+                    if (dist < this.player.size + enemy.size) {
+                        // Player deals low damage on contact (1 damage per collision check)
+                        if (!enemy.playerContactCooldown || enemy.playerContactCooldown <= 0) {
+                            enemy.hp -= 1; // Low damage
+                            enemy.playerContactCooldown = 0.5; // 0.5 second cooldown
+                            this.audio.play('hit');
+
+                            // Kill if HP depleted
+                            if (enemy.hp <= 0) {
+                                this.killEnemy(i);
+                            }
+                        }
+                    }
+                    // Reduce player contact cooldown
+                    if (enemy.playerContactCooldown > 0) {
+                        enemy.playerContactCooldown -= 0.016; // ~60fps
+                    }
+                }
+
+                // (Old Player vs Loots block removed)
+
+                // Player vs Base (deposit wood)
+                const baseDx = this.player.x - this.base.x;
+                const baseDz = this.player.z - this.base.z;
+                if (Math.abs(baseDx) < this.base.width / 2 + this.player.size &&
+                    Math.abs(baseDz) < this.base.height / 2 + this.player.size) {
+                    if (this.player.wood > 0) {
+                        // First heal
+                        const hpNeeded = this.base.maxHp - this.base.hp;
+                        const woodForHeal = Math.min(this.player.wood, hpNeeded);
+                        this.base.hp += woodForHeal;
+                        this.player.wood -= woodForHeal;
+
+                        // Remaining to storage
+                        this.base.wood += this.player.wood;
+                        this.player.wood = 0;
+                    }
+                }
+
+                // Enemies vs Base - ALL enemies deal damage over time
+                for (let i = this.enemies.length - 1; i >= 0; i--) {
+                    const enemy = this.enemies[i];
+                    const dx = enemy.x - this.base.x;
+                    const dz = enemy.z - this.base.z;
+
+                    if (Math.abs(dx) < this.base.width / 2 + enemy.size &&
+                        Math.abs(dz) < this.base.height / 2 + enemy.size) {
+
+                        // Initialize attack cooldown if not set
+                        if (enemy.attackCooldown === undefined) {
+                            enemy.attackCooldown = 0;
+                        }
+
+                        // Attack if cooldown is ready
+                        if (enemy.attackCooldown <= 0) {
+                            // Damage based on enemy type
+                            let damage = 5; // Normal enemy
+                            if (enemy.isBoss) {
+                                damage = 25;
+                            } else if (enemy.isElite) {
+                                damage = 15;
+                            }
+
+                            // Shield absorbs damage first
+                            if (this.base.shield && this.base.shield > 0) {
+                                const shieldDamage = Math.min(damage, this.base.shield);
+                                this.base.shield -= shieldDamage;
+                                damage -= shieldDamage;
+                                // Hide shield effect when depleted
+                                if (this.base.shield <= 0) {
+                                    this.base.shield = 0;
+                                    this.hideCartShieldEffect();
+                                }
+                            }
+                            this.base.hp -= damage;
+                            enemy.attackCooldown = 1; // 1 second between attacks
+
+                            // Visual feedback - push back
+                            const pushDist = enemy.isBoss ? 5 : (enemy.isElite ? 3 : 2);
+                            const angle = Math.atan2(dz, dx);
+                            enemy.x += Math.cos(angle) * pushDist;
+                            enemy.z += Math.sin(angle) * pushDist;
+                            enemy.mesh.position.set(enemy.x, 0, enemy.z);
+                        }
+
+                        // Game no longer ends when cart dies - continue to destination
+                        if (this.base.hp < 0) this.base.hp = 0;
+                    } else {
+                        // Reduce attack cooldown when not in contact
+                        if (enemy.attackCooldown !== undefined && enemy.attackCooldown > 0) {
+                            // Will be reduced in main update loop
+                        }
+                    }
+                }
+
+                // Player vs Loots (RESTORED)
+                for (let i = this.loots.length - 1; i >= 0; i--) {
+                    const loot = this.loots[i];
+                    const dx = this.player.x - loot.x;
+                    const dz = this.player.z - loot.z;
+                    const dist = Math.sqrt(dx * dx + dz * dz);
+
+                    if (dist < this.player.size + 2) {
+                        // Collect
+                        this.audio.play('collect');
+                        this.base.wood += loot.wood;
+                        this.scene.remove(loot.mesh);
+                        this.loots.splice(i, 1);
+                    }
+                }
+
+                // Update loot lifetime
+                for (let i = this.loots.length - 1; i >= 0; i--) {
+                    this.loots[i].lifetime -= 1 / 60;
+                    if (this.loots[i].lifetime <= 0) {
+                        this.scene.remove(this.loots[i].mesh);
+                        this.loots.splice(i, 1);
+                    }
+                }
+            },
+
+            checkTurretBuild() {
+                const availableSlot = this.base.slots.findIndex(s => s === null);
+
+                if (this.base.wood >= this.getTurretBuildCost() && availableSlot >= 0 && !this.paused) {
+                    this.paused = true;
+                    document.getElementById('turret-modal').classList.add('active');
+                    document.body.classList.add('modal-active'); // Disable canvas pointer events
+
+                    // Destroy joystick while modal is open to allow button clicks
+                    if (this.joystickManager) {
+                        this.joystickManager.destroy();
+                        this.joystickManager = null;
+                    }
+                }
+            },
+
+            createGuideArrow() {
+                // Create a pool of arrows for the path
+                this.guidePath = [];
+                const arrowCount = 8;
+
+                // Create a flat chevron shape using ConeGeometry
+                // Rotate geometry ONCE so -Z is forward (or whatever lookAt expects)
+                const geometry = new THREE.ConeGeometry(1, 2, 4);
+                geometry.rotateX(Math.PI / 2);
+
+                const material = new THREE.MeshBasicMaterial({
+                    color: 0x00ff00,
+                    transparent: true,
+                    opacity: 0.6,
+                    depthTest: false, // Always visible
+                    side: THREE.DoubleSide
+                });
+
+                for (let i = 0; i < arrowCount; i++) {
+                    const arrow = new THREE.Mesh(geometry, material);
+                    arrow.position.y = 0.5;
+                    arrow.visible = false;
+                    arrow.scale.set(1, 1, 0.5); // Flatten
+                    this.scene.add(arrow);
+                    this.guidePath.push(arrow);
+                }
+            },
+
+            updateGuideArrow() {
+                if (!this.guidePath || !this.playerMesh) return;
+
+                const canAfford = this.base.wood >= this.getTurretBuildCost();
+                const hasEmptySlot = this.base.slots.some(s => s === null);
+                const shouldShow = canAfford && hasEmptySlot;
+
+                if (shouldShow) {
+                    const startPos = this.playerMesh.position.clone();
+                    const endPos = this.baseMesh.position.clone();
+
+                    const lookTarget = endPos.clone();
+                    lookTarget.y = 0.5;
+
+                    this.guidePath.forEach((arrow, index) => {
+                        arrow.visible = true;
+
+                        // Distribute
+                        const t = (index + 1) / (this.guidePath.length + 1);
+                        arrow.position.lerpVectors(startPos, endPos, t);
+                        arrow.position.y = 0.5;
+
+                        arrow.lookAt(lookTarget);
+
+                        // Animation: Pulse
+                        const time = Date.now() * 0.005;
+                        arrow.material.opacity = 0.5 + Math.sin(time - index * 0.5) * 0.3;
+                    });
+                } else {
+                    this.guidePath.forEach(arrow => arrow.visible = false);
+                }
+            },
+
+            selectTurret(type) {
+                // Check if turret type is unlocked
+                const typeIndex = this.turretUnlockSequence.indexOf(type);
+                if (typeIndex > this.turretUnlockLevel) {
+                    return; // Not unlocked yet
+                }
+
+                const availableSlot = this.base.slots.findIndex(s => s === null);
+                if (availableSlot < 0) return;
+
+                // Calculate position in 3x3 grid
+                const row = Math.floor(availableSlot / 3);
+                const col = availableSlot % 3;
+                const cellSize = this.base.width / 3;
+                const offsetX = (col - 1) * cellSize;
+                const offsetZ = (row - 1) * cellSize;
+
+                const turret = this.createTurret(type, offsetX, offsetZ, availableSlot);
+
+                // Deduct cost BEFORE adding to array (so cost is calculated correctly)
+                this.base.wood -= this.getTurretBuildCost();
+                this.base.slots[availableSlot] = type;
+                this.base.turrets.push(turret);
+
+                // Unlock next turret type if not all unlocked
+                if (this.turretUnlockLevel < this.turretUnlockSequence.length - 1) {
+                    this.turretUnlockLevel++;
+                    this.updateTurretModal();
+                    this.audio.play('build'); // Play sound for unlock
+                }
+
+                document.getElementById('turret-modal').classList.remove('active');
+                document.body.classList.remove('modal-active'); // Re-enable canvas pointer events
+                this.paused = false;
+
+                // Recreate joystick after modal closes
+                this.setupJoystick();
+            },
+
+            // Show upgrade modal for a turret
+            showUpgradeModal(turret) {
+                const upgradeCost = this.getUpgradeCost();
+                console.log('🔔 showUpgradeModal called:', {
+                    turretType: turret?.type,
+                    upgraded: turret?.upgraded,
+                    wood: this.base.wood,
+                    cost: upgradeCost
+                });
+
+                if (turret.upgraded || this.base.wood < upgradeCost) {
+                    console.log('❌ showUpgradeModal blocked:',
+                        turret.upgraded ? 'already upgraded' : 'not enough wood');
+                    return;
+                }
+
+                console.log('✅ Showing upgrade modal!');
+                this.selectedTurretForUpgrade = turret;
+                const data = this.UPGRADE_DATA[turret.type];
+
+                if (!data) {
+                    console.log('❌ No upgrade data for type:', turret.type);
+                    return;
+                }
+
+                // Update title with turret name
+                document.getElementById('upgrade-title').textContent = '⬆️ Upgrade ' + data.name;
+
+                // Update cost display with actual cost
+                document.getElementById('upgrade-cost').textContent = upgradeCost + ' wood';
+
+                // Populate choice 1
+                document.getElementById('choice1-emoji').textContent = data.choice1.emoji;
+                document.getElementById('choice1-name').textContent = data.choice1.name;
+                document.getElementById('choice1-desc').textContent = data.choice1.desc;
+
+                // Populate choice 2
+                document.getElementById('choice2-emoji').textContent = data.choice2.emoji;
+                document.getElementById('choice2-name').textContent = data.choice2.name;
+                document.getElementById('choice2-desc').textContent = data.choice2.desc;
+
+                document.getElementById('upgrade-modal').classList.add('active');
+                document.body.classList.add('modal-active');
+                this.paused = true;
+
+                // Destroy joystick while modal is open
+                if (this.joystickManager) {
+                    this.joystickManager.destroy();
+                    this.joystickManager = null;
+                }
+            },
+
+            // Confirm upgrade with choice (1 or 2)
+            confirmUpgrade(choiceNum) {
+                const turret = this.selectedTurretForUpgrade;
+                if (!turret || turret.upgraded || this.base.wood < this.getUpgradeCost()) {
+                    this.cancelUpgrade();
+                    return;
+                }
+
+                this.base.wood -= this.getUpgradeCost();
+                this.applyUpgrade(turret, choiceNum);
+                this.audio.play('build');
+
+                this.cancelUpgrade();
+            },
+
+            // Cancel upgrade modal
+            cancelUpgrade() {
+                document.getElementById('upgrade-modal').classList.remove('active');
+                document.body.classList.remove('modal-active');
+                this.selectedTurretForUpgrade = null;
+                this.paused = false;
+                this.setupJoystick();
+            },
+
+            // Apply upgrade effects to turret based on choice
+            applyUpgrade(turret, choiceNum) {
+                turret.upgraded = true;
+                const data = this.UPGRADE_DATA[turret.type];
+                const choice = choiceNum === 1 ? data.choice1 : data.choice2;
+                turret.upgradeChoice = choice;
+
+                console.log('🎯 Applying upgrade: ' + choice.emoji + ' ' + choice.name);
+
+                // Apply skill-specific effects
+                if (choice.fireRateMultiplier) {
+                    turret.fireRate *= choice.fireRateMultiplier;
+                }
+                if (choice.damageMultiplier) {
+                    turret.damage *= choice.damageMultiplier;
+                }
+                if (choice.explosive) {
+                    turret.explosive = true;
+                    turret.explosionRadius = choice.explosionRadius;
+                }
+                if (choice.piercing) {
+                    turret.piercing = true;
+                    turret.maxPierce = choice.maxPierce;
+                }
+                if (choice.burning) {
+                    turret.burning = true;
+                    turret.burnDuration = choice.burnDuration;
+                }
+                if (choice.splashMultiplier) {
+                    turret.splash = (turret.splash || 5) * choice.splashMultiplier;
+                }
+                if (choice.rangeMultiplier) {
+                    turret.range = (turret.range || 15) * choice.rangeMultiplier;
+                }
+                if (choice.shieldGenerator) {
+                    turret.shieldGenerator = true;
+                    turret.shieldAmount = choice.shieldAmount;
+                    // Add shield to cart
+                    this.base.shield = (this.base.shield || 0) + choice.shieldAmount;
+                    this.base.maxShield = (this.base.maxShield || 0) + choice.shieldAmount;
+                    // Create shield visual effect around cart
+                    this.createCartShieldEffect();
+                }
+                if (choice.extraWorkers) {
+                    for (let i = 0; i < choice.extraWorkers; i++) {
+                        this.createWorker();
+                    }
+                }
+                if (choice.autoRepair) {
+                    turret.autoRepair = true;
+                    turret.repairRate = choice.repairRate;
+                }
+                if (choice.overheatBonus) {
+                    turret.overheatBonus = true;
+                    turret.overheatDamageMultiplier = choice.overheatDamageMultiplier;
+                }
+                if (choice.noCooldown) {
+                    turret.noCooldown = true;
+                }
+
+                // Visual upgrade indicator - add glow ring with skill color
+                const glowGeo = new THREE.RingGeometry(1.8, 2.2, 16);
+                const glowColor = choiceNum === 1 ? 0x00aaff : 0xff6600;
+                const glowMat = new THREE.MeshBasicMaterial({
+                    color: glowColor,
+                    transparent: true,
+                    opacity: 0.6,
+                    side: THREE.DoubleSide
+                });
+                const glowRing = new THREE.Mesh(glowGeo, glowMat);
+                glowRing.rotation.x = -Math.PI / 2;
+                glowRing.position.y = 3.1;
+                turret.mesh.add(glowRing);
+                turret.glowRing = glowRing;
+
+                // Remove upgrade arrow for this turret
+                this.removeUpgradeArrow(turret);
+            },
+
+            // Create upgrade arrow indicator above turret
+            createUpgradeArrow(turret) {
+                const arrowGroup = new THREE.Group();
+
+                // Arrow body
+                const bodyGeo = new THREE.ConeGeometry(0.4, 1, 4);
+                const bodyMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+                const body = new THREE.Mesh(bodyGeo, bodyMat);
+                arrowGroup.add(body);
+
+                // Arrow stem
+                const stemGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.5, 8);
+                const stem = new THREE.Mesh(stemGeo, bodyMat);
+                stem.position.y = -0.75;
+                arrowGroup.add(stem);
+
+                arrowGroup.position.set(turret.offsetX, 7, turret.offsetZ);
+                arrowGroup.userData = { turret: turret };
+                this.baseMesh.add(arrowGroup);
+                this.upgradeArrows.push(arrowGroup);
+                turret.upgradeArrow = arrowGroup;
+            },
+
+            // Remove upgrade arrow for specific turret
+            removeUpgradeArrow(turret) {
+                if (turret.upgradeArrow) {
+                    this.baseMesh.remove(turret.upgradeArrow);
+                    const idx = this.upgradeArrows.indexOf(turret.upgradeArrow);
+                    if (idx >= 0) this.upgradeArrows.splice(idx, 1);
+                    turret.upgradeArrow = null;
+                }
+            },
+
+            // Update upgrade arrows (animation + show/hide based on unlock level AND wood)
+            updateUpgradeArrows(dt) {
+                const time = Date.now() * 0.003;
+
+                // Show arrows after Gatling is UNLOCKED (turretUnlockLevel >= 4) AND have enough wood
+                const allTurretsBuilt = this.base.turrets.length >= 9; // All 9 turret slots filled
+                const hasEnoughWood = this.base.wood >= this.getUpgradeCost();
+
+                // Create/show arrows only when ALL 9 TURRETS BUILT AND wood >= upgrade cost
+                if (allTurretsBuilt && hasEnoughWood) {
+                    // Create arrows for turrets that can be upgraded
+                    this.base.turrets.forEach(turret => {
+                        if (!turret.upgraded && !turret.upgradeArrow) {
+                            this.createUpgradeArrow(turret);
+                        }
+                    });
+                    // Show existing arrows
+                    this.upgradeArrows.forEach(arrow => {
+                        arrow.visible = true;
+                    });
+
+                    // Show tutorial ONCE when all 9 turrets are built
+                    if (!this.upgradeTutorialShown && this.base.turrets.length >= 9) {
+                        this.upgradeTutorialShown = true;
+                        this.showUpgradeTutorial();
+                    }
+                } else {
+                    // Hide arrows when not enough wood
+                    this.upgradeArrows.forEach(arrow => {
+                        arrow.visible = false;
+                    });
+                }
+
+                // Animate visible arrows (bob up/down)
+                this.upgradeArrows.forEach(arrow => {
+                    if (arrow.visible) {
+                        arrow.position.y = 7 + Math.sin(time) * 0.3;
+                        arrow.rotation.y += dt * 2;
+                    }
+                });
+            },
+
+            // Show upgrade tutorial bubble
+            showUpgradeTutorial() {
+                const bubble = document.createElement('div');
+                bubble.id = 'upgrade-tutorial';
+                bubble.innerHTML = '💡 Click the <span style="color:#00ff00;">green arrow</span> to Upgrade Turret!';
+                bubble.style.cssText = `
+                    position: fixed;
+                    top: 28%;
+                    left: 50%;
+                    transform: translate(-50%, 0);
+                    background: rgba(0,0,0,0.9);
+                    padding: 20px 30px;
+                    border-radius: 15px;
+                    border: 2px solid #00ff00;
+                    color: white;
+                    font-size: 22px;
+                    z-index: 300;
+                    text-align: center;
+                    animation: pulse 1s infinite;
+                `;
+                document.body.appendChild(bubble);
+
+                // Auto-dismiss after 3 seconds
+                setTimeout(() => {
+                    if (bubble.parentNode) {
+                        bubble.style.opacity = '0';
+                        bubble.style.transition = 'opacity 0.5s';
+                        setTimeout(() => bubble.remove(), 500);
+                    }
+                }, 3000);
+
+                // Click to dismiss
+                bubble.addEventListener('click', () => bubble.remove());
+            },
+
+            // Create visual shield effect around cart
+            createCartShieldEffect() {
+                if (this.shieldEffectMesh) return; // Already exists
+
+                // Create a semi-transparent sphere around the cart
+                const shieldGeo = new THREE.SphereGeometry(8, 32, 16);
+                const shieldMat = new THREE.MeshBasicMaterial({
+                    color: 0x00aaff,
+                    transparent: true,
+                    opacity: 0.3,
+                    side: THREE.DoubleSide
+                });
+                this.shieldEffectMesh = new THREE.Mesh(shieldGeo, shieldMat);
+                this.shieldEffectMesh.position.set(0, 3, 0); // Center on cart
+                this.baseMesh.add(this.shieldEffectMesh);
+
+                // Add pulsing animation
+                this.shieldEffectMesh.userData.originalOpacity = 0.3;
+                console.log('🛡️ Shield effect created around cart!');
+            },
+
+            // Hide shield effect when depleted
+            hideCartShieldEffect() {
+                if (this.shieldEffectMesh) {
+                    this.baseMesh.remove(this.shieldEffectMesh);
+                    this.shieldEffectMesh.geometry.dispose();
+                    this.shieldEffectMesh.material.dispose();
+                    this.shieldEffectMesh = null;
+                    console.log('💔 Shield depleted, effect removed!');
+                }
+            },
+
+            // Animate shield effect (call from update loop)
+            updateShieldEffect(time) {
+                if (this.shieldEffectMesh && this.base.shield > 0) {
+                    // Pulse effect
+                    const pulse = 0.3 + Math.sin(time * 3) * 0.1;
+                    this.shieldEffectMesh.material.opacity = pulse;
+                    this.shieldEffectMesh.rotation.y += 0.01;
+                }
+            },
+            updateTurretModal() {
+                // Lock sequence: A (level 0), C (level 1), E (level 2), D (level 3), B (level 4)
+                const buttonMapping = {
+                    'A': 'turret-btn-A',
+                    'C': 'turret-btn-C',
+                    'E': 'turret-btn-E',
+                    'D': 'turret-btn-D',
+                    'B': 'turret-btn-B'
+                };
+
+                this.turretUnlockSequence.forEach((type, index) => {
+                    const btn = document.getElementById(buttonMapping[type]);
+                    if (!btn) return;
+
+                    const lockIcon = btn.querySelector('.lock-icon');
+
+                    if (index <= this.turretUnlockLevel) {
+                        // Unlocked
+                        btn.classList.remove('locked');
+                        if (lockIcon) lockIcon.style.display = 'none';
+
+                        // Add unlock animation for newly unlocked turret
+                        if (index === this.turretUnlockLevel && index > 0) {
+                            btn.classList.add('just-unlocked');
+                            setTimeout(() => btn.classList.remove('just-unlocked'), 800);
+                        }
+                    } else {
+                        // Locked
+                        btn.classList.add('locked');
+                        if (lockIcon) lockIcon.style.display = 'block';
+                    }
+                });
+            },
+
+            addNewTrees() {
+                const roadHalf = this.roadWidth / 2;
+                const worldHalf = this.worldWidth / 2;
+
+                for (let i = 0; i < 10; i++) {
+                    const side = Math.random() < 0.5 ? -1 : 1;
+                    const x = side * (roadHalf + 5 + Math.random() * (worldHalf - roadHalf - 10));
+                    const z = this.base.z - 100 - Math.random() * 50;
+
+                    this.createTree(x, z);
+                }
+            },
+
+            cleanupObjects() {
+                // Remove objects too far behind
+                const minZ = this.base.z + 100;
+
+                for (let i = this.trees.length - 1; i >= 0; i--) {
+                    if (this.trees[i].z > minZ) {
+                        this.scene.remove(this.trees[i].mesh);
+                        this.trees.splice(i, 1);
+                    }
+                }
+
+                for (let i = this.enemies.length - 1; i >= 0; i--) {
+                    const enemy = this.enemies[i];
+                    // SKIP Elite and Boss - they should persist until killed!
+                    if (enemy.isElite || enemy.isBoss) continue;
+
+                    if (enemy.z > minZ) {
+                        this.scene.remove(enemy.mesh);
+                        this.enemies.splice(i, 1);
+                    }
+                }
+
+                for (let i = this.loots.length - 1; i >= 0; i--) {
+                    if (this.loots[i].z > minZ) {
+                        this.scene.remove(this.loots[i].mesh);
+                        this.loots.splice(i, 1);
+                    }
+                }
+            },
+
+            triggerGameOver() {
+                this.gameOver = true;
+                document.getElementById('final-score').textContent =
+                    `Kills: ${this.enemiesKilled} | Turrets: ${this.base.turrets.length}`;
+                document.getElementById('game-over').classList.add('active');
+            },
+
+            // Show spawn alert on screen
+            showSpawnAlert(text, color) {
+                // Create alert element
+                const alert = document.createElement('div');
+                alert.textContent = text;
+                alert.style.cssText = `
+                    position: fixed;
+                    top: 40%;
+                    left: 50%;
+                    transform: translate(-50%, -50%) scale(0.5);
+                    font-size: 48px;
+                    font-weight: bold;
+                    color: ${color};
+                    text-shadow: 0 0 20px ${color}, 0 0 40px ${color}, 2px 2px 4px rgba(0,0,0,0.8);
+                    z-index: 10000;
+                    pointer-events: none;
+                    opacity: 0;
+                    transition: all 0.3s ease-out;
+                    font-family: Arial, sans-serif;
+                `;
+                document.body.appendChild(alert);
+
+                // Animate in
+                setTimeout(() => {
+                    alert.style.opacity = '1';
+                    alert.style.transform = 'translate(-50%, -50%) scale(1.2)';
+                }, 50);
+
+                // Hold
+                setTimeout(() => {
+                    alert.style.transform = 'translate(-50%, -50%) scale(1)';
+                }, 300);
+
+                // Fade out
+                setTimeout(() => {
+                    alert.style.opacity = '0';
+                    alert.style.transform = 'translate(-50%, -50%) scale(1.5)';
+                }, 2000);
+
+                // Remove
+                setTimeout(() => {
+                    alert.remove();
+                }, 2500);
+            },
+
+            triggerVictory() {
+                this.gameOver = true;
+                document.getElementById('victory-score').textContent =
+                    `Kills: ${this.enemiesKilled} | Turrets: ${this.base.turrets.length} | HP: ${Math.ceil(this.base.hp)}`;
+                document.getElementById('victory-screen').classList.add('active');
+                this.audio.play('build'); // Victory sound
+            },
+
+            restart() {
+                // Hide victory and game over screens
+                document.getElementById('game-over').classList.remove('active');
+                document.getElementById('victory-screen').classList.remove('active');
+                this.setupGame();
+            },
+
+            // ==========================================
+            // CAMERA
+            // ==========================================
+            updateCamera() {
+                // Orbit camera around base
+                const targetX = this.base.x;
+                const targetZ = this.base.z;
+
+                const camX = targetX + Math.sin(this.cameraAngle) * this.cameraDistance;
+                const camZ = targetZ + Math.cos(this.cameraAngle) * this.cameraDistance;
+                const camY = this.cameraHeight;
+
+                this.camera.position.set(camX, camY, camZ);
+                this.camera.lookAt(targetX, 0, targetZ);
+            },
+
+            // ==========================================
+            // RENDERING
+            // ==========================================
+            render() {
+                // Animate goal beam pulsing effect
+                if (this.goalBeam) {
+                    const pulse = 0.3 + Math.sin(Date.now() * 0.003) * 0.2;
+                    this.goalBeam.material.opacity = pulse;
+                    this.goalBeam.scale.x = 1 + Math.sin(Date.now() * 0.002) * 0.3;
+                    this.goalBeam.scale.z = 1 + Math.sin(Date.now() * 0.002) * 0.3;
+                }
+
+                this.renderer.render(this.scene, this.camera);
+            },
+
+            // ==========================================
+            // UI
+            // ==========================================
+            updateUI() {
+                document.getElementById('base-wood').innerText = Math.floor(this.base.wood); // Integer only
+                document.getElementById('player-wood').innerText = Math.abs(Math.floor((this.base.z - this.destinationZ))) + "m"; // Distance to goal
+            },
+
+            updateMinimap() {
+                const canvas = document.getElementById('minimap');
+                const ctx = canvas.getContext('2d');
+                const size = 150;
+                canvas.width = size;
+                canvas.height = size;
+
+                // Background
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                ctx.fillRect(0, 0, size, size);
+
+                // Scale factor
+                const scale = size / 150;
+                const centerX = size / 2;
+                const centerY = size / 2;
+
+                // Draw road
+                ctx.fillStyle = '#555';
+                ctx.fillRect(centerX - 10, 0, 20, size);
+
+                // Draw base (center)
+                ctx.fillStyle = '#3366cc';
+                ctx.fillRect(centerX - 8, centerY - 8, 16, 16);
+
+                // Draw turrets on base
+                this.base.turrets.forEach(turret => {
+                    ctx.fillStyle = turret.type === 'A' ? '#333' :
+                        (turret.type === 'B' ? '#ff8c00' : '#8b008b');
+                    const tx = centerX + turret.offsetX * scale * 0.5;
+                    const tz = centerY + turret.offsetZ * scale * 0.5;
+                    ctx.beginPath();
+                    ctx.arc(tx, tz, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                // Draw trees
+                ctx.fillStyle = '#006400';
+                this.trees.forEach(tree => {
+                    const tx = centerX + (tree.x - this.base.x) * scale;
+                    const tz = centerY + (tree.z - this.base.z) * scale;
+                    if (tx >= 0 && tx <= size && tz >= 0 && tz <= size) {
+                        ctx.beginPath();
+                        ctx.arc(tx, tz, 2, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                });
+
+                // Draw enemies
+                ctx.fillStyle = '#cc2222';
+                this.enemies.forEach(enemy => {
+                    const ex = centerX + (enemy.x - this.base.x) * scale;
+                    const ez = centerY + (enemy.z - this.base.z) * scale;
+                    if (ex >= 0 && ex <= size && ez >= 0 && ez <= size) {
+                        ctx.fillRect(ex - 2, ez - 2, 4, 4);
+                    }
+                });
+
+                // Draw loots
+                ctx.fillStyle = '#f0d084';
+                this.loots.forEach(loot => {
+                    const lx = centerX + (loot.x - this.base.x) * scale;
+                    const lz = centerY + (loot.z - this.base.z) * scale;
+                    if (lx >= 0 && lx <= size && lz >= 0 && lz <= size) {
+                        ctx.beginPath();
+                        ctx.arc(lx, lz, 2, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                });
+
+                // Draw player
+                ctx.fillStyle = '#ffcc00';
+                const px = centerX + (this.player.x - this.base.x) * scale;
+                const pz = centerY + (this.player.z - this.base.z) * scale;
+                ctx.beginPath();
+                ctx.arc(px, pz, 4, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Border
+                ctx.strokeStyle = '#444';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(0, 0, size, size);
+            }
+        };
+
+        // Start the game
+        window.onload = () => {
+            game.init();
+
+            // Add turret button event listeners
+            ['A', 'B', 'C', 'D', 'E'].forEach(type => {
+                const btn = document.getElementById('turret-btn-' + type);
+                if (btn) {
+                    btn.addEventListener('click', () => {
+                        game.selectTurret(type);
+                    });
+                }
+            });
+
+            // Upgrade button event listeners
+            document.getElementById('upgrade-btn').addEventListener('click', () => {
+                game.confirmUpgrade();
+            });
+            document.getElementById('cancel-upgrade-btn').addEventListener('click', () => {
+                game.cancelUpgrade();
+            });
+
+            // Victory screen button event listeners - explicit handlers for reliability
+            document.getElementById('download-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                console.log('📥 Download button clicked!');
+                window.open('https://play.google.com/store/apps/details?id=com.topwar.callofdragon', '_blank');
+            });
+            document.getElementById('victory-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                console.log('🔄 Restart button clicked!');
+                game.restart();
+            });
+            document.getElementById('restart-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                console.log('🔄 Game over restart button clicked!');
+                game.restart();
+            });
+        };
+    </script>
+</body>
+
+</html>
