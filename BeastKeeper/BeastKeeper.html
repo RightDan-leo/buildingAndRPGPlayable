@@ -326,10 +326,44 @@
             text-align: center;
             margin-top: 5px;
         }
+
+        /* Back to Portal */
+        #portal-back {
+            position: fixed;
+            top: 8px;
+            left: 8px;
+            z-index: 9999;
+            pointer-events: none;
+        }
+
+        #portal-back a {
+            pointer-events: auto;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: #a78bfa;
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 700;
+            font-family: 'Segoe UI', sans-serif;
+            border: 1px solid rgba(108, 92, 231, 0.4);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            transition: background 0.2s, color 0.2s;
+        }
+
+        #portal-back a:hover {
+            background: rgba(108, 92, 231, 0.5);
+            color: #fff;
+        }
     </style>
 </head>
 
 <body>
+    <div id="portal-back"><a href="../">← 游戏大厅</a></div>
     <canvas id="gameCanvas"></canvas>
 
     <!-- HUD -->
@@ -916,15 +950,6 @@
                     );
                     head.castShadow = true;
                     group.add(head);
-
-                    // Eyes
-                    const eyeGeo = new THREE.SphereGeometry(0.15 * scale, 8, 8);
-                    const eyeMat = new THREE.MeshPhongMaterial({ color: 0xFFFFFF });
-                    const eye = new THREE.Mesh(eyeGeo, eyeMat);
-                    eye.position.copy(head.position);
-                    eye.position.z += 0.4 * scale;
-                    eye.position.y += 0.1 * scale;
-                    group.add(eye);
                 }
 
                 // Injured indicator
@@ -2077,8 +2102,8 @@
                         beast.z = newZ;
                         beast.mesh.position.set(beast.x, 0, beast.z);
 
-                        // Face direction of movement
-                        beast.mesh.rotation.y = Math.atan2(dx, dz);
+                        // Face direction of movement (add PI because head is in Z-negative direction)
+                        beast.mesh.rotation.y = Math.atan2(dx, dz) + Math.PI;
                     }
 
                     // Ranged attack if in range
@@ -2139,10 +2164,10 @@
                         const baseCooldown = Math.max(0.3, 1.0 - (beast.feedCount || 0) * 0.1);
                         beast.attackCooldown = baseCooldown / attackSpeedMult;
 
-                        // Face target
+                        // Face target (add PI because head is in Z-negative direction)
                         const dx = nearest.x - beast.x;
                         const dz = nearest.z - beast.z;
-                        beast.mesh.rotation.y = Math.atan2(dx, dz);
+                        beast.mesh.rotation.y = Math.atan2(dx, dz) + Math.PI;
                     }
                 }
 
