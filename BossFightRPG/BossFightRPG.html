@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>BossFightRPG</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{overflow:hidden;background:#0a0a1a;font-family:'Segoe UI',Arial,sans-serif;touch-action:none;user-select:none}
+canvas{display:block}
+#hud{position:fixed;top:0;left:0;right:0;pointer-events:none;z-index:10}
+#boss-info{position:absolute;top:12px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;opacity:0;transition:opacity .5s}
+#boss-info.v{opacity:1}
+#boss-avatar{width:44px;height:44px;border-radius:50%;border:2px solid #8b0000;background:radial-gradient(#2a1a2a,#0a0a0a);display:flex;align-items:center;justify-content:center;font-size:22px}
+#boss-details{display:flex;flex-direction:column;gap:2px}
+#boss-name{color:#ff4444;font-size:14px;font-weight:bold;text-shadow:0 0 6px rgba(255,0,0,.4)}
+#boss-level{color:#aaa;font-size:11px}
+#boss-hp-bar{width:200px;height:14px;background:#1a0a0a;border:1px solid #550000;border-radius:7px;overflow:hidden}
+#boss-hp-fill{height:100%;width:100%;background:linear-gradient(90deg,#8b0000,#ff2222);transition:width .15s;border-radius:7px}
+#boss-hp-text{color:#ff6666;font-size:10px;text-align:center}
+#gold-carry{position:fixed;top:12px;right:16px;display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.7);border:2px solid #c8a23c;border-radius:8px;padding:5px 12px;z-index:10;pointer-events:none}
+.gicon{width:24px;height:16px;background:linear-gradient(135deg,#ffd700,#b8860b);border-radius:3px}
+.gval{color:#ffd700;font-size:18px;font-weight:bold;text-shadow:0 0 6px rgba(255,215,0,.5)}
+#hint{position:fixed;bottom:40px;left:50%;transform:translateX(-50%);color:#ffd700;font-size:16px;font-weight:bold;text-shadow:0 0 10px rgba(255,215,0,.6);pointer-events:none;z-index:10;opacity:0;transition:opacity .5s}
+#hint.v{opacity:1}
+#boss-announce{position:fixed;top:35%;left:50%;transform:translate(-50%,-50%);color:#ff4444;font-size:28px;font-weight:bold;text-shadow:0 0 20px rgba(255,0,0,.6),0 2px 4px #000;pointer-events:none;z-index:20;opacity:0;transition:opacity .4s;white-space:nowrap}
+#boss-announce.v{opacity:1;animation:anBounce .6s ease-out}
+@keyframes anBounce{0%{transform:translate(-50%,-50%) scale(0)}60%{transform:translate(-50%,-50%) scale(1.15)}100%{transform:translate(-50%,-50%) scale(1)}}
+#dmg-layer{position:fixed;inset:0;pointer-events:none;z-index:15}
+.dmg{position:absolute;font-size:20px;font-weight:bold;text-shadow:0 0 4px #000;animation:dmgF .8s ease-out forwards;pointer-events:none}
+@keyframes dmgF{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-50px) scale(.6)}}
+#ulabels{position:fixed;inset:0;pointer-events:none;z-index:12}
+.ulab{position:absolute;background:rgba(0,0,0,.8);border:1px solid #c8a23c;border-radius:6px;padding:3px 8px;color:#ffd700;font-size:11px;font-weight:bold;white-space:nowrap}
+#levelup{position:fixed;top:40%;left:50%;transform:translate(-50%,-50%);font-size:40px;font-weight:bold;color:#ffd700;text-shadow:0 0 30px rgba(255,215,0,.8);pointer-events:none;z-index:20;opacity:0}
+#levelup.v{opacity:1;animation:lvup .8s ease-out forwards}
+@keyframes lvup{0%{transform:translate(-50%,-50%) scale(0);opacity:1}50%{transform:translate(-50%,-50%) scale(1.3);opacity:1}100%{transform:translate(-50%,-50%) scale(1);opacity:0}}
+#tut-wrap{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;z-index:25}
+#tut-joy{position:relative;width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.3)}
+#tut-knob{position:absolute;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.5);top:50%;left:50%;transform:translate(-50%,-50%);animation:tutKnob 2s ease-in-out infinite}
+#tut-hand{position:absolute;font-size:36px;bottom:-10px;right:-15px;animation:tutHand 2s ease-in-out infinite;opacity:.85}
+#tut-text{color:#fff;font-size:15px;font-weight:bold;text-shadow:0 0 10px rgba(255,255,255,.5);animation:tutPulse 2s ease-in-out infinite}
+@keyframes tutKnob{0%{transform:translate(-50%,-50%)}25%{transform:translate(-20%,-70%)}50%{transform:translate(10%,-50%)}75%{transform:translate(-20%,-30%)}100%{transform:translate(-50%,-50%)}}
+@keyframes tutHand{0%{transform:translate(0,0)}25%{transform:translate(15px,-12px)}50%{transform:translate(25px,0)}75%{transform:translate(15px,12px)}100%{transform:translate(0,0)}}
+@keyframes tutPulse{0%,100%{opacity:.6}50%{opacity:1}}
+#joy-overlay{position:fixed;inset:0;z-index:18;pointer-events:none!important}
+.joy-base{position:absolute;width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.25);display:none}
+.joy-knob{position:absolute;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.45);display:none}
+#victory{position:fixed;inset:0;z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.85)}
+#victory.v{display:flex}
+#victory h1{font-size:48px;color:#ffd700;text-shadow:0 0 30px rgba(255,215,0,.8);margin-bottom:12px}
+#victory .st{color:#ccc;font-size:16px;margin-bottom:30px;text-align:center;line-height:1.8}
+#victory .dlbtn{padding:16px 48px;font-size:20px;font-weight:bold;border:none;border-radius:12px;cursor:pointer;background:linear-gradient(135deg,#ffd700,#ff8c00);color:#1a0a00;box-shadow:0 0 20px rgba(255,215,0,.5);animation:ctaP 2s ease-in-out infinite}
+#victory .rebtn{margin-top:12px;padding:10px 30px;font-size:14px;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:8px;cursor:pointer}
+@keyframes ctaP{0%,100%{box-shadow:0 0 20px rgba(255,215,0,.5)}50%{box-shadow:0 0 40px rgba(255,215,0,.9)}}
+</style>
+</head>
+<body>
+<div id="hud">
+  <div id="boss-info"><div id="boss-avatar">💀</div><div id="boss-details">
+    <div id="boss-name">NIGHT KING</div><div id="boss-level">Lvl 10</div>
+    <div id="boss-hp-bar"><div id="boss-hp-fill"></div></div>
+    <div id="boss-hp-text">2,000/2,000</div></div></div>
+</div>
+<div id="gold-carry"><div class="gicon"></div><div class="gval" id="gold-val">0</div></div>
+<div id="hint"></div>
+<div id="boss-announce"></div>
+<div id="dmg-layer"></div>
+<div id="ulabels"></div>
+<div id="levelup"></div>
+<div id="tut-wrap"><div id="tut-joy"><div id="tut-knob"></div><div id="tut-hand">👆</div></div><div id="tut-text">拖动摇杆移动</div></div>
+<div id="joy-overlay"><div class="joy-base" id="jb"></div><div class="joy-knob" id="jk"></div></div>
+<div id="victory">
+  <h1>🏆 胜利！</h1>
+  <div class="st" id="vstats"></div>
+  <button class="dlbtn" onclick="window.open('https://play.google.com','_blank')">立即下载</button>
+  <button class="rebtn" id="rebtn">▶ 再玩一次</button>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+'use strict';
+// === CONFIG ===
+const C={
+  BASE_Z:0, BOSS_DIST:15,
+  BOSSES:[
+    {name:'夜王',lvl:10,hp:2000,color:0x334466,sz:3.5,emoji:'💀',side:1},
+    {name:'赤焰巨龙',lvl:20,hp:5000,color:0xcc2200,sz:5,emoji:'🐉',side:-1},
+    {name:'双头巨熊',lvl:30,hp:10000,color:0x886644,sz:6.5,emoji:'🐻',side:1}
+  ],
+  BOW:[
+    {cost:0,dmg:100,arrows:1,color:0xffffff,nameTag:'初始弓',homing:false,aoe:false},
+    {cost:5,dmg:100,arrows:3,color:0x4488ff,nameTag:'三连射',homing:false,aoe:false},
+    {cost:10,dmg:200,arrows:3,color:0xaa44ff,nameTag:'魔法箭',homing:false,aoe:true},
+    {cost:15,dmg:240,arrows:5,color:0xffd700,nameTag:'追踪箭暴',homing:true,aoe:true}
+  ],
+  DRAGONS:[
+    {cost:8,dmg:60,color:0xff4422,sz:1,projColor:0xff6600,name:'火焰幼龙'},
+    {cost:15,dmg:120,color:0xaa44ff,sz:1.5,projColor:0x8844ff,name:'雷电青龙'},
+    {cost:20,dmg:200,color:0xffd700,sz:2,projColor:0xffaa00,name:'黄金神龙'}
+  ],
+  HERO_SPEED:12,ATK_RANGE:8,ATK_CD:.8,BOSS_SPEED:2,BOSS_ATK_CD:3,BOSS_SKILL1_CD:8,BOSS_SKILL2_CD:15
+};
+// === STATE ===
+const S={
+  gold:0,bossIdx:0,phase:'idle',gameOver:false,bowLv:0,dragonCount:0,
+  bossHP:0,bossMaxHP:0,bossMesh:null,bossAI:{atkT:3,sk1T:8,sk2T:15,flashT:0,chargeT:0,chargeDir:null},
+  heroPos:{x:0,z:C.BASE_Z},heroAtk:0,
+  goldBars:[],particles:[],projectiles:[],shakeT:0,
+  wStation:{x:-4,z:C.BASE_Z,gold:0},dStation:{x:4,z:C.BASE_Z,gold:0},
+  dragons:[],tutDone:false,bossSpawnSide:1
+};
+let scene,cam,renderer,clock;
+let heroGroup,heroBow,backpackGroup,heroHP=9999;
+let wStationMesh,dStationMesh,eggMesh;
+let audioCtx,keys={w:0,a:0,s:0,d:0};
+let joyVec={x:0,y:0},joyActive=false,joyTouchId=null,joyStart={x:0,y:0};
+const $=id=>document.getElementById(id);
+
+// === AUDIO ===
+function initAudio(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)}
+function snd(t){if(!audioCtx)return;const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.connect(g);g.connect(audioCtx.destination);const n=audioCtx.currentTime;
+  const P={atk:[200,100,.08,'sawtooth',.1],pick:[1800,2400,.05,'sine',.08],drop:[800,400,.1,'triangle',.06],
+    upgrade:[400,1600,.3,'triangle',.15],hatch:[600,1800,.4,'sine',.12],boom:[100,30,.4,'sawtooth',.25],
+    win:[523,1047,.5,'triangle',.15],hit:[150,60,.1,'square',.08]}[t];
+  if(!P)return;o.frequency.setValueAtTime(P[0],n);o.frequency.linearRampToValueAtTime(P[1],n+P[2]);
+  g.gain.setValueAtTime(P[4],n);g.gain.linearRampToValueAtTime(0,n+P[2]+.1);o.type=P[3];o.start(n);o.stop(n+.8)}
+
+// === INIT ===
+function init(){
+  scene=new THREE.Scene();scene.background=new THREE.Color(0x0a1020);scene.fog=new THREE.Fog(0x0a1020,50,100);
+  cam=new THREE.PerspectiveCamera(40,innerWidth/innerHeight,.1,200);
+  cam.position.set(0,18,C.BASE_Z+16);cam.lookAt(0,0,C.BASE_Z);
+  renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;
+  renderer.domElement.style.position='fixed';renderer.domElement.style.top='0';renderer.domElement.style.left='0';renderer.domElement.style.zIndex='1';
+  document.body.appendChild(renderer.domElement);clock=new THREE.Clock();
+  console.log('BossFightRPG v3 init');
+  scene.add(new THREE.AmbientLight(0x6688aa,.8));
+  const dl=new THREE.DirectionalLight(0xffeedd,1.0);dl.position.set(10,20,10);dl.castShadow=true;scene.add(dl);
+  buildWorld();buildHero();buildStations();setupInput();
+
+  window.addEventListener('resize',()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+}
+
+// === WORLD ===
+function buildWorld(){
+  const gnd=new THREE.Mesh(new THREE.PlaneGeometry(80,80),new THREE.MeshStandardMaterial({color:0x1a2a1a,roughness:1}));
+  gnd.rotation.x=-Math.PI/2;gnd.position.y=-.5;gnd.receiveShadow=true;scene.add(gnd);
+  // Path north+south
+  const pm=new THREE.MeshStandardMaterial({color:0x2a3a2a,roughness:.9});
+  const pN=new THREE.Mesh(new THREE.PlaneGeometry(5,C.BOSS_DIST+5),pm);pN.rotation.x=-Math.PI/2;pN.position.set(0,-.48,C.BASE_Z-C.BOSS_DIST/2-2);scene.add(pN);
+  const pS=new THREE.Mesh(new THREE.PlaneGeometry(5,C.BOSS_DIST+5),pm);pS.rotation.x=-Math.PI/2;pS.position.set(0,-.48,C.BASE_Z+C.BOSS_DIST/2+2);scene.add(pS);
+  // Base platform
+  const base=new THREE.Mesh(new THREE.BoxGeometry(16,.5,12),new THREE.MeshStandardMaterial({color:0x554433,roughness:.9}));
+  base.position.set(0,-.25,C.BASE_Z);base.receiveShadow=true;scene.add(base);
+  // Walls (leave gaps for north and south gates)
+  const wm=new THREE.MeshStandardMaterial({color:0x667788,roughness:.8});
+  // East/West full walls
+  [[-8,0,C.BASE_Z,.6,3,12],[8,0,C.BASE_Z,.6,3,12]].forEach(w=>{
+    const m=new THREE.Mesh(new THREE.BoxGeometry(w[3],w[4],w[5]),wm);m.position.set(w[0],1.25,w[2]);m.castShadow=true;scene.add(m)});
+  // North wall (two halves with gap)
+  [[-5.5,1.25,C.BASE_Z-6,5,3,.6],[5.5,1.25,C.BASE_Z-6,5,3,.6]].forEach(w=>{
+    const m=new THREE.Mesh(new THREE.BoxGeometry(w[3],w[4],w[5]),wm);m.position.set(w[0],w[1],w[2]);m.castShadow=true;scene.add(m)});
+  // South wall (two halves with gap)
+  [[-5.5,1.25,C.BASE_Z+6,5,3,.6],[5.5,1.25,C.BASE_Z+6,5,3,.6]].forEach(w=>{
+    const m=new THREE.Mesh(new THREE.BoxGeometry(w[3],w[4],w[5]),wm);m.position.set(w[0],w[1],w[2]);m.castShadow=true;scene.add(m)});
+  // Torches at corners
+  [[-7,C.BASE_Z-5],[7,C.BASE_Z-5],[-7,C.BASE_Z+5],[7,C.BASE_Z+5]].forEach(p=>{
+    const t=new THREE.Mesh(new THREE.CylinderGeometry(.1,.12,1.2,6),new THREE.MeshStandardMaterial({color:0x553311}));
+    t.position.set(p[0],2,p[1]);scene.add(t);
+    const f=new THREE.Mesh(new THREE.SphereGeometry(.2,6,6),new THREE.MeshBasicMaterial({color:0xff6600}));
+    f.position.set(p[0],2.7,p[1]);f.userData.flame=true;scene.add(f);
+    const pl=new THREE.PointLight(0xff6600,.6,8);pl.position.set(p[0],2.8,p[1]);scene.add(pl)});
+  // Trees
+  for(let i=0;i<20;i++){const x=(Math.random()-.5)*60,z=(Math.random()-.5)*70;
+    if(Math.abs(x)<12&&Math.abs(z-C.BASE_Z)<C.BOSS_DIST+12)continue;
+    const tr=new THREE.Mesh(new THREE.CylinderGeometry(.15,.25,2,6),new THREE.MeshStandardMaterial({color:0x3d2817}));
+    tr.position.set(x,1,z);scene.add(tr);
+    const cr=new THREE.Mesh(new THREE.ConeGeometry(1.2,2.5,6),new THREE.MeshStandardMaterial({color:0x1a3322}));
+    cr.position.set(x,3,z);scene.add(cr)}
+}
+
+// === HERO ===
+function buildHero(){
+  heroGroup=new THREE.Group();
+  const body=new THREE.Mesh(new THREE.BoxGeometry(.7,1.4,.5),new THREE.MeshStandardMaterial({color:0x4488ff,metalness:.3}));
+  body.position.y=.7;body.castShadow=true;
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.28,8,8),new THREE.MeshStandardMaterial({color:0xffccaa}));
+  head.position.y=1.6;
+  heroBow=new THREE.Group();
+  const bowBody=new THREE.Mesh(new THREE.TorusGeometry(.4,.04,8,12,Math.PI),new THREE.MeshStandardMaterial({color:0x885522}));
+  bowBody.rotation.z=Math.PI/2;bowBody.position.set(.5,.9,0);
+  const bowString=new THREE.Mesh(new THREE.CylinderGeometry(.01,.01,.8,4),new THREE.MeshBasicMaterial({color:0xcccccc}));
+  bowString.position.set(.5,.9,0);
+  heroBow.add(bowBody,bowString);heroBow.userData.bowMesh=bowBody;
+  backpackGroup=new THREE.Group();backpackGroup.position.set(0,.5,.35);
+  heroGroup.add(body,head,heroBow,backpackGroup);
+  heroGroup.position.set(0,0,C.BASE_Z);scene.add(heroGroup);
+}
+function updateBackpack(){
+  while(backpackGroup.children.length)backpackGroup.remove(backpackGroup.children[0]);
+  for(let i=0;i<Math.min(S.gold,30);i++){
+    const b=new THREE.Mesh(new THREE.BoxGeometry(.45,.18,.25),new THREE.MeshBasicMaterial({color:0xffd700}));
+    b.position.set((i%2)*.22-.11,i*.19,0);backpackGroup.add(b)}
+}
+
+// === STATIONS ===
+function buildStations(){
+  // Weapon (left)
+  const anvil=new THREE.Mesh(new THREE.BoxGeometry(1.4,.7,1),new THREE.MeshStandardMaterial({color:0x555555,metalness:.5}));
+  anvil.position.set(S.wStation.x,.35,S.wStation.z);scene.add(anvil);
+  wStationMesh=anvil;
+  // Dragon (right)
+  const nest=new THREE.Mesh(new THREE.CylinderGeometry(1,1.2,.5,8),new THREE.MeshStandardMaterial({color:0x553322}));
+  nest.position.set(S.dStation.x,.25,S.dStation.z);scene.add(nest);
+  eggMesh=new THREE.Mesh(new THREE.SphereGeometry(.45,8,8),new THREE.MeshStandardMaterial({color:0xff4400,emissive:0xff2200,emissiveIntensity:.3}));
+  eggMesh.position.set(S.dStation.x,.75,S.dStation.z);scene.add(eggMesh);
+  dStationMesh=nest;
+}
+
+// === BOSS ===
+function spawnBoss(){
+  const cfg=C.BOSSES[S.bossIdx];if(!cfg){victory();return}
+  S.bossHP=cfg.hp;S.bossMaxHP=cfg.hp;S.bossSpawnSide=cfg.side;
+  S.bossAI={atkT:C.BOSS_ATK_CD,sk1T:C.BOSS_SKILL1_CD,sk2T:C.BOSS_SKILL2_CD,flashT:0,chargeT:0,chargeDir:null};
+  const bz=C.BASE_Z - cfg.side*C.BOSS_DIST;
+  $('boss-name').textContent=cfg.name;$('boss-level').textContent='等级 '+cfg.lvl;
+  $('boss-avatar').textContent=cfg.emoji;$('boss-info').classList.add('v');updateBossUI();
+  // Announce
+  const an=$('boss-announce');an.textContent='⚠️ '+cfg.name+' 已出现！快去消灭它！';
+  an.classList.add('v');setTimeout(()=>an.classList.remove('v'),3000);
+  // Build boss mesh based on type
+  const g=new THREE.Group();
+  const bMat=new THREE.MeshStandardMaterial({color:cfg.color,roughness:.6});
+  const eMat=new THREE.MeshBasicMaterial({color:0xff0000});
+  if(S.bossIdx===0){
+    // === 夜王: humanoid ice king ===
+    const torso=new THREE.Mesh(new THREE.CylinderGeometry(.5,.7,2.2,8),bMat);torso.position.y=1.4;g.add(torso);
+    const head=new THREE.Mesh(new THREE.SphereGeometry(.5,8,8),new THREE.MeshStandardMaterial({color:0x4466aa}));head.position.y=2.9;g.add(head);
+    // Crown
+    for(let i=0;i<5;i++){const sp=new THREE.Mesh(new THREE.ConeGeometry(.08,.4,4),new THREE.MeshBasicMaterial({color:0x88bbff}));
+      const a=i/5*Math.PI*2;sp.position.set(Math.cos(a)*.35,3.3,Math.sin(a)*.35);g.add(sp)}
+    // Eyes
+    [-.18,.18].forEach(x=>{const e=new THREE.Mesh(new THREE.SphereGeometry(.08,6,6),new THREE.MeshBasicMaterial({color:0x44ddff}));
+      e.position.set(x,2.95,-.42);g.add(e)});
+    // Cape
+    const cape=new THREE.Mesh(new THREE.PlaneGeometry(1.6,2),new THREE.MeshStandardMaterial({color:0x223355,side:THREE.DoubleSide}));
+    cape.position.set(0,1.8,.45);g.add(cape);
+    // Arms
+    [-.7,.7].forEach(x=>{const arm=new THREE.Mesh(new THREE.CylinderGeometry(.12,.1,1.5,6),bMat);
+      arm.position.set(x,1.6,0);arm.rotation.z=x>0?-.3:.3;g.add(arm)});
+    g.scale.setScalar(cfg.sz/3);
+  }else if(S.bossIdx===1){
+    // === 赤焰巨龙: dragon shape ===
+    const body=new THREE.Mesh(new THREE.CylinderGeometry(.6,.8,3,8),bMat);body.position.y=1.5;body.rotation.x=.2;g.add(body);
+    // Neck + Head
+    const neck=new THREE.Mesh(new THREE.CylinderGeometry(.25,.35,1.5,6),bMat);neck.position.set(0,2.8,-.8);neck.rotation.x=-.5;g.add(neck);
+    const head=new THREE.Mesh(new THREE.BoxGeometry(.7,.5,1),bMat);head.position.set(0,3.3,-1.4);g.add(head);
+    // Horns
+    [-.25,.25].forEach(x=>{const h=new THREE.Mesh(new THREE.ConeGeometry(.08,.5,5),new THREE.MeshStandardMaterial({color:0x220000}));
+      h.position.set(x,3.6,-1.2);h.rotation.z=x>0?-.3:.3;g.add(h)});
+    // Eyes (fiery)
+    [-.15,.15].forEach(x=>{const e=new THREE.Mesh(new THREE.SphereGeometry(.07,6,6),new THREE.MeshBasicMaterial({color:0xffaa00}));
+      e.position.set(x,3.35,-1.85);g.add(e)});
+    // Wings
+    const wMat=new THREE.MeshStandardMaterial({color:0x991100,side:THREE.DoubleSide});
+    [-1,1].forEach(s=>{
+      const w=new THREE.Mesh(new THREE.PlaneGeometry(2.5,1.5),wMat);
+      w.position.set(s*1.5,2.2,0);w.rotation.y=s*.2;w.rotation.z=s*-.4;g.add(w);
+      const w2=new THREE.Mesh(new THREE.PlaneGeometry(1.5,1),wMat);
+      w2.position.set(s*2.8,2.5,.2);w2.rotation.y=s*.3;w2.rotation.z=s*-.6;g.add(w2)});
+    // Tail
+    const tail=new THREE.Mesh(new THREE.ConeGeometry(.2,2,6),bMat);tail.position.set(0,.8,1.5);tail.rotation.x=.5;g.add(tail);
+    // Spikes on back
+    for(let i=0;i<4;i++){const sp=new THREE.Mesh(new THREE.ConeGeometry(.1,.4,4),new THREE.MeshStandardMaterial({color:0xcc4400}));
+      sp.position.set(0,2.2+i*.3,-.3+i*.3);g.add(sp)}
+    g.scale.setScalar(cfg.sz/4);
+  }else{
+    // === 双头巨熊: massive two-headed bear ===
+    const body=new THREE.Mesh(new THREE.SphereGeometry(1.2,10,10),bMat);body.position.y=1.5;body.scale.set(1,.9,1);g.add(body);
+    // Belly
+    const belly=new THREE.Mesh(new THREE.SphereGeometry(.7,8,8),new THREE.MeshStandardMaterial({color:0x997755}));belly.position.set(0,1.1,-.5);g.add(belly);
+    // Two heads
+    [-.55,.55].forEach(x=>{
+      const h=new THREE.Mesh(new THREE.SphereGeometry(.5,8,8),bMat);h.position.set(x,2.6,-.3);g.add(h);
+      // Ears
+      [-.2,.2].forEach(ex=>{const ear=new THREE.Mesh(new THREE.SphereGeometry(.12,6,6),bMat);ear.position.set(x+ex,3,.1);g.add(ear)});
+      // Eyes
+      [-.12,.12].forEach(ex=>{const e=new THREE.Mesh(new THREE.SphereGeometry(.06,6,6),eMat);e.position.set(x+ex,2.65,-.75);g.add(e)});
+      // Snout
+      const sn=new THREE.Mesh(new THREE.CylinderGeometry(.15,.2,.3,6),new THREE.MeshStandardMaterial({color:0x664422}));
+      sn.position.set(x,2.45,-.7);sn.rotation.x=Math.PI/2;g.add(sn);
+    });
+    // Arms
+    [-.9,.9].forEach(x=>{const arm=new THREE.Mesh(new THREE.CylinderGeometry(.25,.2,1.5,6),bMat);
+      arm.position.set(x*1.2,1.2,-.4);arm.rotation.z=x>0?-.4:.4;g.add(arm);
+      // Claws
+      const cl=new THREE.Mesh(new THREE.ConeGeometry(.15,.3,5),new THREE.MeshStandardMaterial({color:0x333333}));
+      cl.position.set(x*1.5,.5,-.5);g.add(cl)});
+    // Legs
+    [-.5,.5].forEach(x=>{const leg=new THREE.Mesh(new THREE.CylinderGeometry(.25,.3,.8,6),bMat);
+      leg.position.set(x,.4,.1);g.add(leg)});
+    g.scale.setScalar(cfg.sz/4.5);
+  }
+  g.position.set(0,0,bz);scene.add(g);S.bossMesh=g;
+  S.phase='fight';showHint('⬆️ 去消灭 '+cfg.name+'!');
+}
+function updateBossUI(){
+  const p=Math.max(0,S.bossHP/S.bossMaxHP)*100;
+  $('boss-hp-fill').style.width=p+'%';
+  $('boss-hp-text').textContent=Math.max(0,Math.floor(S.bossHP)).toLocaleString()+'/'+S.bossMaxHP.toLocaleString();
+}
+function bossAI(dt){
+  if(!S.bossMesh||S.bossHP<=0)return;
+  const bp=S.bossMesh.position,hp=heroGroup.position;
+  const dx=hp.x-bp.x,dz=hp.z-bp.z,dist=Math.sqrt(dx*dx+dz*dz);
+  // Face hero
+  S.bossMesh.rotation.y=Math.atan2(dx,dz);
+  // Idle float
+  S.bossMesh.position.y=Math.sin(Date.now()*.003)*.3;
+  // Charge movement
+  if(S.bossAI.chargeT>0){S.bossAI.chargeT-=dt;
+    bp.x+=S.bossAI.chargeDir.x*20*dt;bp.z+=S.bossAI.chargeDir.z*20*dt;return}
+  // Move toward hero slowly (with bounds)
+  if(dist>3){const spd=C.BOSS_SPEED*dt/dist;bp.x+=dx*spd;bp.z+=dz*spd}
+  // Keep boss outside base
+  const side=C.BOSSES[S.bossIdx].side;
+  if(side===1&&bp.z>C.BASE_Z-7)bp.z=C.BASE_Z-7;
+  if(side===-1&&bp.z<C.BASE_Z+7)bp.z=C.BASE_Z+7;
+  bp.x=Math.max(-20,Math.min(20,bp.x));
+  // Attack
+  S.bossAI.atkT-=dt;
+  if(S.bossAI.atkT<=0&&dist<6){S.bossAI.atkT=C.BOSS_ATK_CD;snd('hit');
+    // Lunge animation
+    const ox=bp.x,oz=bp.z;bp.x+=dx/dist*1.5;bp.z+=dz/dist*1.5;
+    setTimeout(()=>{if(S.bossMesh){bp.x=ox;bp.z=oz}},200);
+    heroHP-=5;S.shakeT=.1}
+  // Skill 1: Ground slam
+  S.bossAI.sk1T-=dt;
+  if(S.bossAI.sk1T<=0){S.bossAI.sk1T=C.BOSS_SKILL1_CD;snd('boom');
+    // Jump up then slam
+    const oy=bp.y;bp.y=3;setTimeout(()=>{if(S.bossMesh){bp.y=0;S.shakeT=.3;
+      spawnRing(bp.x,0,bp.z,0xff4400,8);heroHP-=10}},400)}
+  // Skill 2: Charge
+  S.bossAI.sk2T-=dt;
+  if(S.bossAI.sk2T<=0&&dist>4){S.bossAI.sk2T=C.BOSS_SKILL2_CD;
+    S.bossAI.chargeDir={x:dx/dist,z:dz/dist};S.bossAI.chargeT=.3;snd('hit')}
+  // Flash red when recently hit
+  if(S.bossAI.flashT>0){S.bossAI.flashT-=dt;
+    S.bossMesh.children[0].material.emissive.setHex(0xff0000);S.bossMesh.children[0].material.emissiveIntensity=S.bossAI.flashT*5;
+  }else{S.bossMesh.children[0].material.emissiveIntensity=0}
+}
+
+// === BOW ATTACK ===
+function heroAttack(dt){
+  if(!S.bossMesh||S.bossHP<=0||S.phase!=='fight')return;
+  const hp=heroGroup.position,bp=S.bossMesh.position;
+  const dx=bp.x-hp.x,dz=bp.z-hp.z,dist=Math.sqrt(dx*dx+dz*dz);
+  if(dist>C.ATK_RANGE+C.BOSSES[S.bossIdx].sz*.5)return;
+  S.heroAtk-=dt;if(S.heroAtk>0)return;
+  S.heroAtk=C.ATK_CD;snd('atk');
+  const bow=C.BOW[S.bowLv],nArrows=bow.arrows;
+  heroGroup.rotation.y=Math.atan2(dx,dz);
+  const baseAngle=Math.atan2(dx,dz);
+  for(let i=0;i<nArrows;i++){
+    const spread=(i-(nArrows-1)/2)*.15;
+    const ang=baseAngle+spread;
+    const dirX=Math.sin(ang),dirZ=Math.cos(ang);
+    spawnArrow(hp,bow.homing?bp:null,dirX,dirZ,bow.color,bow.dmg,bow.aoe,bow.homing);
+  }
+  dropGoldBar(bp.x,bp.z);
+}
+function spawnArrow(from,target,dx,dz,color,dmg,aoe,homing){
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(.03,.03,.6,4),new THREE.MeshBasicMaterial({color}));
+  m.position.set(from.x,1.5,from.z);m.rotation.x=Math.PI/2;
+  // Trail
+  const trail=new THREE.Mesh(new THREE.CylinderGeometry(.015,.015,.4,4),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.5}));
+  trail.position.y=-.3;m.add(trail);
+  scene.add(m);
+  S.projectiles.push({mesh:m,dx,dz,speed:30,life:2,dmg,aoe,homing,target,color});
+}
+function updateProjectiles(dt){
+  S.projectiles=S.projectiles.filter(p=>{
+    p.life-=dt;if(p.life<=0){scene.remove(p.mesh);return false}
+    if(p.homing&&p.target&&S.bossMesh){
+      const dx=p.target.x-p.mesh.position.x,dz=p.target.z-p.mesh.position.z;
+      const d=Math.sqrt(dx*dx+dz*dz);if(d>.5){p.dx=dx/d;p.dz=dz/d}}
+    p.mesh.position.x+=p.dx*p.speed*dt;p.mesh.position.z+=p.dz*p.speed*dt;
+    p.mesh.rotation.y=Math.atan2(p.dx,p.dz);
+    // Hit boss
+    if(S.bossMesh&&S.bossHP>0){
+      const dx=p.mesh.position.x-S.bossMesh.position.x,dz=p.mesh.position.z-S.bossMesh.position.z;
+      const hitR=C.BOSSES[S.bossIdx]?C.BOSSES[S.bossIdx].sz*.4:2;
+      if(dx*dx+dz*dz<hitR*hitR){
+        S.bossHP-=p.dmg;updateBossUI();S.bossAI.flashT=.1;
+        showDmg(S.bossMesh.position,p.dmg,p.color);
+        if(p.aoe)spawnBurst(p.mesh.position.x,1.5,p.mesh.position.z,p.color,8);
+        scene.remove(p.mesh);
+        if(S.bossHP<=0)bossDie();return false}}
+    return true});
+}
+
+// === GOLD ===
+function dropGoldBar(cx,cz){
+  const ang=Math.random()*Math.PI*2,r=5+Math.random()*3;
+  const x=cx+Math.cos(ang)*r,z=cz+Math.sin(ang)*r;
+  const m=new THREE.Mesh(new THREE.BoxGeometry(.45,.22,.28),new THREE.MeshBasicMaterial({color:0xffd700}));
+  m.position.set(x,2.5,z);scene.add(m);
+  S.goldBars.push({mesh:m,vy:5+Math.random()*3,grounded:false,life:30});snd('drop');
+}
+function pickupGold(){
+  const hp=heroGroup.position;
+  for(let i=S.goldBars.length-1;i>=0;i--){
+    const g=S.goldBars[i];if(!g.grounded)continue;
+    const dx=g.mesh.position.x-hp.x,dz=g.mesh.position.z-hp.z;
+    if(dx*dx+dz*dz<4){scene.remove(g.mesh);S.goldBars.splice(i,1);
+      S.gold++;updateGoldUI();updateBackpack();snd('pick')}
+  }
+}
+function updateGoldBars(dt){
+  S.goldBars=S.goldBars.filter(g=>{
+    if(!g.grounded){g.vy-=15*dt;g.mesh.position.y+=g.vy*dt;
+      if(g.mesh.position.y<=.12){g.mesh.position.y=.12;g.grounded=true}}
+    g.mesh.rotation.y+=dt*2;g.life-=dt;
+    if(g.life<=0){scene.remove(g.mesh);return false}return true});
+}
+
+// === UPGRADES ===
+function tryUpgrade(){
+  const hp=heroGroup.position;
+  // Weapon
+  const wx=hp.x-S.wStation.x,wz=hp.z-S.wStation.z;
+  if(wx*wx+wz*wz<9&&S.gold>0&&S.bowLv<C.BOW.length-1){
+    const next=C.BOW[S.bowLv+1];
+    S.wStation.gold+=S.gold;S.gold=0;updateGoldUI();updateBackpack();
+    if(S.wStation.gold>=next.cost){
+      S.wStation.gold-=next.cost;S.bowLv++;snd('upgrade');
+      spawnBurst(S.wStation.x,2,S.wStation.z,0xffdd00,20);spawnPillar(S.wStation.x,S.wStation.z);
+      heroBow.userData.bowMesh.material.color.setHex(next.color);
+      heroBow.userData.bowMesh.material.emissive=new THREE.Color(next.color);
+      heroBow.userData.bowMesh.material.emissiveIntensity=.3;
+      heroBow.scale.setScalar(1+S.bowLv*.25);
+      showLevelUp('🏹 '+next.nameTag+'!');
+    }
+  }
+  // Dragon
+  const ddx=hp.x-S.dStation.x,ddz=hp.z-S.dStation.z;
+  if(ddx*ddx+ddz*ddz<9&&S.gold>0&&S.dragonCount<3){
+    const dc=C.DRAGONS[S.dragonCount];
+    S.dStation.gold+=S.gold;S.gold=0;updateGoldUI();updateBackpack();
+    if(S.dStation.gold>=dc.cost){S.dStation.gold-=dc.cost;hatchDragon()}
+  }
+}
+function hatchDragon(){
+  const dc=C.DRAGONS[S.dragonCount],sc=dc.sz;snd('hatch');
+  const dg=new THREE.Group();
+  const body=new THREE.Mesh(new THREE.ConeGeometry(.35*sc,.9*sc,6),new THREE.MeshStandardMaterial({color:dc.color}));
+  body.position.y=1.8;body.rotation.x=.3;
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.22*sc,6,6),new THREE.MeshStandardMaterial({color:dc.color}));
+  head.position.set(0,2.1+.1*sc,-.15*sc);
+  const wm=new THREE.MeshStandardMaterial({color:dc.color,side:THREE.DoubleSide});
+  const wL=new THREE.Mesh(new THREE.PlaneGeometry(.7*sc,.35*sc),wm);wL.position.set(-.4*sc,1.9,0);wL.rotation.z=.4;
+  const wR=new THREE.Mesh(new THREE.PlaneGeometry(.7*sc,.35*sc),wm);wR.position.set(.4*sc,1.9,0);wR.rotation.z=-.4;
+  if(S.dragonCount===2){// Golden glow
+    body.material.emissive=new THREE.Color(0xffd700);body.material.emissiveIntensity=.4}
+  dg.add(body,head,wL,wR);dg.position.copy(heroGroup.position);dg.position.y=2;scene.add(dg);
+  S.dragons.push({mesh:dg,atkTimer:0,angle:S.dragonCount*2.1,cfg:dc});
+  S.dragonCount++;
+  spawnBurst(S.dStation.x,2,S.dStation.z,dc.color,25);spawnPillar(S.dStation.x,S.dStation.z);
+  eggMesh.visible=S.dragonCount<3;
+  if(S.dragonCount<3)eggMesh.material.color.setHex(C.DRAGONS[S.dragonCount].color);
+  showLevelUp('🐉 '+dc.name+'!');
+}
+function updateDragons(dt){
+  S.dragons.forEach((d,i)=>{
+    d.angle+=dt*1.5;
+    const hp=heroGroup.position;
+    const tx=hp.x+Math.cos(d.angle)*2.5,tz=hp.z+Math.sin(d.angle)*2.5;
+    d.mesh.position.x+=(tx-d.mesh.position.x)*dt*4;
+    d.mesh.position.z+=(tz-d.mesh.position.z)*dt*4;
+    d.mesh.position.y=2+Math.sin(Date.now()*.003+i)*.3;
+    d.mesh.children[2].rotation.z=.4+Math.sin(Date.now()*.01)*.3;
+    d.mesh.children[3].rotation.z=-.4-Math.sin(Date.now()*.01)*.3;
+    if(S.bossMesh&&S.bossHP>0){d.atkTimer-=dt;
+      if(d.atkTimer<=0){d.atkTimer=1;
+        const bp=S.bossMesh.position;
+        const ddx=bp.x-d.mesh.position.x,ddz=bp.z-d.mesh.position.z;
+        const dd=Math.sqrt(ddx*ddx+ddz*ddz)||1;
+        const isHoming=i===2;// Golden dragon has homing
+        spawnArrow(d.mesh.position,isHoming?bp:null,ddx/dd,ddz/dd,d.cfg.projColor,d.cfg.dmg,i>=1,isHoming);
+      }}
+  });
+}
+
+// === BOSS DIE ===
+function bossDie(){
+  S.bossHP=0;snd('boom');S.shakeT=.5;
+  const bp=S.bossMesh.position.clone();
+  spawnBurst(bp.x,2,bp.z,0xff2200,40);spawnBurst(bp.x,2,bp.z,0xffdd00,30);
+  for(let i=0;i<15;i++)dropGoldBar(bp.x,bp.z);
+  setTimeout(()=>{
+    if(S.bossMesh){scene.remove(S.bossMesh);S.bossMesh=null}
+    $('boss-info').classList.remove('v');
+    S.bossIdx++;
+    if(S.bossIdx>=C.BOSSES.length)setTimeout(victory,2000);
+    else{S.phase='fight';setTimeout(spawnBoss,2000)}
+  },2000);
+}
+
+// === EFFECTS ===
+function spawnBurst(x,y,z,color,n){for(let i=0;i<n;i++)S.particles.push({x,y,z,
+  vx:(Math.random()-.5)*8,vy:Math.random()*5+2,vz:(Math.random()-.5)*8,life:1,color,sz:.1+Math.random()*.1})}
+function spawnPillar(x,z){const m=new THREE.Mesh(new THREE.CylinderGeometry(.25,.25,10,8),
+  new THREE.MeshBasicMaterial({color:0xffdd44,transparent:true,opacity:.5}));m.position.set(x,5,z);scene.add(m);setTimeout(()=>scene.remove(m),600)}
+function spawnRing(x,y,z,color,r){
+  const ring=new THREE.Mesh(new THREE.RingGeometry(0,r,24),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.5,side:THREE.DoubleSide}));
+  ring.rotation.x=-Math.PI/2;ring.position.set(x,.1,z);scene.add(ring);setTimeout(()=>scene.remove(ring),500)}
+function showDmg(pos,val,color){
+  const p=pos.clone();p.y+=2;p.project(cam);
+  const sx=(p.x*.5+.5)*innerWidth,sy=(-p.y*.5+.5)*innerHeight;
+  const el=document.createElement('div');el.className='dmg';
+  el.style.color='#'+(color||0xff3333).toString(16).padStart(6,'0');
+  el.textContent='-'+val;el.style.left=sx+'px';el.style.top=(sy-20)+'px';
+  $('dmg-layer').appendChild(el);setTimeout(()=>el.remove(),800)}
+function showLevelUp(t){const el=$('levelup');el.textContent=t;el.classList.remove('v');
+  void el.offsetWidth;el.classList.add('v');snd('upgrade')}
+let pMeshes=[];
+function updateParticles(dt){
+  pMeshes.forEach(m=>scene.remove(m));pMeshes=[];
+  S.particles=S.particles.filter(p=>{p.life-=dt*1.5;if(p.life<=0)return false;
+    p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;p.vy-=9.8*dt;
+    const m=new THREE.Mesh(new THREE.SphereGeometry(p.sz,4,4),new THREE.MeshBasicMaterial({color:p.color,transparent:true,opacity:p.life}));
+    m.position.set(p.x,Math.max(0,p.y),p.z);scene.add(m);pMeshes.push(m);return true})}
+
+// === UI ===
+function updateGoldUI(){$('gold-val').textContent=S.gold}
+function showHint(t){const h=$('hint');h.textContent=t;h.classList.add('v');
+  clearTimeout(showHint._t);showHint._t=setTimeout(()=>h.classList.remove('v'),4000)}
+function updateLabels(){
+  const lc=$('ulabels');lc.innerHTML='';
+  if(S.bowLv<C.BOW.length-1){const n=C.BOW[S.bowLv+1];
+    const p=new THREE.Vector3(S.wStation.x,2,S.wStation.z).project(cam);
+    if(p.z<1){const e=document.createElement('div');e.className='ulab';
+      e.textContent='🏹 '+n.nameTag+' ('+S.wStation.gold+'/'+n.cost+' 💎)';
+      e.style.left=((p.x*.5+.5)*innerWidth-50)+'px';e.style.top=((-p.y*.5+.5)*innerHeight-25)+'px';lc.appendChild(e)}}
+  if(S.dragonCount<3){const dc=C.DRAGONS[S.dragonCount];
+    const p=new THREE.Vector3(S.dStation.x,2,S.dStation.z).project(cam);
+    if(p.z<1){const e=document.createElement('div');e.className='ulab';
+      e.textContent='🥚 '+dc.name+' ('+S.dStation.gold+'/'+dc.cost+' 💎)';
+      e.style.left=((p.x*.5+.5)*innerWidth-50)+'px';e.style.top=((-p.y*.5+.5)*innerHeight-25)+'px';lc.appendChild(e)}}
+}
+
+// === INPUT ===
+function setupInput(){
+  document.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(k in keys){keys[k]=1;startGame();initAudio()}});
+  document.addEventListener('keyup',e=>{const k=e.key.toLowerCase();if(k in keys)keys[k]=0});
+  // Dynamic joystick - mouse (listen on document, check target)
+  document.addEventListener('mousedown',e=>{
+    const t=e.target;if(t.tagName==='BUTTON')return;
+    initAudio();startGame();joyActive=true;joyStart={x:e.clientX,y:e.clientY};
+    $('jb').style.display='block';$('jb').style.left=(e.clientX-45)+'px';$('jb').style.top=(e.clientY-45)+'px';
+    $('jk').style.display='block';$('jk').style.left=(e.clientX-20)+'px';$('jk').style.top=(e.clientY-20)+'px';
+  });
+  document.addEventListener('mousemove',e=>{if(!joyActive)return;
+    let dx=e.clientX-joyStart.x,dy=e.clientY-joyStart.y;
+    const d=Math.sqrt(dx*dx+dy*dy),maxR=45;
+    if(d>maxR){dx=dx/d*maxR;dy=dy/d*maxR}
+    $('jk').style.left=(joyStart.x+dx-20)+'px';$('jk').style.top=(joyStart.y+dy-20)+'px';
+    joyVec={x:d>5?dx/maxR:0,y:d>5?dy/maxR:0}});
+  document.addEventListener('mouseup',()=>{joyActive=false;joyVec={x:0,y:0};
+    $('jb').style.display='none';$('jk').style.display='none'});
+  // Touch
+  document.addEventListener('touchstart',e=>{
+    const t=e.target;if(t.tagName==='BUTTON')return;
+    e.preventDefault();initAudio();startGame();const tc=e.touches[0];joyActive=true;joyTouchId=tc.identifier;
+    joyStart={x:tc.clientX,y:tc.clientY};
+    $('jb').style.display='block';$('jb').style.left=(tc.clientX-45)+'px';$('jb').style.top=(tc.clientY-45)+'px';
+    $('jk').style.display='block';$('jk').style.left=(tc.clientX-20)+'px';$('jk').style.top=(tc.clientY-20)+'px';
+  },{passive:false});
+  document.addEventListener('touchmove',e=>{if(!joyActive)return;
+    for(let t of e.changedTouches)if(t.identifier===joyTouchId){
+      let dx=t.clientX-joyStart.x,dy=t.clientY-joyStart.y;
+      const d=Math.sqrt(dx*dx+dy*dy),maxR=45;
+      if(d>maxR){dx=dx/d*maxR;dy=dy/d*maxR}
+      $('jk').style.left=(joyStart.x+dx-20)+'px';$('jk').style.top=(joyStart.y+dy-20)+'px';
+      joyVec={x:d>5?dx/maxR:0,y:d>5?dy/maxR:0}}},{passive:false});
+  document.addEventListener('touchend',e=>{for(let t of e.changedTouches)if(t.identifier===joyTouchId){
+    joyActive=false;joyVec={x:0,y:0};$('jb').style.display='none';$('jk').style.display='none'}});
+  $('rebtn').addEventListener('click',e=>{e.stopPropagation();restart()});
+}
+function startGame(){
+  if(S.tutDone)return;S.tutDone=true;
+  $('tut-wrap').style.display='none';
+  S.phase='fight';spawnBoss();
+}
+
+// === VICTORY / RESTART ===
+function victory(){S.gameOver=true;S.phase='victory';snd('win');
+  $('vstats').innerHTML='Boss击杀: '+S.bossIdx+' | 弓箭: '+C.BOW[S.bowLv].nameTag+' | 精灵龙: '+S.dragonCount;
+  $('victory').classList.add('v')}
+function restart(){
+  S.gold=0;S.bossIdx=0;S.phase='idle';S.gameOver=false;S.bowLv=0;S.dragonCount=0;
+  S.bossHP=0;S.bossMaxHP=0;S.shakeT=0;S.heroAtk=0;S.heroPos={x:0,z:C.BASE_Z};
+  S.wStation.gold=0;S.dStation.gold=0;S.tutDone=false;heroHP=9999;
+  S.bossAI={atkT:3,sk1T:8,sk2T:15,flashT:0,chargeT:0,chargeDir:null};
+  if(S.bossMesh){scene.remove(S.bossMesh);S.bossMesh=null}
+  S.dragons.forEach(d=>scene.remove(d.mesh));S.dragons=[];
+  S.goldBars.forEach(g=>scene.remove(g.mesh));S.goldBars=[];
+  S.particles=[];S.projectiles.forEach(p=>scene.remove(p.mesh));S.projectiles=[];
+  heroGroup.position.set(0,0,C.BASE_Z);
+  heroBow.scale.setScalar(1);heroBow.userData.bowMesh.material.color.setHex(0x885522);
+  heroBow.userData.bowMesh.material.emissiveIntensity=0;
+  updateBackpack();updateGoldUI();eggMesh.visible=true;
+  eggMesh.material.color.setHex(0xff4400);
+  $('victory').classList.remove('v');$('boss-info').classList.remove('v');
+  $('tut-wrap').style.display='';
+}
+
+// === MAIN LOOP ===
+function update(){
+  requestAnimationFrame(update);
+  if(S.gameOver){renderer.render(scene,cam);return}
+  const dt=Math.min(clock.getDelta(),.05);
+  // Movement
+  let mx=0,mz=0;
+  if(keys.a)mx-=1;if(keys.d)mx+=1;if(keys.w)mz-=1;if(keys.s)mz+=1;
+  mx+=joyVec.x;mz+=joyVec.y;
+  const ml=Math.sqrt(mx*mx+mz*mz);
+  if(ml>.1&&S.tutDone){mx/=ml;mz/=ml;
+    heroGroup.position.x+=mx*C.HERO_SPEED*dt;heroGroup.position.z+=mz*C.HERO_SPEED*dt;
+    heroGroup.rotation.y=Math.atan2(mx,mz);
+    heroGroup.position.x=Math.max(-30,Math.min(30,heroGroup.position.x));
+    heroGroup.position.z=Math.max(C.BASE_Z-C.BOSS_DIST-8,Math.min(C.BASE_Z+C.BOSS_DIST+8,heroGroup.position.z));
+  }
+  // Hero bob
+  heroGroup.position.y=Math.abs(Math.sin(Date.now()*.008))*.12*(ml>.1?1:0);
+  // Camera follow
+  cam.position.x+=(heroGroup.position.x-cam.position.x)*dt*3;
+  cam.position.z+=(heroGroup.position.z+20-cam.position.z)*dt*3;
+  cam.lookAt(heroGroup.position.x,0,heroGroup.position.z);
+  // Shake
+  if(S.shakeT>0){S.shakeT-=dt;cam.position.x+=(Math.random()-.5)*.5;cam.position.y+=( Math.random()-.5)*.3}
+  // Systems
+  if(S.phase==='fight'){heroAttack(dt);bossAI(dt)}
+  pickupGold();tryUpgrade();
+  updateGoldBars(dt);updateDragons(dt);updateParticles(dt);updateProjectiles(dt);
+  // Flames
+  scene.traverse(o=>{if(o.userData&&o.userData.flame)o.scale.setScalar(.8+Math.sin(Date.now()*.01+o.id)*.3)});
+  updateLabels();
+  renderer.render(scene,cam);
+}
+
+init();update();
+</script>
+</body>
+</html>
