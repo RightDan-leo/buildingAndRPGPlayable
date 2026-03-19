@@ -13,24 +13,31 @@ canvas{display:block}
 #boss-info.v{opacity:1}
 #boss-avatar{width:44px;height:44px;border-radius:50%;border:2px solid #8b0000;background:radial-gradient(#2a1a2a,#0a0a0a);display:flex;align-items:center;justify-content:center;font-size:22px}
 #boss-details{display:flex;flex-direction:column;gap:2px}
-#boss-name{color:#ff4444;font-size:14px;font-weight:bold;text-shadow:0 0 6px rgba(255,0,0,.4)}
-#boss-level{color:#aaa;font-size:11px}
-#boss-hp-bar{width:200px;height:14px;background:#1a0a0a;border:1px solid #550000;border-radius:7px;overflow:hidden}
-#boss-hp-fill{height:100%;width:100%;background:linear-gradient(90deg,#8b0000,#ff2222);transition:width .15s;border-radius:7px}
-#boss-hp-text{color:#ff6666;font-size:10px;text-align:center}
+#boss-name{color:#ff4444;font-size:18px;font-weight:bold;text-shadow:0 0 6px rgba(255,0,0,.4)}
+#boss-level{color:#aaa;font-size:13px}
+#boss-hp-bar{width:300px;height:16px;background:#1a0a0a;border:1px solid #550000;border-radius:8px;overflow:hidden}
+#boss-hp-fill{height:100%;width:100%;background:linear-gradient(90deg,#8b0000,#ff2222);transition:width .15s;border-radius:8px}
+#boss-hp-text{color:#ff6666;font-size:12px;text-align:center}
 #gold-carry{position:fixed;top:12px;right:16px;display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.7);border:2px solid #c8a23c;border-radius:8px;padding:5px 12px;z-index:10;pointer-events:none}
-.gicon{width:24px;height:16px;background:linear-gradient(135deg,#ffd700,#b8860b);border-radius:3px}
-.gval{color:#ffd700;font-size:18px;font-weight:bold;text-shadow:0 0 6px rgba(255,215,0,.5)}
-#hint{position:fixed;bottom:40px;left:50%;transform:translateX(-50%);color:#ffd700;font-size:16px;font-weight:bold;text-shadow:0 0 10px rgba(255,215,0,.6);pointer-events:none;z-index:10;opacity:0;transition:opacity .5s}
+#hero-info{position:fixed;top:12px;left:16px;display:flex;align-items:center;gap:10px;background:rgba(0,0,0,.7);border:2px solid #4488ff;border-radius:10px;padding:6px 14px;z-index:10;pointer-events:none}
+#hero-avatar{width:40px;height:40px;border-radius:50%;border:2px solid #4488ff;background:radial-gradient(#223366,#0a0a2a);display:flex;align-items:center;justify-content:center;font-size:20px}
+#hero-details{display:flex;flex-direction:column;gap:3px}
+#hero-name{color:#66aaff;font-size:14px;font-weight:bold;text-shadow:0 0 6px rgba(68,136,255,.4)}
+#hero-hp-bar{width:120px;height:12px;background:#1a1a2a;border:1px solid #335;border-radius:6px;overflow:hidden}
+#hero-hp-fill{height:100%;width:100%;background:linear-gradient(90deg,#22cc44,#44ff66);transition:width .2s;border-radius:6px}
+#hero-hp-text{color:#66ff88;font-size:11px;text-align:center}
+.gicon{font-size:22px;line-height:1}
+.gval{color:#ffd700;font-size:22px;font-weight:bold;text-shadow:0 0 6px rgba(255,215,0,.5)}
+#hint{position:fixed;bottom:40px;left:50%;transform:translateX(-50%);color:#ffd700;font-size:20px;font-weight:bold;text-shadow:0 0 10px rgba(255,215,0,.6);pointer-events:none;z-index:10;opacity:0;transition:opacity .5s}
 #hint.v{opacity:1}
-#boss-announce{position:fixed;top:35%;left:50%;transform:translate(-50%,-50%);color:#ff4444;font-size:28px;font-weight:bold;text-shadow:0 0 20px rgba(255,0,0,.6),0 2px 4px #000;pointer-events:none;z-index:20;opacity:0;transition:opacity .4s;white-space:nowrap}
+#boss-announce{position:fixed;top:35%;left:50%;transform:translate(-50%,-50%);color:#ff4444;font-size:32px;font-weight:bold;text-shadow:0 0 20px rgba(255,0,0,.6),0 2px 4px #000;pointer-events:none;z-index:20;opacity:0;transition:opacity .4s;white-space:nowrap}
 #boss-announce.v{opacity:1;animation:anBounce .6s ease-out}
 @keyframes anBounce{0%{transform:translate(-50%,-50%) scale(0)}60%{transform:translate(-50%,-50%) scale(1.15)}100%{transform:translate(-50%,-50%) scale(1)}}
 #dmg-layer{position:fixed;inset:0;pointer-events:none;z-index:15}
 .dmg{position:absolute;font-size:20px;font-weight:bold;text-shadow:0 0 4px #000;animation:dmgF .8s ease-out forwards;pointer-events:none}
 @keyframes dmgF{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-50px) scale(.6)}}
 #ulabels{position:fixed;inset:0;pointer-events:none;z-index:12}
-.ulab{position:absolute;background:rgba(0,0,0,.8);border:1px solid #c8a23c;border-radius:6px;padding:3px 8px;color:#ffd700;font-size:11px;font-weight:bold;white-space:nowrap}
+.ulab{position:absolute;background:rgba(0,0,0,.8);border:1px solid #c8a23c;border-radius:6px;padding:5px 10px;color:#ffd700;font-size:14px;font-weight:bold;white-space:nowrap}
 #levelup{position:fixed;top:40%;left:50%;transform:translate(-50%,-50%);font-size:40px;font-weight:bold;color:#ffd700;text-shadow:0 0 30px rgba(255,215,0,.8);pointer-events:none;z-index:20;opacity:0}
 #levelup.v{opacity:1;animation:lvup .8s ease-out forwards}
 @keyframes lvup{0%{transform:translate(-50%,-50%) scale(0);opacity:1}50%{transform:translate(-50%,-50%) scale(1.3);opacity:1}100%{transform:translate(-50%,-50%) scale(1);opacity:0}}
@@ -48,7 +55,7 @@ canvas{display:block}
 #victory{position:fixed;inset:0;z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.85)}
 #victory.v{display:flex}
 #victory h1{font-size:48px;color:#ffd700;text-shadow:0 0 30px rgba(255,215,0,.8);margin-bottom:12px}
-#victory .st{color:#ccc;font-size:16px;margin-bottom:30px;text-align:center;line-height:1.8}
+#victory .st{color:#ffd700;font-size:28px;font-weight:bold;text-shadow:0 0 20px rgba(255,215,0,.6),0 2px 4px #000;margin-bottom:30px;text-align:center;line-height:1.8}
 #victory .dlbtn{padding:16px 48px;font-size:20px;font-weight:bold;border:none;border-radius:12px;cursor:pointer;background:linear-gradient(135deg,#ffd700,#ff8c00);color:#1a0a00;box-shadow:0 0 20px rgba(255,215,0,.5);animation:ctaP 2s ease-in-out infinite}
 #victory .rebtn{margin-top:12px;padding:10px 30px;font-size:14px;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:8px;cursor:pointer}
 @keyframes ctaP{0%,100%{box-shadow:0 0 20px rgba(255,215,0,.5)}50%{box-shadow:0 0 40px rgba(255,215,0,.9)}}
@@ -61,7 +68,11 @@ canvas{display:block}
     <div id="boss-hp-bar"><div id="boss-hp-fill"></div></div>
     <div id="boss-hp-text">2,000/2,000</div></div></div>
 </div>
-<div id="gold-carry"><div class="gicon"></div><div class="gval" id="gold-val">0</div></div>
+<div id="hero-info"><div id="hero-avatar">⚔️</div><div id="hero-details">
+  <div id="hero-name">勇士</div>
+  <div id="hero-hp-bar"><div id="hero-hp-fill"></div></div>
+  <div id="hero-hp-text">100/100</div></div></div>
+<div id="gold-carry"><div class="gicon">🪙</div><div class="gval" id="gold-val">0</div></div>
 <div id="hint"></div>
 <div id="boss-announce"></div>
 <div id="dmg-layer"></div>
@@ -70,8 +81,8 @@ canvas{display:block}
 <div id="tut-wrap"><div id="tut-joy"><div id="tut-knob"></div><div id="tut-hand">👆</div></div><div id="tut-text">拖动摇杆移动</div></div>
 <div id="joy-overlay"><div class="joy-base" id="jb"></div><div class="joy-knob" id="jk"></div></div>
 <div id="victory">
-  <h1>🏆 胜利！</h1>
-  <div class="st" id="vstats"></div>
+  <h1>🐉 下载《万龙觉醒》</h1>
+  <div class="st">开启您的魔幻征程！</div>
   <button class="dlbtn" onclick="window.open('https://play.google.com','_blank')">立即下载</button>
   <button class="rebtn" id="rebtn">▶ 再玩一次</button>
 </div>
@@ -80,11 +91,11 @@ canvas{display:block}
 'use strict';
 // === CONFIG ===
 const C={
-  BASE_Z:0, BOSS_DIST:15,
+  BASE_Z:0, BOSS_DIST:20,
   BOSSES:[
-    {name:'夜王',lvl:10,hp:2000,color:0x334466,sz:3.5,emoji:'💀',side:1},
-    {name:'赤焰巨龙',lvl:20,hp:5000,color:0xcc2200,sz:5,emoji:'🐉',side:-1},
-    {name:'双头巨熊',lvl:30,hp:10000,color:0x886644,sz:6.5,emoji:'🐻',side:1}
+    {name:'蜥蜴人',lvl:10,hp:3000,color:0x446633,sz:3.5,emoji:'🦎',side:1},
+    {name:'双头巨熊',lvl:20,hp:6000,color:0x886644,sz:5,emoji:'🐻',side:-1},
+    {name:'烈焰巨龙',lvl:30,hp:10000,color:0xcc2200,sz:6.5,emoji:'🐉',side:1}
   ],
   BOW:[
     {cost:0,dmg:100,arrows:1,color:0xffffff,nameTag:'初始弓',homing:false,aoe:false},
@@ -97,7 +108,8 @@ const C={
     {cost:15,dmg:120,color:0xaa44ff,sz:1.5,projColor:0x8844ff,name:'雷电青龙'},
     {cost:20,dmg:200,color:0xffd700,sz:2,projColor:0xffaa00,name:'黄金神龙'}
   ],
-  HERO_SPEED:12,ATK_RANGE:8,ATK_CD:.8,BOSS_SPEED:2,BOSS_ATK_CD:3,BOSS_SKILL1_CD:8,BOSS_SKILL2_CD:15
+  HERO_SPEED:12,ATK_RANGE:5,ATK_CD:.8,BOSS_SPEED:2,BOSS_ATK_CD:3,BOSS_SKILL1_CD:8,BOSS_SKILL2_CD:15,
+  EGG_BUILD_COST:8
 };
 // === STATE ===
 const S={
@@ -105,12 +117,14 @@ const S={
   bossHP:0,bossMaxHP:0,bossMesh:null,bossAI:{atkT:3,sk1T:8,sk2T:15,flashT:0,chargeT:0,chargeDir:null},
   heroPos:{x:0,z:C.BASE_Z},heroAtk:0,
   goldBars:[],particles:[],projectiles:[],shakeT:0,
-  wStation:{x:-4,z:C.BASE_Z,gold:0},dStation:{x:4,z:C.BASE_Z,gold:0},
-  dragons:[],tutDone:false,bossSpawnSide:1
+  wStation:{x:-6,z:C.BASE_Z,gold:0},dStation:{x:6,z:C.BASE_Z,gold:0,phase:'hidden'},
+  dragons:[],tutDone:false,bossSpawnSide:1,
+  carryingEgg:false,droppedEggs:[],atkGoldCount:0
 };
 let scene,cam,renderer,clock;
-let heroGroup,heroBow,backpackGroup,heroHP=9999;
+let heroGroup,heroBow,backpackGroup,heroHP=100,heroMaxHP=100;
 let wStationMesh,dStationMesh,eggMesh;
+let wFillMesh,dFillMesh,wProgSprite,dProgSprite;
 let audioCtx,keys={w:0,a:0,s:0,d:0};
 let joyVec={x:0,y:0},joyActive=false,joyTouchId=null,joyStart={x:0,y:0};
 const $=id=>document.getElementById(id);
@@ -150,22 +164,31 @@ function buildWorld(){
   const pm=new THREE.MeshStandardMaterial({color:0x2a3a2a,roughness:.9});
   const pN=new THREE.Mesh(new THREE.PlaneGeometry(5,C.BOSS_DIST+5),pm);pN.rotation.x=-Math.PI/2;pN.position.set(0,-.48,C.BASE_Z-C.BOSS_DIST/2-2);scene.add(pN);
   const pS=new THREE.Mesh(new THREE.PlaneGeometry(5,C.BOSS_DIST+5),pm);pS.rotation.x=-Math.PI/2;pS.position.set(0,-.48,C.BASE_Z+C.BOSS_DIST/2+2);scene.add(pS);
-  // Base platform
-  const base=new THREE.Mesh(new THREE.BoxGeometry(16,.5,12),new THREE.MeshStandardMaterial({color:0x554433,roughness:.9}));
+  // Base platform (expanded)
+  const base=new THREE.Mesh(new THREE.BoxGeometry(20,.5,16),new THREE.MeshStandardMaterial({color:0x554433,roughness:.9}));
   base.position.set(0,-.25,C.BASE_Z);base.receiveShadow=true;scene.add(base);
   // Walls (leave gaps for north and south gates)
   const wm=new THREE.MeshStandardMaterial({color:0x667788,roughness:.8});
-  // East/West full walls
-  [[-8,0,C.BASE_Z,.6,3,12],[8,0,C.BASE_Z,.6,3,12]].forEach(w=>{
+  // East wall (two halves with blocked gate, gate opens for dragon)
+  S.eastGateOpen=false;
+  const eastGateMeshes=[];
+  [[-10,0,C.BASE_Z,.6,3,16]].forEach(w=>{
     const m=new THREE.Mesh(new THREE.BoxGeometry(w[3],w[4],w[5]),wm);m.position.set(w[0],1.25,w[2]);m.castShadow=true;scene.add(m)});
+  // East wall: top half (z: BASE_Z-8 to BASE_Z-1.5) and bottom half (z: BASE_Z+1.5 to BASE_Z+8)
+  [[10,1.25,C.BASE_Z-4.75,.6,3,6.5],[10,1.25,C.BASE_Z+4.75,.6,3,6.5]].forEach(w=>{
+    const m=new THREE.Mesh(new THREE.BoxGeometry(w[3],w[4],w[5]),wm);m.position.set(w[0],w[1],w[2]);m.castShadow=true;scene.add(m)});
+  // East gate blocking meshes (removed when dragon appears)
+  const gateBlock=new THREE.Mesh(new THREE.BoxGeometry(.6,3,3),wm.clone());
+  gateBlock.position.set(10,1.25,C.BASE_Z);gateBlock.castShadow=true;scene.add(gateBlock);
+  S.eastGateMesh=gateBlock;
   // North wall (two halves with gap)
-  [[-5.5,1.25,C.BASE_Z-6,5,3,.6],[5.5,1.25,C.BASE_Z-6,5,3,.6]].forEach(w=>{
+  [[-6.5,1.25,C.BASE_Z-8,7,3,.6],[6.5,1.25,C.BASE_Z-8,7,3,.6]].forEach(w=>{
     const m=new THREE.Mesh(new THREE.BoxGeometry(w[3],w[4],w[5]),wm);m.position.set(w[0],w[1],w[2]);m.castShadow=true;scene.add(m)});
   // South wall (two halves with gap)
-  [[-5.5,1.25,C.BASE_Z+6,5,3,.6],[5.5,1.25,C.BASE_Z+6,5,3,.6]].forEach(w=>{
+  [[-6.5,1.25,C.BASE_Z+8,7,3,.6],[6.5,1.25,C.BASE_Z+8,7,3,.6]].forEach(w=>{
     const m=new THREE.Mesh(new THREE.BoxGeometry(w[3],w[4],w[5]),wm);m.position.set(w[0],w[1],w[2]);m.castShadow=true;scene.add(m)});
   // Torches at corners
-  [[-7,C.BASE_Z-5],[7,C.BASE_Z-5],[-7,C.BASE_Z+5],[7,C.BASE_Z+5]].forEach(p=>{
+  [[-9,C.BASE_Z-7],[9,C.BASE_Z-7],[-9,C.BASE_Z+7],[9,C.BASE_Z+7]].forEach(p=>{
     const t=new THREE.Mesh(new THREE.CylinderGeometry(.1,.12,1.2,6),new THREE.MeshStandardMaterial({color:0x553311}));
     t.position.set(p[0],2,p[1]);scene.add(t);
     const f=new THREE.Mesh(new THREE.SphereGeometry(.2,6,6),new THREE.MeshBasicMaterial({color:0xff6600}));
@@ -200,22 +223,85 @@ function buildHero(){
 function updateBackpack(){
   while(backpackGroup.children.length)backpackGroup.remove(backpackGroup.children[0]);
   for(let i=0;i<Math.min(S.gold,30);i++){
-    const b=new THREE.Mesh(new THREE.BoxGeometry(.45,.18,.25),new THREE.MeshBasicMaterial({color:0xffd700}));
-    b.position.set((i%2)*.22-.11,i*.19,0);backpackGroup.add(b)}
+    const b=new THREE.Mesh(new THREE.BoxGeometry(.4,.15,.25),new THREE.MeshBasicMaterial({color:0xffd700}));
+    b.position.set(0,i*.16,0);backpackGroup.add(b)}
 }
 
 // === STATIONS ===
+const ZS=2.2;// zone square half-size
+function makeProgressSprite(){
+  const c=document.createElement('canvas');c.width=512;c.height=128;
+  const ctx=c.getContext('2d');ctx.clearRect(0,0,512,128);
+  const tex=new THREE.CanvasTexture(c);
+  const mat=new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false});
+  const sp=new THREE.Sprite(mat);sp.scale.set(4,1.5,1);sp.userData.canvas=c;sp.userData.ctx=ctx;sp.userData.tex=tex;
+  return sp;
+}
+function updateProgressSprite(sp,current,total){
+  const c=sp.userData.canvas,ctx=sp.userData.ctx;
+  ctx.clearRect(0,0,512,128);
+  ctx.font='bold 72px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle='rgba(255,215,0,0.9)';ctx.strokeStyle='rgba(0,0,0,0.7)';ctx.lineWidth=5;
+  const txt=total<=0?(current<0?'孵化龙蛋':'满级'):current+'/'+total;ctx.strokeText(txt,256,64);ctx.fillText(txt,256,64);
+  sp.userData.tex.needsUpdate=true;
+}
 function buildStations(){
+  const zoneMat=new THREE.MeshBasicMaterial({color:0xffd700,transparent:true,opacity:.12,side:THREE.DoubleSide});
+  // Build square zone helper
+  function makeSquareZone(sx,sz,parentGroup){
+    const target=parentGroup||scene;
+    // Fill zone
+    const zone=new THREE.Mesh(new THREE.PlaneGeometry(ZS*2,ZS*2),zoneMat.clone());
+    zone.rotation.x=-Math.PI/2;zone.position.set(sx,.02,sz);target.add(zone);
+    // Border (4 edges)
+    const bm=new THREE.MeshBasicMaterial({color:0xffd700,transparent:true,opacity:.4});
+    const t=.06;// border thickness
+    [[-ZS,0,t,ZS*2],[ZS,0,t,ZS*2],[0,-ZS,ZS*2,t],[0,ZS,ZS*2,t]].forEach(([ox,oz,w,h])=>{
+      const b=new THREE.Mesh(new THREE.PlaneGeometry(w,h),bm.clone());
+      b.rotation.x=-Math.PI/2;b.position.set(sx+ox,.03,sz+oz);target.add(b);});
+    // Progress bar fill (starts at 0 height, grows upward along z)
+    const fill=new THREE.Mesh(new THREE.PlaneGeometry(ZS*2-.1,.01),new THREE.MeshBasicMaterial({color:0x44aaff,transparent:true,opacity:.35,side:THREE.DoubleSide}));
+    fill.rotation.x=-Math.PI/2;fill.position.set(sx,.025,sz+ZS);target.add(fill);
+    return fill;
+  }
   // Weapon (left)
   const anvil=new THREE.Mesh(new THREE.BoxGeometry(1.4,.7,1),new THREE.MeshStandardMaterial({color:0x555555,metalness:.5}));
   anvil.position.set(S.wStation.x,.35,S.wStation.z);scene.add(anvil);
   wStationMesh=anvil;
-  // Dragon (right)
+  wFillMesh=makeSquareZone(S.wStation.x,S.wStation.z);
+  wProgSprite=makeProgressSprite();wProgSprite.position.set(S.wStation.x,1.8,S.wStation.z);scene.add(wProgSprite);
+  // Dragon zone (right) — starts HIDDEN, revealed after first boss
+  // Use a group to control visibility of entire zone
+  S.dZoneGroup=new THREE.Group();scene.add(S.dZoneGroup);
+  dFillMesh=makeSquareZone(S.dStation.x,S.dStation.z,S.dZoneGroup);
+  dFillMesh.material.color.setHex(0xff6622);
+  dProgSprite=makeProgressSprite();dProgSprite.position.set(S.dStation.x,1.8,S.dStation.z);S.dZoneGroup.add(dProgSprite);
+  S.dZoneGroup.visible=false;// hidden initially
+  // Show initial progress on ground
+  updateProgressSprite(wProgSprite,0,C.BOW[1].cost);
+  // Arrow indicator for dragon zone
+  const arrowGeo=new THREE.ConeGeometry(.3,.8,4);
+  const arrowMat=new THREE.MeshBasicMaterial({color:0x44ff44,transparent:true,opacity:0.8});
+  S.dStationArrow=new THREE.Mesh(arrowGeo,arrowMat);
+  S.dStationArrow.rotation.x=Math.PI;
+  S.dStationArrow.position.set(S.dStation.x,3.5,S.dStation.z);
+  S.dStationArrow.visible=false;scene.add(S.dStationArrow);
+}
+// Dynamic nest/egg mesh helpers
+function spawnNestMesh(){
+  if(dStationMesh)return;// already exists
   const nest=new THREE.Mesh(new THREE.CylinderGeometry(1,1.2,.5,8),new THREE.MeshStandardMaterial({color:0x553322}));
   nest.position.set(S.dStation.x,.25,S.dStation.z);scene.add(nest);
-  eggMesh=new THREE.Mesh(new THREE.SphereGeometry(.45,8,8),new THREE.MeshStandardMaterial({color:0xff4400,emissive:0xff2200,emissiveIntensity:.3}));
-  eggMesh.position.set(S.dStation.x,.75,S.dStation.z);scene.add(eggMesh);
   dStationMesh=nest;
+}
+function spawnEggOnNest(){
+  if(eggMesh)return;
+  const dc=C.DRAGONS[S.dragonCount];
+  eggMesh=new THREE.Mesh(new THREE.SphereGeometry(.45,8,8),new THREE.MeshStandardMaterial({color:dc.color,emissive:dc.color,emissiveIntensity:.3}));
+  eggMesh.position.set(S.dStation.x,.75,S.dStation.z);scene.add(eggMesh);
+}
+function removeEggFromNest(){
+  if(eggMesh){scene.remove(eggMesh);eggMesh=null}
 }
 
 // === BOSS ===
@@ -234,76 +320,166 @@ function spawnBoss(){
   const bMat=new THREE.MeshStandardMaterial({color:cfg.color,roughness:.6});
   const eMat=new THREE.MeshBasicMaterial({color:0xff0000});
   if(S.bossIdx===0){
-    // === 夜王: humanoid ice king ===
-    const torso=new THREE.Mesh(new THREE.CylinderGeometry(.5,.7,2.2,8),bMat);torso.position.y=1.4;g.add(torso);
-    const head=new THREE.Mesh(new THREE.SphereGeometry(.5,8,8),new THREE.MeshStandardMaterial({color:0x4466aa}));head.position.y=2.9;g.add(head);
-    // Crown
-    for(let i=0;i<5;i++){const sp=new THREE.Mesh(new THREE.ConeGeometry(.08,.4,4),new THREE.MeshBasicMaterial({color:0x88bbff}));
-      const a=i/5*Math.PI*2;sp.position.set(Math.cos(a)*.35,3.3,Math.sin(a)*.35);g.add(sp)}
+    // === 蜥蜴人: reptilian biped ===
+    const torso=new THREE.Mesh(new THREE.CylinderGeometry(.4,.6,2,8),bMat);torso.position.y=1.3;g.add(torso);
+    const head=new THREE.Mesh(new THREE.BoxGeometry(.7,.5,.9),bMat);head.position.set(0,2.7,-.2);g.add(head);
+    // Jaw
+    const jaw=new THREE.Mesh(new THREE.BoxGeometry(.6,.2,.7),new THREE.MeshStandardMaterial({color:0x335522}));
+    jaw.position.set(0,2.35,-.3);g.add(jaw);
     // Eyes
-    [-.18,.18].forEach(x=>{const e=new THREE.Mesh(new THREE.SphereGeometry(.08,6,6),new THREE.MeshBasicMaterial({color:0x44ddff}));
-      e.position.set(x,2.95,-.42);g.add(e)});
-    // Cape
-    const cape=new THREE.Mesh(new THREE.PlaneGeometry(1.6,2),new THREE.MeshStandardMaterial({color:0x223355,side:THREE.DoubleSide}));
-    cape.position.set(0,1.8,.45);g.add(cape);
-    // Arms
-    [-.7,.7].forEach(x=>{const arm=new THREE.Mesh(new THREE.CylinderGeometry(.12,.1,1.5,6),bMat);
-      arm.position.set(x,1.6,0);arm.rotation.z=x>0?-.3:.3;g.add(arm)});
+    [-.2,.2].forEach(x=>{const e=new THREE.Mesh(new THREE.SphereGeometry(.08,6,6),new THREE.MeshBasicMaterial({color:0xffcc00}));
+      e.position.set(x,2.8,-.65);g.add(e)});
+    // Spine ridges
+    for(let i=0;i<4;i++){const sp=new THREE.Mesh(new THREE.ConeGeometry(.08,.35,4),new THREE.MeshStandardMaterial({color:0x556633}));
+      sp.position.set(0,1.8+i*.35,.35);g.add(sp)}
+    // Arms with claws
+    [-.6,.6].forEach(x=>{const arm=new THREE.Mesh(new THREE.CylinderGeometry(.1,.12,1.2,6),bMat);
+      arm.position.set(x,1.5,-.1);arm.rotation.z=x>0?-.3:.3;g.add(arm);
+      const cl=new THREE.Mesh(new THREE.ConeGeometry(.08,.25,4),new THREE.MeshStandardMaterial({color:0x333333}));
+      cl.position.set(x*1.15,.8,-.2);g.add(cl)});
+    // Legs
+    [-.3,.3].forEach(x=>{const leg=new THREE.Mesh(new THREE.CylinderGeometry(.12,.15,.9,6),bMat);
+      leg.position.set(x,.4,0);g.add(leg)});
+    // Tail
+    const tail=new THREE.Mesh(new THREE.ConeGeometry(.15,1.8,6),bMat);tail.position.set(0,.8,.9);tail.rotation.x=.6;g.add(tail);
     g.scale.setScalar(cfg.sz/3);
   }else if(S.bossIdx===1){
-    // === 赤焰巨龙: dragon shape ===
+    // === 双头巨熊: massive two-headed bear ===
+    const body=new THREE.Mesh(new THREE.SphereGeometry(1.2,10,10),bMat);body.position.y=1.5;body.scale.set(1,.9,1);g.add(body);
+    const belly=new THREE.Mesh(new THREE.SphereGeometry(.7,8,8),new THREE.MeshStandardMaterial({color:0x997755}));belly.position.set(0,1.1,-.5);g.add(belly);
+    [-.55,.55].forEach(x=>{
+      const h=new THREE.Mesh(new THREE.SphereGeometry(.5,8,8),bMat);h.position.set(x,2.6,-.3);g.add(h);
+      [-.2,.2].forEach(ex=>{const ear=new THREE.Mesh(new THREE.SphereGeometry(.12,6,6),bMat);ear.position.set(x+ex,3,.1);g.add(ear)});
+      [-.12,.12].forEach(ex=>{const e=new THREE.Mesh(new THREE.SphereGeometry(.06,6,6),eMat);e.position.set(x+ex,2.65,-.75);g.add(e)});
+      const sn=new THREE.Mesh(new THREE.CylinderGeometry(.15,.2,.3,6),new THREE.MeshStandardMaterial({color:0x664422}));
+      sn.position.set(x,2.45,-.7);sn.rotation.x=Math.PI/2;g.add(sn);
+    });
+    [-.9,.9].forEach(x=>{const arm=new THREE.Mesh(new THREE.CylinderGeometry(.25,.2,1.5,6),bMat);
+      arm.position.set(x*1.2,1.2,-.4);arm.rotation.z=x>0?-.4:.4;g.add(arm);
+      const cl=new THREE.Mesh(new THREE.ConeGeometry(.15,.3,5),new THREE.MeshStandardMaterial({color:0x333333}));
+      cl.position.set(x*1.5,.5,-.5);g.add(cl)});
+    [-.5,.5].forEach(x=>{const leg=new THREE.Mesh(new THREE.CylinderGeometry(.25,.3,.8,6),bMat);
+      leg.position.set(x,.4,.1);g.add(leg)});
+    g.scale.setScalar(cfg.sz/4.5);
+  }else{
+    // === 烈焰巨龙: massive flame dragon ===
     const body=new THREE.Mesh(new THREE.CylinderGeometry(.6,.8,3,8),bMat);body.position.y=1.5;body.rotation.x=.2;g.add(body);
-    // Neck + Head
     const neck=new THREE.Mesh(new THREE.CylinderGeometry(.25,.35,1.5,6),bMat);neck.position.set(0,2.8,-.8);neck.rotation.x=-.5;g.add(neck);
     const head=new THREE.Mesh(new THREE.BoxGeometry(.7,.5,1),bMat);head.position.set(0,3.3,-1.4);g.add(head);
-    // Horns
     [-.25,.25].forEach(x=>{const h=new THREE.Mesh(new THREE.ConeGeometry(.08,.5,5),new THREE.MeshStandardMaterial({color:0x220000}));
       h.position.set(x,3.6,-1.2);h.rotation.z=x>0?-.3:.3;g.add(h)});
-    // Eyes (fiery)
     [-.15,.15].forEach(x=>{const e=new THREE.Mesh(new THREE.SphereGeometry(.07,6,6),new THREE.MeshBasicMaterial({color:0xffaa00}));
       e.position.set(x,3.35,-1.85);g.add(e)});
-    // Wings
     const wMat=new THREE.MeshStandardMaterial({color:0x991100,side:THREE.DoubleSide});
     [-1,1].forEach(s=>{
       const w=new THREE.Mesh(new THREE.PlaneGeometry(2.5,1.5),wMat);
       w.position.set(s*1.5,2.2,0);w.rotation.y=s*.2;w.rotation.z=s*-.4;g.add(w);
       const w2=new THREE.Mesh(new THREE.PlaneGeometry(1.5,1),wMat);
       w2.position.set(s*2.8,2.5,.2);w2.rotation.y=s*.3;w2.rotation.z=s*-.6;g.add(w2)});
-    // Tail
     const tail=new THREE.Mesh(new THREE.ConeGeometry(.2,2,6),bMat);tail.position.set(0,.8,1.5);tail.rotation.x=.5;g.add(tail);
-    // Spikes on back
     for(let i=0;i<4;i++){const sp=new THREE.Mesh(new THREE.ConeGeometry(.1,.4,4),new THREE.MeshStandardMaterial({color:0xcc4400}));
       sp.position.set(0,2.2+i*.3,-.3+i*.3);g.add(sp)}
     g.scale.setScalar(cfg.sz/4);
-  }else{
-    // === 双头巨熊: massive two-headed bear ===
-    const body=new THREE.Mesh(new THREE.SphereGeometry(1.2,10,10),bMat);body.position.y=1.5;body.scale.set(1,.9,1);g.add(body);
-    // Belly
-    const belly=new THREE.Mesh(new THREE.SphereGeometry(.7,8,8),new THREE.MeshStandardMaterial({color:0x997755}));belly.position.set(0,1.1,-.5);g.add(belly);
-    // Two heads
-    [-.55,.55].forEach(x=>{
-      const h=new THREE.Mesh(new THREE.SphereGeometry(.5,8,8),bMat);h.position.set(x,2.6,-.3);g.add(h);
-      // Ears
-      [-.2,.2].forEach(ex=>{const ear=new THREE.Mesh(new THREE.SphereGeometry(.12,6,6),bMat);ear.position.set(x+ex,3,.1);g.add(ear)});
-      // Eyes
-      [-.12,.12].forEach(ex=>{const e=new THREE.Mesh(new THREE.SphereGeometry(.06,6,6),eMat);e.position.set(x+ex,2.65,-.75);g.add(e)});
-      // Snout
-      const sn=new THREE.Mesh(new THREE.CylinderGeometry(.15,.2,.3,6),new THREE.MeshStandardMaterial({color:0x664422}));
-      sn.position.set(x,2.45,-.7);sn.rotation.x=Math.PI/2;g.add(sn);
-    });
-    // Arms
-    [-.9,.9].forEach(x=>{const arm=new THREE.Mesh(new THREE.CylinderGeometry(.25,.2,1.5,6),bMat);
-      arm.position.set(x*1.2,1.2,-.4);arm.rotation.z=x>0?-.4:.4;g.add(arm);
-      // Claws
-      const cl=new THREE.Mesh(new THREE.ConeGeometry(.15,.3,5),new THREE.MeshStandardMaterial({color:0x333333}));
-      cl.position.set(x*1.5,.5,-.5);g.add(cl)});
-    // Legs
-    [-.5,.5].forEach(x=>{const leg=new THREE.Mesh(new THREE.CylinderGeometry(.25,.3,.8,6),bMat);
-      leg.position.set(x,.4,.1);g.add(leg)});
-    g.scale.setScalar(cfg.sz/4.5);
   }
   g.position.set(0,0,bz);scene.add(g);S.bossMesh=g;
+  // Draw lair zone on ground
+  if(S.lairZoneMesh)scene.remove(S.lairZoneMesh);
+  const lairGeo=new THREE.RingGeometry(0,10,48);
+  const lairMat=new THREE.MeshBasicMaterial({color:0x884422,transparent:true,opacity:0.18,side:THREE.DoubleSide});
+  S.lairZoneMesh=new THREE.Mesh(lairGeo,lairMat);
+  S.lairZoneMesh.rotation.x=-Math.PI/2;S.lairZoneMesh.position.set(0,0.02,bz);scene.add(S.lairZoneMesh);
+  // Lair border ring
+  if(S.lairBorderMesh)scene.remove(S.lairBorderMesh);
+  const borderGeo=new THREE.RingGeometry(9.7,10,48);
+  const borderMat=new THREE.MeshBasicMaterial({color:0xff4422,transparent:true,opacity:0.35,side:THREE.DoubleSide});
+  S.lairBorderMesh=new THREE.Mesh(borderGeo,borderMat);
+  S.lairBorderMesh.rotation.x=-Math.PI/2;S.lairBorderMesh.position.set(0,0.03,bz);scene.add(S.lairBorderMesh);
   S.phase='fight';showHint('⬆️ 去消灭 '+cfg.name+'!');
+  // Boss 3 (烈焰巨龙): cinematic entrance then CTA
+  if(S.bossIdx===2){
+    S.bossHP=Infinity;S.bossMaxHP=Infinity;
+    S.phase='cinematic';// Freeze gameplay
+    // Open east gate
+    if(S.eastGateMesh){scene.remove(S.eastGateMesh);S.eastGateMesh=null;S.eastGateOpen=true}
+    // Place dragon at east gate entrance
+    const dragonZ=C.BASE_Z;
+    g.position.set(18,-8,dragonZ);
+    g.rotation.y=Math.PI/2;// Face west (into base)
+    const riseStart=Date.now();
+    const camTarget={x:5,y:8,z:dragonZ+10};
+    const camLook={x:15,y:3,z:dragonZ};
+    const riseAnim=()=>{
+      if(!S.bossMesh)return;
+      const t=(Date.now()-riseStart)/1000;
+      // Phase 1: Camera pan to gate (0-1.5s)
+      if(t<1.5){
+        const p=t/1.5;
+        cam.position.x+=(camTarget.x-cam.position.x)*0.05;
+        cam.position.y+=(camTarget.y-cam.position.y)*0.05;
+        cam.position.z+=(camTarget.z-cam.position.z)*0.05;
+        cam.lookAt(camLook.x,camLook.y,camLook.z);
+        requestAnimationFrame(riseAnim);
+      }
+      // Phase 2: Dragon rises from ground (1.5-4s)
+      else if(t<4){
+        const rt=t-1.5;
+        g.position.y=-8+rt*3.5;
+        S.shakeT=0.15;
+        cam.position.set(camTarget.x,camTarget.y,camTarget.z);
+        cam.lookAt(g.position.x,Math.max(0,g.position.y)+2,g.position.z);
+        // Fire/smoke particles during rise
+        if(Math.random()<0.3)spawnBurst(g.position.x,g.position.y+3,g.position.z,0xff4400,4);
+        if(Math.random()<0.2)spawnBurst(g.position.x+(Math.random()-.5)*5,g.position.y+1,g.position.z+(Math.random()-.5)*5,0xffaa00,2);
+        requestAnimationFrame(riseAnim);
+      }
+      // Phase 3: Dragon lands + roar (4-5s)
+      else if(t<5){
+        g.position.y=0.5;
+        g.rotation.y=Math.PI/2;// Face west
+        cam.position.set(camTarget.x,camTarget.y,camTarget.z);
+        cam.lookAt(g.position.x,3,g.position.z);
+        if(t<4.2){S.shakeT=0.5;snd('boom');
+          spawnBurst(g.position.x,3,g.position.z,0xff2200,50);
+          spawnBurst(g.position.x,3,g.position.z,0xffdd00,40);
+          spawnRing(g.position.x,0.1,g.position.z,0xff4400,15);}
+        requestAnimationFrame(riseAnim);
+      }
+      // Phase 4: Fire breath (5-8s)
+      else if(t<8){
+        g.position.y=0.5;
+        cam.position.set(camTarget.x,camTarget.y,camTarget.z);
+        cam.lookAt(g.position.x,3,g.position.z);
+        // Continuous fire breath towards base
+        const headX=g.position.x-2,headZ=g.position.z;
+        for(let fi=0;fi<3;fi++){
+          const fx=headX-Math.random()*8,fz=headZ+(Math.random()-.5)*4;
+          spawnBurst(fx,1+Math.random()*2,fz,Math.random()<0.5?0xff4400:0xffaa00,2);
+        }
+        if(Math.random()<0.15)spawnBurst(headX-Math.random()*6,0.5,headZ+(Math.random()-.5)*3,0xff2200,3);
+        S.shakeT=0.08;
+        requestAnimationFrame(riseAnim);
+      }
+      // Phase 5: Camera pan back to player (8-10s)
+      else if(t<10){
+        S.shakeT=0;
+        const hp=heroGroup.position;
+        const p=(t-8)/2;// 0→1 over 2 seconds
+        cam.position.x+=(hp.x-cam.position.x)*0.04;
+        cam.position.y+=(15-cam.position.y)*0.04;
+        cam.position.z+=(hp.z+20-cam.position.z)*0.04;
+        cam.lookAt(hp.x,0,hp.z);
+        requestAnimationFrame(riseAnim);
+      }
+      // Phase 6: Show CTA
+      else{
+        S.shakeT=0;
+        victory();
+      }
+    };
+    requestAnimationFrame(riseAnim);
+    const an=$('boss-announce');an.textContent='⚠️ 烈焰巨龙 降临！';
+    an.classList.add('v');
+  }
 }
 function updateBossUI(){
   const p=Math.max(0,S.bossHP/S.bossMaxHP)*100;
@@ -313,20 +489,31 @@ function updateBossUI(){
 function bossAI(dt){
   if(!S.bossMesh||S.bossHP<=0)return;
   const bp=S.bossMesh.position,hp=heroGroup.position;
+  const cfg=C.BOSSES[S.bossIdx],side=cfg.side;
+  const lairZ=C.BASE_Z-side*C.BOSS_DIST;// boss spawn z
+  const lairR=10;// lair radius from spawn point
   const dx=hp.x-bp.x,dz=hp.z-bp.z,dist=Math.sqrt(dx*dx+dz*dz);
-  // Face hero
-  S.bossMesh.rotation.y=Math.atan2(dx,dz);
+  // Face hero (models face -Z, so add PI)
+  S.bossMesh.rotation.y=Math.atan2(dx,dz)+Math.PI;
   // Idle float
   S.bossMesh.position.y=Math.sin(Date.now()*.003)*.3;
   // Charge movement
   if(S.bossAI.chargeT>0){S.bossAI.chargeT-=dt;
-    bp.x+=S.bossAI.chargeDir.x*20*dt;bp.z+=S.bossAI.chargeDir.z*20*dt;return}
-  // Move toward hero slowly (with bounds)
-  if(dist>3){const spd=C.BOSS_SPEED*dt/dist;bp.x+=dx*spd;bp.z+=dz*spd}
-  // Keep boss outside base
-  const side=C.BOSSES[S.bossIdx].side;
-  if(side===1&&bp.z>C.BASE_Z-7)bp.z=C.BASE_Z-7;
-  if(side===-1&&bp.z<C.BASE_Z+7)bp.z=C.BASE_Z+7;
+    bp.x+=S.bossAI.chargeDir.x*20*dt;bp.z+=S.bossAI.chargeDir.z*20*dt;}
+  else{
+  // Move toward hero slowly only if hero is within lair range
+  const hDistToLair=Math.sqrt(hp.x*hp.x+(hp.z-lairZ)*(hp.z-lairZ));
+  if(dist>3&&hDistToLair<lairR){const spd=C.BOSS_SPEED*dt/dist;bp.x+=dx*spd;bp.z+=dz*spd}
+  else if(dist>3){
+    // Return to lair center
+    const dlx=0-bp.x,dlz=lairZ-bp.z,dld=Math.sqrt(dlx*dlx+dlz*dlz);
+    if(dld>1){const spd=C.BOSS_SPEED*dt/dld;bp.x+=dlx*spd;bp.z+=dlz*spd}
+  }
+  }
+  // Clamp boss to lair bounds
+  const bdx=bp.x-0,bdz=bp.z-lairZ;
+  const bDist=Math.sqrt(bdx*bdx+bdz*bdz);
+  if(bDist>lairR){bp.x=bdx/bDist*lairR;bp.z=lairZ+bdz/bDist*lairR}
   bp.x=Math.max(-20,Math.min(20,bp.x));
   // Attack
   S.bossAI.atkT-=dt;
@@ -334,13 +521,13 @@ function bossAI(dt){
     // Lunge animation
     const ox=bp.x,oz=bp.z;bp.x+=dx/dist*1.5;bp.z+=dz/dist*1.5;
     setTimeout(()=>{if(S.bossMesh){bp.x=ox;bp.z=oz}},200);
-    heroHP-=5;S.shakeT=.1}
+    heroHP-=5;heroHP=Math.max(heroMaxHP*.1,heroHP);updateHeroUI();S.shakeT=.1}
   // Skill 1: Ground slam
   S.bossAI.sk1T-=dt;
   if(S.bossAI.sk1T<=0){S.bossAI.sk1T=C.BOSS_SKILL1_CD;snd('boom');
     // Jump up then slam
     const oy=bp.y;bp.y=3;setTimeout(()=>{if(S.bossMesh){bp.y=0;S.shakeT=.3;
-      spawnRing(bp.x,0,bp.z,0xff4400,8);heroHP-=10}},400)}
+      spawnRing(bp.x,0,bp.z,0xff4400,8);heroHP-=10;heroHP=Math.max(heroMaxHP*.1,heroHP);updateHeroUI()}},400)}
   // Skill 2: Charge
   S.bossAI.sk2T-=dt;
   if(S.bossAI.sk2T<=0&&dist>4){S.bossAI.sk2T=C.BOSS_SKILL2_CD;
@@ -360,7 +547,7 @@ function heroAttack(dt){
   S.heroAtk-=dt;if(S.heroAtk>0)return;
   S.heroAtk=C.ATK_CD;snd('atk');
   const bow=C.BOW[S.bowLv],nArrows=bow.arrows;
-  heroGroup.rotation.y=Math.atan2(dx,dz);
+  heroGroup.rotation.y=Math.atan2(dx,dz)+Math.PI;
   const baseAngle=Math.atan2(dx,dz);
   for(let i=0;i<nArrows;i++){
     const spread=(i-(nArrows-1)/2)*.15;
@@ -368,14 +555,24 @@ function heroAttack(dt){
     const dirX=Math.sin(ang),dirZ=Math.cos(ang);
     spawnArrow(hp,bow.homing?bp:null,dirX,dirZ,bow.color,bow.dmg,bow.aoe,bow.homing);
   }
-  dropGoldBar(bp.x,bp.z);
+  // Gold drops every 3rd attack (instead of 3 per attack)
+  S.atkGoldCount++;
+  if(S.atkGoldCount%3===0)dropGoldBar(bp.x,bp.z);
 }
 function spawnArrow(from,target,dx,dz,color,dmg,aoe,homing){
-  const m=new THREE.Mesh(new THREE.CylinderGeometry(.03,.03,.6,4),new THREE.MeshBasicMaterial({color}));
+  const lvScale=1+S.bowLv*0.4;// arrows get bigger with upgrades
+  const arrowR=.03*lvScale,arrowL=.6*lvScale;
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(arrowR*.6,arrowR,arrowL,4),new THREE.MeshBasicMaterial({color}));
   m.position.set(from.x,1.5,from.z);m.rotation.x=Math.PI/2;
-  // Trail
-  const trail=new THREE.Mesh(new THREE.CylinderGeometry(.015,.015,.4,4),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.5}));
-  trail.position.y=-.3;m.add(trail);
+  // Trail — longer and more intense per level
+  const trailL=.4+S.bowLv*.25;
+  const trail=new THREE.Mesh(new THREE.CylinderGeometry(.01,.015*lvScale,trailL,4),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.3+S.bowLv*.15}));
+  trail.position.y=-trailL/2;m.add(trail);
+  // Glow for level 2+ (emissive glow sphere)
+  if(S.bowLv>=2){
+    const glow=new THREE.Mesh(new THREE.SphereGeometry(.08*lvScale,6,6),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.35}));
+    m.add(glow);
+  }
   scene.add(m);
   S.projectiles.push({mesh:m,dx,dz,speed:30,life:2,dmg,aoe,homing,target,color});
 }
@@ -394,7 +591,10 @@ function updateProjectiles(dt){
       if(dx*dx+dz*dz<hitR*hitR){
         S.bossHP-=p.dmg;updateBossUI();S.bossAI.flashT=.1;
         showDmg(S.bossMesh.position,p.dmg,p.color);
-        if(p.aoe)spawnBurst(p.mesh.position.x,1.5,p.mesh.position.z,p.color,8);
+        // Hit burst scales with bow level
+        const hitParticles=4+S.bowLv*6;
+        spawnBurst(p.mesh.position.x,1.5,p.mesh.position.z,p.color,hitParticles);
+        if(p.aoe)spawnBurst(p.mesh.position.x,1.5,p.mesh.position.z,p.color,hitParticles+8);
         scene.remove(p.mesh);
         if(S.bossHP<=0)bossDie();return false}}
     return true});
@@ -402,7 +602,7 @@ function updateProjectiles(dt){
 
 // === GOLD ===
 function dropGoldBar(cx,cz){
-  const ang=Math.random()*Math.PI*2,r=5+Math.random()*3;
+  const ang=Math.random()*Math.PI*2,r=2+Math.random()*2;
   const x=cx+Math.cos(ang)*r,z=cz+Math.sin(ang)*r;
   const m=new THREE.Mesh(new THREE.BoxGeometry(.45,.22,.28),new THREE.MeshBasicMaterial({color:0xffd700}));
   m.position.set(x,2.5,z);scene.add(m);
@@ -413,8 +613,32 @@ function pickupGold(){
   for(let i=S.goldBars.length-1;i>=0;i--){
     const g=S.goldBars[i];if(!g.grounded)continue;
     const dx=g.mesh.position.x-hp.x,dz=g.mesh.position.z-hp.z;
-    if(dx*dx+dz*dz<4){scene.remove(g.mesh);S.goldBars.splice(i,1);
-      S.gold++;updateGoldUI();updateBackpack();snd('pick')}
+    const dd=dx*dx+dz*dz;
+    // Magnetic pull: gold within 5 units drifts toward player
+    if(dd<25&&dd>=9){g.mesh.position.x-=dx*0.06;g.mesh.position.z-=dz*0.06}
+    // Pickup within 3 units
+    if(dd<9){scene.remove(g.mesh);S.goldBars.splice(i,1);
+      S.gold++;updateGoldUI();updateBackpack();snd('pick');}
+  }
+  // Pickup dropped eggs
+  for(let i=S.droppedEggs.length-1;i>=0;i--){
+    const e=S.droppedEggs[i];if(!e.grounded)continue;
+    const dx=e.mesh.position.x-hp.x,dz=e.mesh.position.z-hp.z;
+    if(dx*dx+dz*dz<4){scene.remove(e.mesh);S.droppedEggs.splice(i,1);
+      S.carryingEgg=true;snd('pick');
+      showHint('🥚 拿到龙蛋了！带回孵化台！');
+      // Show egg on hero backpack
+      if(!heroGroup.userData.eggMesh){
+        const dc=C.DRAGONS[S.dragonCount];
+        const em=new THREE.Mesh(new THREE.SphereGeometry(.3,8,8),new THREE.MeshStandardMaterial({color:dc.color,emissive:dc.color,emissiveIntensity:.4}));
+        em.position.set(0,1.8,0);heroGroup.add(em);heroGroup.userData.eggMesh=em;
+      }
+      // If boss 2 was just killed (bossIdx===2) and player picks up egg, trigger dragon cinematic
+      if(S.bossIdx>=2){
+        S.phase='fight';
+        setTimeout(spawnBoss,1500);// This spawns boss 3 (dragon cinematic)
+      }
+    }
   }
 }
 function updateGoldBars(dt){
@@ -423,32 +647,94 @@ function updateGoldBars(dt){
       if(g.mesh.position.y<=.12){g.mesh.position.y=.12;g.grounded=true}}
     g.mesh.rotation.y+=dt*2;g.life-=dt;
     if(g.life<=0){scene.remove(g.mesh);return false}return true});
+  // Update dropped eggs physics
+  S.droppedEggs=S.droppedEggs.filter(e=>{
+    if(!e.grounded){e.vy-=12*dt;e.mesh.position.y+=e.vy*dt;
+      if(e.mesh.position.y<=.5){e.mesh.position.y=.5;e.grounded=true}}
+    e.mesh.rotation.y+=dt;e.life-=dt;
+    if(e.life<=0){scene.remove(e.mesh);return false}return true});
 }
 
 // === UPGRADES ===
-function tryUpgrade(){
+// Helper: update bar fill (rectangle growing bottom-to-top)
+function updateBarFill(mesh,progress,sx,sz){
+  const p=Math.min(1,Math.max(0,progress));
+  const h=(ZS*2-.1)*p;// filled height
+  mesh.geometry.dispose();
+  mesh.geometry=new THREE.PlaneGeometry(ZS*2-.1,Math.max(.01,h));
+  mesh.position.set(sx,.025,sz+ZS-h/2);// anchor at bottom, grow up
+}
+let drainTimer=0;
+function drainStations(dt){
+  drainTimer-=dt;if(drainTimer>0)return;
   const hp=heroGroup.position;
-  // Weapon
-  const wx=hp.x-S.wStation.x,wz=hp.z-S.wStation.z;
-  if(wx*wx+wz*wz<9&&S.gold>0&&S.bowLv<C.BOW.length-1){
-    const next=C.BOW[S.bowLv+1];
-    S.wStation.gold+=S.gold;S.gold=0;updateGoldUI();updateBackpack();
-    if(S.wStation.gold>=next.cost){
-      S.wStation.gold-=next.cost;S.bowLv++;snd('upgrade');
-      spawnBurst(S.wStation.x,2,S.wStation.z,0xffdd00,20);spawnPillar(S.wStation.x,S.wStation.z);
-      heroBow.userData.bowMesh.material.color.setHex(next.color);
-      heroBow.userData.bowMesh.material.emissive=new THREE.Color(next.color);
-      heroBow.userData.bowMesh.material.emissiveIntensity=.3;
-      heroBow.scale.setScalar(1+S.bowLv*.25);
-      showLevelUp('🏹 '+next.nameTag+'!');
+  // AABB zone check
+  function inZone(px,pz,sx,sz){return Math.abs(px-sx)<ZS&&Math.abs(pz-sz)<ZS}
+  // Weapon station
+  if(S.bowLv<C.BOW.length-1){
+    if(inZone(hp.x,hp.z,S.wStation.x,S.wStation.z)&&S.gold>0){
+      drainTimer=.12;S.gold--;S.wStation.gold++;
+      updateGoldUI();updateBackpack();snd('pick');
+      spawnBurst(S.wStation.x,1,S.wStation.z,0xffd700,2);
+      const next=C.BOW[S.bowLv+1];
+      updateBarFill(wFillMesh,S.wStation.gold/next.cost,S.wStation.x,S.wStation.z);
+      updateProgressSprite(wProgSprite,S.wStation.gold,next.cost);
+      if(S.wStation.gold>=next.cost){
+        S.wStation.gold-=next.cost;S.bowLv++;snd('upgrade');
+        spawnBurst(S.wStation.x,2,S.wStation.z,0xffdd00,20);spawnPillar(S.wStation.x,S.wStation.z);
+        heroBow.userData.bowMesh.material.color.setHex(next.color);
+        heroBow.userData.bowMesh.material.emissive=new THREE.Color(next.color);
+        heroBow.userData.bowMesh.material.emissiveIntensity=.3;
+        heroBow.scale.setScalar(1+S.bowLv*.25);
+        showLevelUp('⬆ 等级提升，获得 '+next.nameTag+'!');
+        updateBarFill(wFillMesh,0,S.wStation.x,S.wStation.z);
+        if(S.bowLv<C.BOW.length-1)updateProgressSprite(wProgSprite,0,C.BOW[S.bowLv+1].cost);
+        else updateProgressSprite(wProgSprite,0,0);
+      }
+      return;// one coin per tick
     }
   }
-  // Dragon
-  const ddx=hp.x-S.dStation.x,ddz=hp.z-S.dStation.z;
-  if(ddx*ddx+ddz*ddz<9&&S.gold>0&&S.dragonCount<3){
-    const dc=C.DRAGONS[S.dragonCount];
-    S.dStation.gold+=S.gold;S.gold=0;updateGoldUI();updateBackpack();
-    if(S.dStation.gold>=dc.cost){S.dStation.gold-=dc.cost;hatchDragon()}
+  // Dragon station — phase-based logic
+  const dPhase=S.dStation.phase;
+  if(dPhase==='hidden'){
+    // Zone not yet revealed — do nothing
+  }else if(dPhase==='wait_egg'){
+    // Deliver egg if carrying one
+    if(inZone(hp.x,hp.z,S.dStation.x,S.dStation.z)&&S.carryingEgg){
+      S.carryingEgg=false;
+      if(heroGroup.userData.eggMesh){heroGroup.remove(heroGroup.userData.eggMesh);heroGroup.userData.eggMesh=null}
+      S.dStation.phase='has_egg';
+      spawnEggOnNest();
+      if(S.dStationArrow)S.dStationArrow.visible=false;
+      snd('pick');spawnBurst(S.dStation.x,1.5,S.dStation.z,0xffdd00,10);
+      showHint('🥚 龙蛋已放置！捐献金币孵化！');
+      const dc=C.DRAGONS[S.dragonCount];
+      updateProgressSprite(dProgSprite,0,dc.cost);
+    }
+  }else if(dPhase==='has_egg'&&S.dragonCount<3){
+    // Hatch phase: donate gold to hatch dragon
+    if(inZone(hp.x,hp.z,S.dStation.x,S.dStation.z)&&S.gold>0){
+      drainTimer=.12;S.gold--;S.dStation.gold++;
+      updateGoldUI();updateBackpack();snd('pick');
+      spawnBurst(S.dStation.x,1,S.dStation.z,0xffd700,2);
+      const dc=C.DRAGONS[S.dragonCount];
+      updateBarFill(dFillMesh,S.dStation.gold/dc.cost,S.dStation.x,S.dStation.z);
+      updateProgressSprite(dProgSprite,S.dStation.gold,dc.cost);
+      if(S.dStation.gold>=dc.cost){
+        S.dStation.gold=0;
+        removeEggFromNest();
+        hatchDragon();
+        updateBarFill(dFillMesh,0,S.dStation.x,S.dStation.z);
+        if(S.dragonCount<3){
+          S.dStation.phase='wait_egg';
+          updateProgressSprite(dProgSprite,-1,0);
+        }else{
+          S.dStation.phase='done';
+          updateProgressSprite(dProgSprite,0,0);
+        }
+      }
+      return;
+    }
   }
 }
 function hatchDragon(){
@@ -461,15 +747,12 @@ function hatchDragon(){
   const wm=new THREE.MeshStandardMaterial({color:dc.color,side:THREE.DoubleSide});
   const wL=new THREE.Mesh(new THREE.PlaneGeometry(.7*sc,.35*sc),wm);wL.position.set(-.4*sc,1.9,0);wL.rotation.z=.4;
   const wR=new THREE.Mesh(new THREE.PlaneGeometry(.7*sc,.35*sc),wm);wR.position.set(.4*sc,1.9,0);wR.rotation.z=-.4;
-  if(S.dragonCount===2){// Golden glow
-    body.material.emissive=new THREE.Color(0xffd700);body.material.emissiveIntensity=.4}
+  if(S.dragonCount===2){body.material.emissive=new THREE.Color(0xffd700);body.material.emissiveIntensity=.4}
   dg.add(body,head,wL,wR);dg.position.copy(heroGroup.position);dg.position.y=2;scene.add(dg);
   S.dragons.push({mesh:dg,atkTimer:0,angle:S.dragonCount*2.1,cfg:dc});
   S.dragonCount++;
   spawnBurst(S.dStation.x,2,S.dStation.z,dc.color,25);spawnPillar(S.dStation.x,S.dStation.z);
-  eggMesh.visible=S.dragonCount<3;
-  if(S.dragonCount<3)eggMesh.material.color.setHex(C.DRAGONS[S.dragonCount].color);
-  showLevelUp('🐉 '+dc.name+'!');
+  showLevelUp('⬆ 等级提升，获得 '+dc.name+'！');
 }
 function updateDragons(dt){
   S.dragons.forEach((d,i)=>{
@@ -482,12 +765,15 @@ function updateDragons(dt){
     d.mesh.children[2].rotation.z=.4+Math.sin(Date.now()*.01)*.3;
     d.mesh.children[3].rotation.z=-.4-Math.sin(Date.now()*.01)*.3;
     if(S.bossMesh&&S.bossHP>0){d.atkTimer-=dt;
-      if(d.atkTimer<=0){d.atkTimer=1;
+      if(d.atkTimer<=0){
         const bp=S.bossMesh.position;
         const ddx=bp.x-d.mesh.position.x,ddz=bp.z-d.mesh.position.z;
         const dd=Math.sqrt(ddx*ddx+ddz*ddz)||1;
-        const isHoming=i===2;// Golden dragon has homing
-        spawnArrow(d.mesh.position,isHoming?bp:null,ddx/dd,ddz/dd,d.cfg.projColor,d.cfg.dmg,i>=1,isHoming);
+        if(dd<=C.ATK_RANGE+2){// Dragons must be close to boss to attack
+          d.atkTimer=1;
+          const isHoming=i===2;
+          spawnArrow(d.mesh.position,isHoming?bp:null,ddx/dd,ddz/dd,d.cfg.projColor,d.cfg.dmg,i>=1,isHoming);
+        }
       }}
   });
 }
@@ -497,14 +783,51 @@ function bossDie(){
   S.bossHP=0;snd('boom');S.shakeT=.5;
   const bp=S.bossMesh.position.clone();
   spawnBurst(bp.x,2,bp.z,0xff2200,40);spawnBurst(bp.x,2,bp.z,0xffdd00,30);
-  for(let i=0;i<15;i++)dropGoldBar(bp.x,bp.z);
+  // Remove boss first
+  if(S.bossMesh){scene.remove(S.bossMesh);S.bossMesh=null}
+  // Remove lair visuals
+  if(S.lairZoneMesh){scene.remove(S.lairZoneMesh);S.lairZoneMesh=null}
+  if(S.lairBorderMesh){scene.remove(S.lairBorderMesh);S.lairBorderMesh=null}
+  $('boss-info').classList.remove('v');
+  // Reveal dragon zone on first boss kill (phase was hidden)
+  if(S.dStation.phase==='hidden'){
+    S.dStation.phase='wait_egg';
+    dFillMesh.visible=true;dProgSprite.visible=true;
+    if(S.dZoneGroup)S.dZoneGroup.visible=true;
+    spawnNestMesh();
+    spawnBurst(S.dStation.x,2,S.dStation.z,0xffdd00,15);
+    updateProgressSprite(dProgSprite,-1,0);// shows "孵化龙蛋"
+    if(S.dStationArrow)S.dStationArrow.visible=true;
+    showLevelUp('🥚 孵化台出现了！');
+  }
+  // Drop dragon egg if nest is waiting for one
+  if(S.dStation.phase==='wait_egg'&&S.dragonCount<3){
+    const dc=C.DRAGONS[S.dragonCount];
+    const em=new THREE.Mesh(new THREE.SphereGeometry(.5,8,8),new THREE.MeshStandardMaterial({color:dc.color,emissive:dc.color,emissiveIntensity:.5}));
+    em.position.set(bp.x,2.5,bp.z);scene.add(em);
+    S.droppedEggs.push({mesh:em,vy:4,grounded:false,life:60});
+    showHint('🥚 龙蛋掉落了！快去捡起来！');
+    if(S.dStationArrow)S.dStationArrow.visible=true;
+  }
+  // Gold explosion — staggered waves (amount depends on boss)
+  let dropped=0;
+  const goldTotal=S.bossIdx===0?8:10;
+  const goldWave=setInterval(()=>{
+    for(let i=0;i<Math.min(4,goldTotal-dropped);i++)dropGoldBar(bp.x,bp.z);
+    dropped+=4;snd('drop');
+    if(dropped>=goldTotal)clearInterval(goldWave);
+  },150);
+  // Next boss after gold settles
   setTimeout(()=>{
-    if(S.bossMesh){scene.remove(S.bossMesh);S.bossMesh=null}
-    $('boss-info').classList.remove('v');
     S.bossIdx++;
-    if(S.bossIdx>=C.BOSSES.length)setTimeout(victory,2000);
-    else{S.phase='fight';setTimeout(spawnBoss,2000)}
-  },2000);
+    if(S.bossIdx>=2){
+      // Boss 3 (dragon) is triggered by egg pickup, not spawned here
+      S.phase='collect';// Wait for player to pick up egg then trigger cinematic
+      showHint('🥚 快去拾取龙蛋！');
+    }else{
+      S.phase='fight';setTimeout(spawnBoss,1500);
+    }
+  },2500);
 }
 
 // === EFFECTS ===
@@ -534,20 +857,38 @@ function updateParticles(dt){
 
 // === UI ===
 function updateGoldUI(){$('gold-val').textContent=S.gold}
+function updateHeroUI(){
+  const p=Math.max(0,heroHP/heroMaxHP)*100;
+  $('hero-hp-fill').style.width=p+'%';
+  $('hero-hp-text').textContent=Math.floor(heroHP)+'/'+heroMaxHP;
+  // Color shift: green→yellow→red
+  if(p>50)$('hero-hp-fill').style.background='linear-gradient(90deg,#22cc44,#44ff66)';
+  else if(p>25)$('hero-hp-fill').style.background='linear-gradient(90deg,#ccaa22,#ffdd44)';
+  else $('hero-hp-fill').style.background='linear-gradient(90deg,#cc2222,#ff4444)';
+}
 function showHint(t){const h=$('hint');h.textContent=t;h.classList.add('v');
   clearTimeout(showHint._t);showHint._t=setTimeout(()=>h.classList.remove('v'),4000)}
 function updateLabels(){
   const lc=$('ulabels');lc.innerHTML='';
   if(S.bowLv<C.BOW.length-1){const n=C.BOW[S.bowLv+1];
-    const p=new THREE.Vector3(S.wStation.x,2,S.wStation.z).project(cam);
+    const p=new THREE.Vector3(S.wStation.x,3.5,S.wStation.z).project(cam);
     if(p.z<1){const e=document.createElement('div');e.className='ulab';
-      e.textContent='🏹 '+n.nameTag+' ('+S.wStation.gold+'/'+n.cost+' 💎)';
+      e.textContent='🏹 '+n.nameTag;
       e.style.left=((p.x*.5+.5)*innerWidth-50)+'px';e.style.top=((-p.y*.5+.5)*innerHeight-25)+'px';lc.appendChild(e)}}
-  if(S.dragonCount<3){const dc=C.DRAGONS[S.dragonCount];
-    const p=new THREE.Vector3(S.dStation.x,2,S.dStation.z).project(cam);
-    if(p.z<1){const e=document.createElement('div');e.className='ulab';
-      e.textContent='🥚 '+dc.name+' ('+S.dStation.gold+'/'+dc.cost+' 💎)';
-      e.style.left=((p.x*.5+.5)*innerWidth-50)+'px';e.style.top=((-p.y*.5+.5)*innerHeight-25)+'px';lc.appendChild(e)}}
+  if(S.dStation.phase!=='hidden'){
+    if(S.dragonCount<3){
+      const p=new THREE.Vector3(S.dStation.x,3.5,S.dStation.z).project(cam);
+      if(p.z<1){const e=document.createElement('div');e.className='ulab';
+        if(S.dStation.phase==='wait_egg')e.textContent='🥚 孵化龙蛋';
+        else if(S.dStation.phase==='has_egg')e.textContent='🥚 '+C.DRAGONS[S.dragonCount].name;
+        else e.textContent='🥚 满级';
+        e.style.left=((p.x*.5+.5)*innerWidth-50)+'px';e.style.top=((-p.y*.5+.5)*innerHeight-25)+'px';lc.appendChild(e)}}
+    else{
+      const p=new THREE.Vector3(S.dStation.x,3.5,S.dStation.z).project(cam);
+      if(p.z<1){const e=document.createElement('div');e.className='ulab';
+        e.textContent='🥚 满级';
+        e.style.left=((p.x*.5+.5)*innerWidth-50)+'px';e.style.top=((-p.y*.5+.5)*innerHeight-25)+'px';lc.appendChild(e)}}
+  }
 }
 
 // === INPUT ===
@@ -596,22 +937,43 @@ function startGame(){
 
 // === VICTORY / RESTART ===
 function victory(){S.gameOver=true;S.phase='victory';snd('win');
-  $('vstats').innerHTML='Boss击杀: '+S.bossIdx+' | 弓箭: '+C.BOW[S.bowLv].nameTag+' | 精灵龙: '+S.dragonCount;
   $('victory').classList.add('v')}
 function restart(){
-  S.gold=0;S.bossIdx=0;S.phase='idle';S.gameOver=false;S.bowLv=0;S.dragonCount=0;
+  S.gold=0;S.bossIdx=0;S.phase='idle';S.gameOver=false;S.bowLv=0;S.dragonCount=0;S.atkGoldCount=0;
   S.bossHP=0;S.bossMaxHP=0;S.shakeT=0;S.heroAtk=0;S.heroPos={x:0,z:C.BASE_Z};
-  S.wStation.gold=0;S.dStation.gold=0;S.tutDone=false;heroHP=9999;
+  S.wStation.gold=0;S.dStation.gold=0;S.dStation.phase='hidden';S.tutDone=false;heroHP=heroMaxHP;updateHeroUI();
+  S.carryingEgg=false;S.droppedEggs.forEach(e=>scene.remove(e.mesh));S.droppedEggs=[];
+  if(heroGroup.userData.eggMesh){heroGroup.remove(heroGroup.userData.eggMesh);heroGroup.userData.eggMesh=null}
+  // Remove dynamic nest/egg meshes
+  if(dStationMesh){scene.remove(dStationMesh);dStationMesh=null}
+  if(eggMesh){scene.remove(eggMesh);eggMesh=null}
   S.bossAI={atkT:3,sk1T:8,sk2T:15,flashT:0,chargeT:0,chargeDir:null};
   if(S.bossMesh){scene.remove(S.bossMesh);S.bossMesh=null}
+  if(S.lairZoneMesh){scene.remove(S.lairZoneMesh);S.lairZoneMesh=null}
+  if(S.lairBorderMesh){scene.remove(S.lairBorderMesh);S.lairBorderMesh=null}
+  // Restore east gate if it was opened
+  if(S.eastGateOpen&&!S.eastGateMesh){
+    const wm=new THREE.MeshStandardMaterial({color:0x667788,roughness:.8});
+    const gb=new THREE.Mesh(new THREE.BoxGeometry(.6,3,3),wm);
+    gb.position.set(10,1.25,C.BASE_Z);gb.castShadow=true;scene.add(gb);
+    S.eastGateMesh=gb;S.eastGateOpen=false;
+  }
   S.dragons.forEach(d=>scene.remove(d.mesh));S.dragons=[];
   S.goldBars.forEach(g=>scene.remove(g.mesh));S.goldBars=[];
   S.particles=[];S.projectiles.forEach(p=>scene.remove(p.mesh));S.projectiles=[];
   heroGroup.position.set(0,0,C.BASE_Z);
+  cam.position.set(0,18,C.BASE_Z+16);cam.lookAt(0,0,C.BASE_Z);// Reset camera to top-down
   heroBow.scale.setScalar(1);heroBow.userData.bowMesh.material.color.setHex(0x885522);
   heroBow.userData.bowMesh.material.emissiveIntensity=0;
-  updateBackpack();updateGoldUI();eggMesh.visible=true;
-  eggMesh.material.color.setHex(0xff4400);
+  updateBackpack();updateGoldUI();
+  // Reset zone progress visuals
+  drainTimer=0;
+  updateBarFill(wFillMesh,0,S.wStation.x,S.wStation.z);
+  updateBarFill(dFillMesh,0,S.dStation.x,S.dStation.z);
+  updateProgressSprite(wProgSprite,0,C.BOW[1].cost);
+  // Hide dragon zone and arrow
+  if(S.dZoneGroup)S.dZoneGroup.visible=false;
+  if(S.dStationArrow)S.dStationArrow.visible=false;
   $('victory').classList.remove('v');$('boss-info').classList.remove('v');
   $('tut-wrap').style.display='';
 }
@@ -627,25 +989,59 @@ function update(){
   mx+=joyVec.x;mz+=joyVec.y;
   const ml=Math.sqrt(mx*mx+mz*mz);
   if(ml>.1&&S.tutDone){mx/=ml;mz/=ml;
-    heroGroup.position.x+=mx*C.HERO_SPEED*dt;heroGroup.position.z+=mz*C.HERO_SPEED*dt;
-    heroGroup.rotation.y=Math.atan2(mx,mz);
-    heroGroup.position.x=Math.max(-30,Math.min(30,heroGroup.position.x));
-    heroGroup.position.z=Math.max(C.BASE_Z-C.BOSS_DIST-8,Math.min(C.BASE_Z+C.BOSS_DIST+8,heroGroup.position.z));
+    heroGroup.position.x+=mx*C.HERO_SPEED*dt;
+    heroGroup.position.z+=mz*C.HERO_SPEED*dt;
+    heroGroup.rotation.y=Math.atan2(mx,mz)+Math.PI;
+    // Wall collision: 6 solid AABB segments, push hero out on overlap
+    // Walls: E(x=10), W(x=-10) full; N(z=-8) two halves; S(z=+8) two halves
+    // Each wall: [centerX, centerZ, halfW, halfD] (width along x, depth along z)
+    const R=.4;// hero radius
+    const walls=[
+      [-10, 0, .3, 8],   // West wall
+      [-6.5,-8, 3.5,.3],// North-left wall
+      [ 6.5,-8, 3.5,.3],// North-right wall
+      [-6.5, 8, 3.5,.3],// South-left wall
+      [ 6.5, 8, 3.5,.3] // South-right wall
+    ];
+    // East wall: full if gate closed, two halves if open
+    if(!S.eastGateOpen){
+      walls.push([10, 0, .3, 8]);// East full wall
+    }else{
+      walls.push([10, -4.75, .3, 3.25]);// East top half
+      walls.push([10, 4.75, .3, 3.25]);// East bottom half
+    }
+    let hx=heroGroup.position.x,hz=heroGroup.position.z;
+    for(const[wx,wz,whx,whz] of walls){
+      const ox=Math.abs(hx-wx)-(whx+R),oz=Math.abs(hz-wz)-(whz+R);
+      if(ox<0&&oz<0){// overlapping this wall
+        if(ox>oz){// push out along x (smaller overlap)
+          hx+=hx>wx?-ox:ox;
+        }else{// push out along z
+          hz+=hz>wz?-oz:oz;
+        }
+      }
+    }
+    heroGroup.position.x=Math.max(-30,Math.min(30,hx));
+    heroGroup.position.z=Math.max(C.BASE_Z-C.BOSS_DIST-8,Math.min(C.BASE_Z+C.BOSS_DIST+8,hz));
   }
   // Hero bob
   heroGroup.position.y=Math.abs(Math.sin(Date.now()*.008))*.12*(ml>.1?1:0);
-  // Camera follow
-  cam.position.x+=(heroGroup.position.x-cam.position.x)*dt*3;
-  cam.position.z+=(heroGroup.position.z+20-cam.position.z)*dt*3;
-  cam.lookAt(heroGroup.position.x,0,heroGroup.position.z);
+  // Camera follow (skip during cinematic — riseAnim handles camera)
+  if(S.phase!=='cinematic'){
+    cam.position.x+=(heroGroup.position.x-cam.position.x)*dt*3;
+    cam.position.z+=(heroGroup.position.z+20-cam.position.z)*dt*3;
+    cam.lookAt(heroGroup.position.x,0,heroGroup.position.z);
+  }
   // Shake
-  if(S.shakeT>0){S.shakeT-=dt;cam.position.x+=(Math.random()-.5)*.5;cam.position.y+=( Math.random()-.5)*.3}
+  if(S.shakeT>0){S.shakeT-=dt;cam.position.x+=(Math.random()-.5)*.5;cam.position.y+=(Math.random()-.5)*.3}
   // Systems
   if(S.phase==='fight'){heroAttack(dt);bossAI(dt)}
-  pickupGold();tryUpgrade();
+  if(S.phase!=='cinematic'){pickupGold();drainStations(dt);}
   updateGoldBars(dt);updateDragons(dt);updateParticles(dt);updateProjectiles(dt);
   // Flames
   scene.traverse(o=>{if(o.userData&&o.userData.flame)o.scale.setScalar(.8+Math.sin(Date.now()*.01+o.id)*.3)});
+  // Arrow bounce animation
+  if(S.dStationArrow&&S.dStationArrow.visible)S.dStationArrow.position.y=3+Math.sin(Date.now()*.005)*.5;
   updateLabels();
   renderer.render(scene,cam);
 }
