@@ -34,8 +34,8 @@ canvas{display:block}
 #boss-announce.v{opacity:1;animation:anBounce .6s ease-out}
 @keyframes anBounce{0%{transform:translate(-50%,-50%) scale(0)}60%{transform:translate(-50%,-50%) scale(1.15)}100%{transform:translate(-50%,-50%) scale(1)}}
 #dmg-layer{position:fixed;inset:0;pointer-events:none;z-index:15}
-.dmg{position:absolute;font-size:20px;font-weight:bold;text-shadow:0 0 4px #000;animation:dmgF .8s ease-out forwards;pointer-events:none}
-@keyframes dmgF{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-50px) scale(.6)}}
+.dmg{position:absolute;font-size:32px;font-weight:900;-webkit-text-stroke:1.5px #000;text-shadow:0 0 8px #000,0 2px 4px rgba(0,0,0,.8);animation:dmgF .8s ease-out forwards;pointer-events:none}
+@keyframes dmgF{0%{opacity:1;transform:translateY(0) scale(1.2)}100%{opacity:0;transform:translateY(-60px) scale(.7)}}
 #ulabels{position:fixed;inset:0;pointer-events:none;z-index:12}
 .ulab{position:absolute;background:rgba(0,0,0,.8);border:1px solid #c8a23c;border-radius:6px;padding:5px 10px;color:#ffd700;font-size:14px;font-weight:bold;white-space:nowrap}
 #levelup{position:fixed;top:40%;left:50%;transform:translate(-50%,-50%);font-size:40px;font-weight:bold;color:#ffd700;text-shadow:0 0 30px rgba(255,215,0,.8);pointer-events:none;z-index:20;opacity:0}
@@ -93,19 +93,19 @@ canvas{display:block}
 const C={
   BASE_Z:0, BOSS_DIST:20,
   BOSSES:[
-    {name:'蜥蜴人',lvl:10,hp:3000,color:0x446633,sz:3.5,emoji:'🦎',side:1},
-    {name:'双头巨熊',lvl:20,hp:6000,color:0x886644,sz:5,emoji:'🐻',side:-1},
+    {name:'蜥蜴人',lvl:10,hp:8000,color:0x446633,sz:3.5,emoji:'🦎',side:1},
+    {name:'双头巨熊',lvl:20,hp:12000,color:0x886644,sz:5,emoji:'🐻',side:-1},
     {name:'烈焰巨龙',lvl:30,hp:10000,color:0xcc2200,sz:6.5,emoji:'🐉',side:1}
   ],
   BOW:[
     {cost:0,dmg:100,arrows:1,color:0xffffff,nameTag:'初始弓',homing:false,aoe:false},
-    {cost:5,dmg:100,arrows:3,color:0x4488ff,nameTag:'三连射',homing:false,aoe:false},
-    {cost:10,dmg:200,arrows:3,color:0xaa44ff,nameTag:'魔法箭',homing:false,aoe:true},
-    {cost:15,dmg:240,arrows:5,color:0xffd700,nameTag:'追踪箭暴',homing:true,aoe:true}
+    {cost:20,dmg:100,arrows:3,color:0x4488ff,nameTag:'三连射',homing:false,aoe:false},
+    {cost:40,dmg:200,arrows:3,color:0xaa44ff,nameTag:'魔法箭',homing:false,aoe:true},
+    {cost:45,dmg:240,arrows:5,color:0xffd700,nameTag:'追踪箭暴',homing:true,aoe:true}
   ],
   DRAGONS:[
-    {cost:8,dmg:60,color:0xff4422,sz:1,projColor:0xff6600,name:'火焰幼龙'},
-    {cost:15,dmg:120,color:0xaa44ff,sz:1.5,projColor:0x8844ff,name:'雷电青龙'},
+    {cost:35,dmg:60,color:0xff4422,sz:1,projColor:0xff6600,name:'火焰幼龙'},
+    {cost:40,dmg:120,color:0xaa44ff,sz:1.5,projColor:0x8844ff,name:'雷电青龙'},
     {cost:20,dmg:200,color:0xffd700,sz:2,projColor:0xffaa00,name:'黄金神龙'}
   ],
   HERO_SPEED:12,ATK_RANGE:5,ATK_CD:.8,BOSS_SPEED:2,BOSS_ATK_CD:3,BOSS_SKILL1_CD:8,BOSS_SKILL2_CD:15,
@@ -119,7 +119,7 @@ const S={
   goldBars:[],particles:[],projectiles:[],shakeT:0,
   wStation:{x:-6,z:C.BASE_Z,gold:0},dStation:{x:6,z:C.BASE_Z,gold:0,phase:'hidden'},
   dragons:[],tutDone:false,bossSpawnSide:1,
-  carryingEgg:false,droppedEggs:[],atkGoldCount:0
+  carryingEgg:false,droppedEggs:[],atkGoldCount:0,boss2Dead:false,zoneCooldown:0
 };
 let scene,cam,renderer,clock;
 let heroGroup,heroBow,backpackGroup,heroHP=100,heroMaxHP=100;
@@ -135,7 +135,8 @@ function snd(t){if(!audioCtx)return;const o=audioCtx.createOscillator(),g=audioC
   o.connect(g);g.connect(audioCtx.destination);const n=audioCtx.currentTime;
   const P={atk:[200,100,.08,'sawtooth',.1],pick:[1800,2400,.05,'sine',.08],drop:[800,400,.1,'triangle',.06],
     upgrade:[400,1600,.3,'triangle',.15],hatch:[600,1800,.4,'sine',.12],boom:[100,30,.4,'sawtooth',.25],
-    win:[523,1047,.5,'triangle',.15],hit:[150,60,.1,'square',.08]}[t];
+    win:[523,1047,.5,'triangle',.15],hit:[150,60,.1,'square',.08],
+    donate:[1200,1600,.04,'sine',.06],roar:[80,40,.6,'sawtooth',.2],fire:[300,80,.3,'sawtooth',.1]}[t];
   if(!P)return;o.frequency.setValueAtTime(P[0],n);o.frequency.linearRampToValueAtTime(P[1],n+P[2]);
   g.gain.setValueAtTime(P[4],n);g.gain.linearRampToValueAtTime(0,n+P[2]+.1);o.type=P[3];o.start(n);o.stop(n+.8)}
 
@@ -394,7 +395,7 @@ function spawnBoss(){
   const borderMat=new THREE.MeshBasicMaterial({color:0xff4422,transparent:true,opacity:0.35,side:THREE.DoubleSide});
   S.lairBorderMesh=new THREE.Mesh(borderGeo,borderMat);
   S.lairBorderMesh.rotation.x=-Math.PI/2;S.lairBorderMesh.position.set(0,0.03,bz);scene.add(S.lairBorderMesh);
-  S.phase='fight';showHint('⬆️ 去消灭 '+cfg.name+'!');
+  S.phase='fight';showHint('⬆️ 去消灭 '+cfg.name+'!');snd('roar');
   // Boss 3 (烈焰巨龙): cinematic entrance then CTA
   if(S.bossIdx===2){
     S.bossHP=Infinity;S.bossMaxHP=Infinity;
@@ -449,13 +450,11 @@ function spawnBoss(){
         g.position.y=0.5;
         cam.position.set(camTarget.x,camTarget.y,camTarget.z);
         cam.lookAt(g.position.x,3,g.position.z);
-        // Continuous fire breath towards base
+        // Continuous fire breath towards base (reduced rate for performance)
         const headX=g.position.x-2,headZ=g.position.z;
-        for(let fi=0;fi<3;fi++){
-          const fx=headX-Math.random()*8,fz=headZ+(Math.random()-.5)*4;
-          spawnBurst(fx,1+Math.random()*2,fz,Math.random()<0.5?0xff4400:0xffaa00,2);
-        }
-        if(Math.random()<0.15)spawnBurst(headX-Math.random()*6,0.5,headZ+(Math.random()-.5)*3,0xff2200,3);
+        const fx=headX-Math.random()*8,fz=headZ+(Math.random()-.5)*4;
+        spawnBurst(fx,1+Math.random()*2,fz,Math.random()<0.5?0xff4400:0xffaa00,2);
+        if(Math.random()<0.2)snd('fire');
         S.shakeT=0.08;
         requestAnimationFrame(riseAnim);
       }
@@ -555,9 +554,7 @@ function heroAttack(dt){
     const dirX=Math.sin(ang),dirZ=Math.cos(ang);
     spawnArrow(hp,bow.homing?bp:null,dirX,dirZ,bow.color,bow.dmg,bow.aoe,bow.homing);
   }
-  // Gold drops every 3rd attack (instead of 3 per attack)
-  S.atkGoldCount++;
-  if(S.atkGoldCount%3===0)dropGoldBar(bp.x,bp.z);
+  for(let i=0;i<3;i++)dropGoldBar(bp.x,bp.z);
 }
 function spawnArrow(from,target,dx,dz,color,dmg,aoe,homing){
   const lvScale=1+S.bowLv*0.4;// arrows get bigger with upgrades
@@ -576,6 +573,19 @@ function spawnArrow(from,target,dx,dz,color,dmg,aoe,homing){
   scene.add(m);
   S.projectiles.push({mesh:m,dx,dz,speed:30,life:2,dmg,aoe,homing,target,color});
 }
+// Boss-specific damage multiplier
+function getDmgMultiplier(){
+  // Boss 1 (蜥蜴人): weapon 1 upgrade gives +50% damage
+  if(S.bossIdx===0&&S.bowLv>=1)return 1.5;
+  // Boss 2 (双头巨熊): has 40% armor. Broken only by having BOTH weapon 2 AND dragon
+  if(S.bossIdx===1){
+    const hasWeapon2=S.bowLv>=2;
+    const hasDragon=S.dragonCount>=1;
+    if(hasWeapon2&&hasDragon)return 1.0;// Armor broken!
+    return 0.6;// 40% damage reduction
+  }
+  return 1.0;
+}
 function updateProjectiles(dt){
   S.projectiles=S.projectiles.filter(p=>{
     p.life-=dt;if(p.life<=0){scene.remove(p.mesh);return false}
@@ -589,12 +599,15 @@ function updateProjectiles(dt){
       const dx=p.mesh.position.x-S.bossMesh.position.x,dz=p.mesh.position.z-S.bossMesh.position.z;
       const hitR=C.BOSSES[S.bossIdx]?C.BOSSES[S.bossIdx].sz*.4:2;
       if(dx*dx+dz*dz<hitR*hitR){
-        S.bossHP-=p.dmg;updateBossUI();S.bossAI.flashT=.1;
-        showDmg(S.bossMesh.position,p.dmg,p.color);
-        // Hit burst scales with bow level
-        const hitParticles=4+S.bowLv*6;
+        // Apply boss-specific damage multiplier
+        const mult=getDmgMultiplier();
+        const finalDmg=Math.round(p.dmg*mult);
+        S.bossHP-=finalDmg;updateBossUI();S.bossAI.flashT=.1;
+        showDmg(S.bossMesh.position,finalDmg,p.color);
+        // Hit burst scales with bow level (capped for performance)
+        const hitParticles=Math.min(3+S.bowLv*2,8);
         spawnBurst(p.mesh.position.x,1.5,p.mesh.position.z,p.color,hitParticles);
-        if(p.aoe)spawnBurst(p.mesh.position.x,1.5,p.mesh.position.z,p.color,hitParticles+8);
+        if(p.aoe)spawnBurst(p.mesh.position.x,1.5,p.mesh.position.z,p.color,Math.min(hitParticles+4,10));
         scene.remove(p.mesh);
         if(S.bossHP<=0)bossDie();return false}}
     return true});
@@ -633,10 +646,11 @@ function pickupGold(){
         const em=new THREE.Mesh(new THREE.SphereGeometry(.3,8,8),new THREE.MeshStandardMaterial({color:dc.color,emissive:dc.color,emissiveIntensity:.4}));
         em.position.set(0,1.8,0);heroGroup.add(em);heroGroup.userData.eggMesh=em;
       }
-      // If boss 2 was just killed (bossIdx===2) and player picks up egg, trigger dragon cinematic
-      if(S.bossIdx>=2){
+      // If boss 2 has been killed, trigger dragon cinematic
+      if(S.boss2Dead&&S.phase!=='cinematic'){
         S.phase='fight';
-        setTimeout(spawnBoss,1500);// This spawns boss 3 (dragon cinematic)
+        S.bossIdx=2;
+        setTimeout(spawnBoss,1500);
       }
     }
   }
@@ -648,11 +662,13 @@ function updateGoldBars(dt){
     g.mesh.rotation.y+=dt*2;g.life-=dt;
     if(g.life<=0){scene.remove(g.mesh);return false}return true});
   // Update dropped eggs physics
-  S.droppedEggs=S.droppedEggs.filter(e=>{
+  S.droppedEggs.forEach(e=>{
     if(!e.grounded){e.vy-=12*dt;e.mesh.position.y+=e.vy*dt;
       if(e.mesh.position.y<=.5){e.mesh.position.y=.5;e.grounded=true}}
-    e.mesh.rotation.y+=dt;e.life-=dt;
-    if(e.life<=0){scene.remove(e.mesh);return false}return true});
+    e.mesh.rotation.y+=dt;
+    // Bob the green arrow up and down
+    if(e.arrow)e.arrow.position.y=1.5+Math.sin(Date.now()*.005)*.4;
+  });
 }
 
 // === UPGRADES ===
@@ -667,16 +683,28 @@ function updateBarFill(mesh,progress,sx,sz){
 let drainTimer=0;
 function drainStations(dt){
   drainTimer-=dt;if(drainTimer>0)return;
+  // Zone cooldown after upgrade
+  if(S.zoneCooldown>0){
+    S.zoneCooldown-=dt;
+    if(S.zoneCooldown<=0){
+      // Restore zone visuals
+      S.zoneCooldown=0;
+      wFillMesh.visible=true;wProgSprite.visible=true;
+      if(S.dStation.phase!=='hidden'){dFillMesh.visible=true;dProgSprite.visible=true;}
+    }
+    return;
+  }
   const hp=heroGroup.position;
   // AABB zone check
   function inZone(px,pz,sx,sz){return Math.abs(px-sx)<ZS&&Math.abs(pz-sz)<ZS}
   // Weapon station
   if(S.bowLv<C.BOW.length-1){
     if(inZone(hp.x,hp.z,S.wStation.x,S.wStation.z)&&S.gold>0){
-      drainTimer=.12;S.gold--;S.wStation.gold++;
-      updateGoldUI();updateBackpack();snd('pick');
-      spawnBurst(S.wStation.x,1,S.wStation.z,0xffd700,2);
       const next=C.BOW[S.bowLv+1];
+      drainTimer=next.cost>=40?.05:next.cost>=30?.06:.12;
+      S.gold--;S.wStation.gold++;
+      updateGoldUI();updateBackpack();snd('donate');
+      spawnBurst(S.wStation.x,1,S.wStation.z,0xffd700,2);
       updateBarFill(wFillMesh,S.wStation.gold/next.cost,S.wStation.x,S.wStation.z);
       updateProgressSprite(wProgSprite,S.wStation.gold,next.cost);
       if(S.wStation.gold>=next.cost){
@@ -690,6 +718,10 @@ function drainStations(dt){
         updateBarFill(wFillMesh,0,S.wStation.x,S.wStation.z);
         if(S.bowLv<C.BOW.length-1)updateProgressSprite(wProgSprite,0,C.BOW[S.bowLv+1].cost);
         else updateProgressSprite(wProgSprite,0,0);
+        // Hide zones for 2s to encourage fighting
+        S.zoneCooldown=2;
+        wFillMesh.visible=false;wProgSprite.visible=false;
+        dFillMesh.visible=false;dProgSprite.visible=false;
       }
       return;// one coin per tick
     }
@@ -714,10 +746,11 @@ function drainStations(dt){
   }else if(dPhase==='has_egg'&&S.dragonCount<3){
     // Hatch phase: donate gold to hatch dragon
     if(inZone(hp.x,hp.z,S.dStation.x,S.dStation.z)&&S.gold>0){
-      drainTimer=.12;S.gold--;S.dStation.gold++;
-      updateGoldUI();updateBackpack();snd('pick');
-      spawnBurst(S.dStation.x,1,S.dStation.z,0xffd700,2);
       const dc=C.DRAGONS[S.dragonCount];
+      drainTimer=dc.cost>=35?.06:.12;
+      S.gold--;S.dStation.gold++;
+      updateGoldUI();updateBackpack();snd('donate');
+      spawnBurst(S.dStation.x,1,S.dStation.z,0xffd700,2);
       updateBarFill(dFillMesh,S.dStation.gold/dc.cost,S.dStation.x,S.dStation.z);
       updateProgressSprite(dProgSprite,S.dStation.gold,dc.cost);
       if(S.dStation.gold>=dc.cost){
@@ -732,6 +765,10 @@ function drainStations(dt){
           S.dStation.phase='done';
           updateProgressSprite(dProgSprite,0,0);
         }
+        // Hide zones for 2s to encourage fighting
+        S.zoneCooldown=2;
+        wFillMesh.visible=false;wProgSprite.visible=false;
+        dFillMesh.visible=false;dProgSprite.visible=false;
       }
       return;
     }
@@ -789,6 +826,8 @@ function bossDie(){
   if(S.lairZoneMesh){scene.remove(S.lairZoneMesh);S.lairZoneMesh=null}
   if(S.lairBorderMesh){scene.remove(S.lairBorderMesh);S.lairBorderMesh=null}
   $('boss-info').classList.remove('v');
+  // Mark boss 2 death immediately for egg pickup detection
+  if(S.bossIdx===1)S.boss2Dead=true;
   // Reveal dragon zone on first boss kill (phase was hidden)
   if(S.dStation.phase==='hidden'){
     S.dStation.phase='wait_egg';
@@ -805,7 +844,14 @@ function bossDie(){
     const dc=C.DRAGONS[S.dragonCount];
     const em=new THREE.Mesh(new THREE.SphereGeometry(.5,8,8),new THREE.MeshStandardMaterial({color:dc.color,emissive:dc.color,emissiveIntensity:.5}));
     em.position.set(bp.x,2.5,bp.z);scene.add(em);
-    S.droppedEggs.push({mesh:em,vy:4,grounded:false,life:60});
+    // Green arrow indicator above egg
+    const arrowGeo=new THREE.ConeGeometry(.25,.8,4);
+    const arrowMat=new THREE.MeshBasicMaterial({color:0x44ff44});
+    const arrow=new THREE.Mesh(arrowGeo,arrowMat);
+    arrow.rotation.x=Math.PI;// Point downward
+    arrow.position.set(0,2,0);
+    em.add(arrow);
+    S.droppedEggs.push({mesh:em,arrow,vy:4,grounded:false});
     showHint('🥚 龙蛋掉落了！快去捡起来！');
     if(S.dStationArrow)S.dStationArrow.visible=true;
   }
@@ -819,20 +865,31 @@ function bossDie(){
   },150);
   // Next boss after gold settles
   setTimeout(()=>{
+    // If dragon cinematic already triggered by egg pickup, do nothing
+    if(S.bossIdx>=2||S.phase==='cinematic')return;
     S.bossIdx++;
     if(S.bossIdx>=2){
       // Boss 3 (dragon) is triggered by egg pickup, not spawned here
-      S.phase='collect';// Wait for player to pick up egg then trigger cinematic
+      S.phase='collect';
       showHint('🥚 快去拾取龙蛋！');
+      // If player already picked up the egg during the delay, trigger now
+      if(S.carryingEgg){
+        S.phase='fight';
+        setTimeout(spawnBoss,1500);
+      }
     }else{
       S.phase='fight';setTimeout(spawnBoss,1500);
     }
   },2500);
 }
 
-// === EFFECTS ===
-function spawnBurst(x,y,z,color,n){for(let i=0;i<n;i++)S.particles.push({x,y,z,
-  vx:(Math.random()-.5)*8,vy:Math.random()*5+2,vz:(Math.random()-.5)*8,life:1,color,sz:.1+Math.random()*.1})}
+function spawnBurst(x,y,z,color,n){
+  // Cap total active particles for performance
+  const maxP=150;
+  if(S.particles.length>maxP)S.particles.splice(0,S.particles.length-maxP+n);
+  for(let i=0;i<n;i++)S.particles.push({x,y,z,
+    vx:(Math.random()-.5)*8,vy:Math.random()*5+2,vz:(Math.random()-.5)*8,life:1,color,sz:.1+Math.random()*.1});
+}
 function spawnPillar(x,z){const m=new THREE.Mesh(new THREE.CylinderGeometry(.25,.25,10,8),
   new THREE.MeshBasicMaterial({color:0xffdd44,transparent:true,opacity:.5}));m.position.set(x,5,z);scene.add(m);setTimeout(()=>scene.remove(m),600)}
 function spawnRing(x,y,z,color,r){
@@ -847,13 +904,26 @@ function showDmg(pos,val,color){
   $('dmg-layer').appendChild(el);setTimeout(()=>el.remove(),800)}
 function showLevelUp(t){const el=$('levelup');el.textContent=t;el.classList.remove('v');
   void el.offsetWidth;el.classList.add('v');snd('upgrade')}
-let pMeshes=[];
+let pMeshPool=[],pGeo=null;
 function updateParticles(dt){
-  pMeshes.forEach(m=>scene.remove(m));pMeshes=[];
+  if(!pGeo)pGeo=new THREE.SphereGeometry(.12,3,3);// Shared geometry
+  // Hide all pool meshes first
+  for(let i=0;i<pMeshPool.length;i++)pMeshPool[i].visible=false;
+  let idx=0;
   S.particles=S.particles.filter(p=>{p.life-=dt*1.5;if(p.life<=0)return false;
     p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;p.vy-=9.8*dt;
-    const m=new THREE.Mesh(new THREE.SphereGeometry(p.sz,4,4),new THREE.MeshBasicMaterial({color:p.color,transparent:true,opacity:p.life}));
-    m.position.set(p.x,Math.max(0,p.y),p.z);scene.add(m);pMeshes.push(m);return true})}
+    let m;
+    if(idx<pMeshPool.length){
+      m=pMeshPool[idx];m.visible=true;m.material.color.setHex(p.color);
+    }else{
+      m=new THREE.Mesh(pGeo,new THREE.MeshBasicMaterial({color:p.color,transparent:true,opacity:1}));
+      scene.add(m);pMeshPool.push(m);
+    }
+    m.position.set(p.x,Math.max(0,p.y),p.z);
+    m.material.opacity=p.life;
+    m.scale.setScalar(p.sz/.12);
+    idx++;return true});
+}
 
 // === UI ===
 function updateGoldUI(){$('gold-val').textContent=S.gold}
@@ -939,7 +1009,7 @@ function startGame(){
 function victory(){S.gameOver=true;S.phase='victory';snd('win');
   $('victory').classList.add('v')}
 function restart(){
-  S.gold=0;S.bossIdx=0;S.phase='idle';S.gameOver=false;S.bowLv=0;S.dragonCount=0;S.atkGoldCount=0;
+  S.gold=0;S.bossIdx=0;S.phase='idle';S.gameOver=false;S.bowLv=0;S.dragonCount=0;S.atkGoldCount=0;S.boss2Dead=false;S.zoneCooldown=0;
   S.bossHP=0;S.bossMaxHP=0;S.shakeT=0;S.heroAtk=0;S.heroPos={x:0,z:C.BASE_Z};
   S.wStation.gold=0;S.dStation.gold=0;S.dStation.phase='hidden';S.tutDone=false;heroHP=heroMaxHP;updateHeroUI();
   S.carryingEgg=false;S.droppedEggs.forEach(e=>scene.remove(e.mesh));S.droppedEggs=[];
@@ -1042,6 +1112,11 @@ function update(){
   scene.traverse(o=>{if(o.userData&&o.userData.flame)o.scale.setScalar(.8+Math.sin(Date.now()*.01+o.id)*.3)});
   // Arrow bounce animation
   if(S.dStationArrow&&S.dStationArrow.visible)S.dStationArrow.position.y=3+Math.sin(Date.now()*.005)*.5;
+  // Hide dragon station text when waiting for egg but no egg available
+  if(S.dStation.phase==='wait_egg'&&S.zoneCooldown<=0){
+    const hasEgg=S.carryingEgg||S.droppedEggs.length>0;
+    dProgSprite.visible=hasEgg;
+  }
   updateLabels();
   renderer.render(scene,cam);
 }
